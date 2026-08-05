@@ -1,0 +1,229 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 16px;
+}
+
+.backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 440px;
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+  background: rgba(24, 24, 24, 0.8);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-soft);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modalHeader h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.closeBtn {
+  color: var(--text-secondary);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.03);
+  transition: var(--transition-fast);
+}
+
+.closeBtn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.modalBody {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.noticeMessage {
+  background-color: rgba(230, 57, 70, 0.08);
+  border: 1px solid rgba(230, 57, 70, 0.25);
+  color: var(--primary);
+  padding: 12px 16px;
+  border-radius: var(--border-radius-sm);
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 600;
+  text-align: center;
+}
+
+.subtext {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.packagesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.packageRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  position: relative;
+}
+
+.packageRow:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.popularRow {
+  border-color: var(--primary);
+  background: linear-gradient(90deg, rgba(230, 57, 70, 0.04) 0%, rgba(24, 24, 24, 0) 100%);
+}
+
+.popularRow:hover {
+  border-color: var(--primary);
+}
+
+.popularBadge {
+  position: absolute;
+  top: -8px;
+  right: 18px;
+  background-color: var(--primary);
+  color: var(--text-primary);
+  font-size: 8px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  box-shadow: var(--shadow-glow);
+}
+
+.packageInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.packHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coinCount {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--coin);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.coinIcon {
+  color: var(--coin);
+}
+
+.bonusTag {
+  background-color: rgba(46, 204, 113, 0.1);
+  color: var(--success);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.packLabel {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.priceBtn {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  transition: var(--transition-fast);
+}
+
+.packageRow:hover .priceBtn {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-glow);
+}
+
+.modalFooter {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 10px;
+}
+
+.successScreen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px 0;
+  gap: 12px;
+}
+
+.successIcon {
+  color: var(--success);
+}
+
+.successScreen h4 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.successScreen p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
