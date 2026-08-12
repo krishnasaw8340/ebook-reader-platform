@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Coins, Bell, Plus, User, Bookmark, Sparkles, LogOut, Code, ArrowLeft, X, Flame } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
+import { useAuth } from '../../contexts/AuthContext';
 import styles from './Layout.module.css';
 
 export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearchTrigger }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { wallet, bookSeries, userLibrary } = useUser();
+  const { user, isAuthenticated, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -237,8 +239,8 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
                 {profileOpen && (
                   <div className={`${styles.profileDropdown} glass`}>
                     <div className={styles.profileDropdownHeader}>
-                      <div className={styles.profileName}>MangaFan99</div>
-                      <div className={styles.profileEmail}>premium.reader@kuroyomi.com</div>
+                      <div className={styles.profileName}>{user ? user.email.split('@')[0] : 'Guest User'}</div>
+                      <div className={styles.profileEmail}>{user ? user.email : 'Sign in to access your library'}</div>
                     </div>
                     <div className={styles.profileMenu}>
                       <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/library'); }}>
@@ -253,9 +255,15 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
                       <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/profile'); }}>
                         <User size={15} /> Account Settings
                       </div>
-                      <div className={`${styles.profileItem} ${styles.signOut}`} onClick={() => { setProfileOpen(false); navigate('/login'); }}>
-                        <LogOut size={15} /> Sign Out
-                      </div>
+                      {isAuthenticated ? (
+                        <div className={`${styles.profileItem} ${styles.signOut}`} onClick={async () => { setProfileOpen(false); await logout(); navigate('/login'); }}>
+                          <LogOut size={15} /> Sign Out
+                        </div>
+                      ) : (
+                        <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/login'); }}>
+                          <LogOut size={15} /> Sign In / Register
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
