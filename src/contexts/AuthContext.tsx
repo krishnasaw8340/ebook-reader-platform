@@ -14,9 +14,10 @@ interface AuthContextType {
     refreshToken: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (payload: LoginPayload) => Promise<void>;
+    login: (payload: LoginPayload) => Promise<JwtUser>;
     register: (payload: RegisterPayload) => Promise<{ message: string; email: string }>;
     verifyEmail: (payload: VerifyEmailPayload) => Promise<{ message: string }>;
+    resendVerificationOtp: (email: string) => Promise<{ message: string }>;
     forgotPassword: (email: string) => Promise<{ message: string }>;
     resetPassword: (payload: ResetPasswordPayload) => Promise<{ message: string }>;
     logout: () => Promise<void>;
@@ -83,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Fetch profile
             const profile = await authApi.getMe();
             setUser(profile);
+            return profile;
         } finally {
             setIsLoading(false);
         }
@@ -101,6 +103,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(true);
         try {
             return await authApi.verifyEmail(payload);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const resendVerificationOtp = async (email: string) => {
+        setIsLoading(true);
+        try {
+            return await authApi.resendVerificationOtp(email);
         } finally {
             setIsLoading(false);
         }
@@ -158,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 login,
                 register,
                 verifyEmail,
+                resendVerificationOtp,
                 forgotPassword,
                 resetPassword,
                 logout,

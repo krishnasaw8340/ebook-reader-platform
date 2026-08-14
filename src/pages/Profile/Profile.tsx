@@ -74,11 +74,13 @@ export const Profile: React.FC = () => {
                                     <span>Wallet Balance Refill</span>
                                     <ChevronRight size={16} />
                                 </div>
-                                <div className={styles.settingItem} onClick={() => navigate('/admin')}>
-                                    <ShieldCheck size={16} />
-                                    <span>Creator Publishing Dashboard</span>
-                                    <ChevronRight size={16} />
-                                </div>
+                                {user?.roles?.includes('ADMIN') && (
+                                    <div className={styles.settingItem} onClick={() => navigate('/admin')} style={{ color: '#ff6b6b', fontWeight: 700 }}>
+                                        <ShieldCheck size={16} style={{ color: '#e50914' }} />
+                                        <span>Admin Control & Book Management</span>
+                                        <span style={{ marginLeft: 'auto', fontSize: '10px', background: '#e50914', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>ADMIN</span>
+                                    </div>
+                                )}
 
                                 {isAuthenticated ? (
                                     <>

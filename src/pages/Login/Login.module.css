@@ -255,16 +255,27 @@
   margin-bottom: 12px;
 }
 
-.alertSuccess {
-  width: 100%;
+.btnSecondary {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
   padding: 10px 14px;
-  background-color: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.4);
   border-radius: var(--border-radius-sm);
-  color: #6ee7b7;
+  font-weight: 600;
   font-size: 12px;
-  text-align: left;
-  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: var(--transition-fast);
+  margin-top: 6px;
+}
+
+.btnSecondary:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .selectRole {

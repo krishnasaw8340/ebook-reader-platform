@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, LogIn, ChevronRight, User as UserIcon, Shield, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, LogIn, ChevronRight, User as UserIcon, Shield, KeyRound, CheckCircle2, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import styles from './Login.module.css';
@@ -9,7 +9,7 @@ type AuthMode = 'LOGIN' | 'REGISTER' | 'VERIFY_EMAIL' | 'FORGOT_PASSWORD' | 'RES
 
 export const Login: React.FC = () => {
     const navigate = useNavigate();
-    const { login, register, verifyEmail, forgotPassword, resetPassword, isLoading } = useAuth();
+    const { login, register, verifyEmail, resendVerificationOtp, forgotPassword, resetPassword, isLoading } = useAuth();
 
     const [mode, setMode] = useState<AuthMode>('LOGIN');
 
@@ -25,10 +25,12 @@ export const Login: React.FC = () => {
     // Banner states
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [isUnverifiedError, setIsUnverifiedError] = useState(false);
 
     const resetFeedback = () => {
         setErrorMessage(null);
         setSuccessMessage(null);
+        setIsUnverifiedError(false);
     };
 
     const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -39,7 +41,11 @@ export const Login: React.FC = () => {
             navigate('/');
         } catch (err: any) {
             const msg = err.response?.data?.message || 'Login failed. Please check your credentials.';
-            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
+            const formattedMsg = Array.isArray(msg) ? msg.join(', ') : msg;
+            setErrorMessage(formattedMsg);
+            if (formattedMsg.toLowerCase().includes('verify')) {
+                setIsUnverifiedError(true);
+            }
         }
     };
 
@@ -72,6 +78,22 @@ export const Login: React.FC = () => {
             setOtp('');
         } catch (err: any) {
             const msg = err.response?.data?.message || 'Email verification failed.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
+        }
+    };
+
+    const handleResendOtp = async () => {
+        if (!email) {
+            setErrorMessage('Please enter your email address to receive a verification OTP.');
+            return;
+        }
+        resetFeedback();
+        try {
+            const res = await resendVerificationOtp(email);
+            setSuccessMessage(res.message);
+            setMode('VERIFY_EMAIL');
+        } catch (err: any) {
+            const msg = err.response?.data?.message || 'Failed to resend verification OTP.';
             setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
         }
     };
@@ -141,7 +163,7 @@ export const Login: React.FC = () => {
                         {mode === 'VERIFY_EMAIL' && (
                             <>
                                 <h3>Email Verification</h3>
-                                <p className={styles.subtext}>Enter the 6-digit OTP code sent to <strong>{email}</strong></p>
+                                <p className={styles.subtext}>Enter the 6-digit OTP code sent to <strong>{email || 'your email'}</strong></p>
                             </>
                         )}
                         {mode === 'FORGOT_PASSWORD' && (
@@ -158,7 +180,23 @@ export const Login: React.FC = () => {
                         )}
 
                         {/* Error / Success Alerts */}
-                        {errorMessage && <div className={styles.alertError}>{errorMessage}</div>}
+                        {errorMessage && (
+                            <div className={styles.alertError}>
+                                <div>{errorMessage}</div>
+                                {isUnverifiedError && (
+                                    <div style={{ marginTop: '10px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={handleResendOtp}
+                                            disabled={isLoading}
+                                            className={styles.btnSecondary}
+                                        >
+                                            <Mail size={14} /> Verify Email / Send OTP
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {successMessage && (
                             <div className={styles.alertSuccess}>
                                 <CheckCircle2 size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
@@ -217,6 +255,13 @@ export const Login: React.FC = () => {
                                         Don't have an account?{' '}
                                         <span onClick={() => { resetFeedback(); setMode('REGISTER'); }}>
                                             Sign Up <ChevronRight size={12} />
+                                        </span>
+                                    </div>
+
+                                    <div className={styles.signupNotice} style={{ marginTop: '8px' }}>
+                                        Have an unverified email?{' '}
+                                        <span onClick={() => { resetFeedback(); setMode('VERIFY_EMAIL'); }}>
+                                            Verify Email <ChevronRight size={12} />
                                         </span>
                                     </div>
                                 </motion.form>
@@ -293,9 +338,13 @@ export const Login: React.FC = () => {
                                     </button>
 
                                     <div className={styles.signupNotice}>
-                                        Already have an account?{' '}
+                                        Already registered?{' '}
                                         <span onClick={() => { resetFeedback(); setMode('LOGIN'); }}>
                                             Sign In <ChevronRight size={12} />
+                                        </span>
+                                        {' or '}
+                                        <span onClick={() => { resetFeedback(); setMode('VERIFY_EMAIL'); }}>
+                                            Verify Email
                                         </span>
                                     </div>
                                 </motion.form>
@@ -311,6 +360,17 @@ export const Login: React.FC = () => {
                                     className={styles.form}
                                 >
                                     <div className={styles.inputWrapper}>
+                                        <Mail size={16} className={styles.inputIcon} />
+                                        <input
+                                            type="email"
+                                            placeholder="Email Address"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className={styles.inputWrapper}>
                                         <KeyRound size={16} className={styles.inputIcon} />
                                         <input
                                             type="text"
@@ -325,6 +385,15 @@ export const Login: React.FC = () => {
 
                                     <button type="submit" className={styles.btnLogin} disabled={isLoading}>
                                         {isLoading ? <div className={styles.spinner} /> : 'Verify Email'}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={styles.btnSecondary}
+                                        onClick={handleResendOtp}
+                                        disabled={isLoading}
+                                    >
+                                        <RotateCw size={14} /> Resend OTP Code
                                     </button>
 
                                     <div className={styles.signupNotice}>

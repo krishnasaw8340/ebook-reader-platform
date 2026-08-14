@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Coins, Bell, Plus, User, Bookmark, Sparkles, LogOut, Code, ArrowLeft, X, Flame } from 'lucide-react';
+import { Search, Coins, Bell, Plus, User, Bookmark, Sparkles, LogOut, Shield, ArrowLeft, X, Flame } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
 import styles from './Layout.module.css';
@@ -249,9 +249,12 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
                       <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/wallet'); }}>
                         <Coins size={15} /> Wallet Coins
                       </div>
-                      <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/admin'); }}>
-                        <Code size={15} /> Creator Studio
-                      </div>
+                      {user?.roles?.includes('ADMIN') && (
+                        <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/admin'); }} style={{ color: '#ff6b6b', fontWeight: 700 }}>
+                          <Shield size={15} style={{ color: '#e50914' }} /> Admin Control
+                          <span style={{ marginLeft: 'auto', fontSize: '9px', background: '#e50914', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>ADMIN</span>
+                        </div>
+                      )}
                       <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/profile'); }}>
                         <User size={15} /> Account Settings
                       </div>

@@ -47,6 +47,8 @@ interface UserContextType {
   toggleBookmark: (seriesId: string) => void;
   saveProgress: (bookId: string, chapterId: string, pageId: string) => void;
   publishBook: (seriesTitle: string, bookTitle: string, chapterTitle: string, pagesCount: number, cost: number) => void;
+  deleteBookSeries: (seriesId: string) => void;
+  toggleSeriesStatus: (seriesId: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -360,6 +362,25 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPages(prev => [...newPages, ...prev]);
   };
 
+  const deleteBookSeries = (seriesId: string) => {
+    setBookSeries(prev => prev.filter(s => s.id !== seriesId));
+    const relatedBookIds = books.filter(b => b.series_id === seriesId).map(b => b.id);
+    setBooks(prev => prev.filter(b => b.series_id !== seriesId));
+    const relatedChapterIds = chapters.filter(c => relatedBookIds.includes(c.book_id)).map(c => c.id);
+    setChapters(prev => prev.filter(c => !relatedBookIds.includes(c.book_id)));
+    setPages(prev => prev.filter(p => !relatedChapterIds.includes(p.chapter_id)));
+  };
+
+  const toggleSeriesStatus = (seriesId: string) => {
+    setBookSeries(prev => prev.map(s => {
+      if (s.id === seriesId) {
+        const nextStatus = s.status === 'ONGOING' ? 'COMPLETED' : 'ONGOING';
+        return { ...s, status: nextStatus };
+      }
+      return s;
+    }));
+  };
+
   return (
     <UserContext.Provider value={{
       currentUser,
@@ -379,7 +400,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       rechargeCoins,
       toggleBookmark,
       saveProgress,
-      publishBook
+      publishBook,
+      deleteBookSeries,
+      toggleSeriesStatus
     }}>
       {children}
     </UserContext.Provider>
