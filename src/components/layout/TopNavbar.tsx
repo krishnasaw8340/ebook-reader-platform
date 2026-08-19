@@ -9,7 +9,7 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
   const navigate = useNavigate();
   const location = useLocation();
   const { wallet, bookSeries, userLibrary } = useUser();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -249,9 +249,9 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
                       <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/wallet'); }}>
                         <Coins size={15} /> Wallet Coins
                       </div>
-                      {user?.roles?.includes('ADMIN') && (
+                      {isAdmin && (
                         <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/admin'); }} style={{ color: '#ff6b6b', fontWeight: 700 }}>
-                          <Shield size={15} style={{ color: '#e50914' }} /> Admin Control
+                          <Shield size={15} style={{ color: '#e50914' }} /> Admin Portal
                           <span style={{ marginLeft: 'auto', fontSize: '9px', background: '#e50914', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>ADMIN</span>
                         </div>
                       )}

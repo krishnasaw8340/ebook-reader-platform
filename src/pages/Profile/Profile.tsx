@@ -8,7 +8,7 @@ import styles from './Profile.module.css';
 export const Profile: React.FC = () => {
     const navigate = useNavigate();
     const { currentUser, wallet, coinTransactions, readingProgress } = useUser();
-    const { user, isAuthenticated, logout, logoutAll } = useAuth();
+    const { user, isAuthenticated, isAdmin, logout, logoutAll } = useAuth();
 
     const totalReadCount = readingProgress.length;
 
@@ -74,10 +74,10 @@ export const Profile: React.FC = () => {
                                     <span>Wallet Balance Refill</span>
                                     <ChevronRight size={16} />
                                 </div>
-                                {user?.roles?.includes('ADMIN') && (
+                                {isAdmin && (
                                     <div className={styles.settingItem} onClick={() => navigate('/admin')} style={{ color: '#ff6b6b', fontWeight: 700 }}>
                                         <ShieldCheck size={16} style={{ color: '#e50914' }} />
-                                        <span>Admin Control & Book Management</span>
+                                        <span>Admin Portal & Book Management</span>
                                         <span style={{ marginLeft: 'auto', fontSize: '10px', background: '#e50914', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>ADMIN</span>
                                     </div>
                                 )}

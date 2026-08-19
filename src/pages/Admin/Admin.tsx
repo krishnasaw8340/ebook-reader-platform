@@ -354,7 +354,7 @@ export const Admin: React.FC = () => {
                       return (
                         <tr key={series.id}>
                           <td>
-                            <img src={series.cover_image} alt={series.title} className={styles.coverThumb} />
+                            <img src={series.cover_image || ''} alt={series.title} className={styles.coverThumb} />
                           </td>
                           <td>
                             <strong>{series.title}</strong>
