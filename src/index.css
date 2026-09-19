@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
+  color-scheme: dark;
+
   /* Color Palette */
   --primary: #E63946;
   --primary-rgb: 230, 57, 70;
@@ -71,6 +73,17 @@ button, input, textarea, select {
   border: none;
   outline: none;
   color: inherit;
+}
+
+select {
+  color-scheme: dark;
+  background-color: #181818;
+  color: #ffffff;
+}
+
+option {
+  background-color: #181818;
+  color: #ffffff;
 }
 
 /* Scrollbars */

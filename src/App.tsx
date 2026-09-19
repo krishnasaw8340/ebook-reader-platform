@@ -19,10 +19,14 @@ import { AdminRoute } from './admin/guards/AdminRoute';
 import { AdminLayout } from './admin/layout/AdminLayout';
 import { AdminDashboard } from './admin/dashboard/AdminDashboard';
 import { AdminBooks } from './admin/books/AdminBooks';
+import { BookWizard } from './admin/books/BookWizard';
+import { AdminBookDetail } from './admin/books/AdminBookDetail';
 import { AdminSeries } from './admin/series/AdminSeries';
+import { AdminSeriesDetail } from './admin/series/AdminSeriesDetail';
 import { AdminVolumes } from './admin/volumes/AdminVolumes';
 import { AdminChapters } from './admin/chapters/AdminChapters';
 import { AdminPages } from './admin/pages/AdminPages';
+import { AdminUploads } from './admin/uploads/AdminUploads';
 import { AdminUsers } from './admin/users/AdminUsers';
 import { AdminPricing } from './admin/pricing/AdminPricing';
 
@@ -68,12 +72,22 @@ const AppContent: React.FC = () => {
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="books" element={<AdminBooks />} />
+            <Route path="books/new" element={<BookWizard />} />
+            <Route path="books/:id" element={<AdminBookDetail />} />
+            <Route path="books/:id/edit" element={<AdminBookDetail />} />
+            <Route path="books/:id/chapters" element={<AdminBookDetail />} />
             <Route path="series" element={<AdminSeries />} />
+            <Route path="series/:id" element={<AdminSeriesDetail />} />
             <Route path="volumes" element={<AdminVolumes />} />
+            <Route path="volumes/:id" element={<AdminVolumes />} />
             <Route path="chapters" element={<AdminChapters />} />
+            <Route path="chapters/:id" element={<AdminChapters />} />
+            <Route path="chapters/:id/pages" element={<AdminPages />} />
             <Route path="pages" element={<AdminPages />} />
+            <Route path="uploads" element={<AdminUploads />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="pricing" element={<AdminPricing />} />
+            <Route path="settings" element={<AdminDashboard />} />
           </Route>
         </Routes>
       </main>

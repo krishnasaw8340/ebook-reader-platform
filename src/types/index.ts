@@ -53,19 +53,87 @@ export interface BookSeries {
   title: string; // String Title
   description: string | null; // String? Desc
   cover_image: string | null; // String? Cover
-  status: 'ONGOING' | 'COMPLETED'; // Enum Status
+  status: 'ONGOING' | 'COMPLETED' | 'DRAFT' | 'ARCHIVED'; // Enum Status
   created_at: string; // DateTime Created
+  updated_at?: string;
+}
+
+export interface Volume {
+  id: string; // UUID PK
+  series_id: string; // UUID FK
+  volume_no: number; // Order in series
+  title: string;
+  description?: string | null;
+  cover_image?: string | null;
+  status: 'ONGOING' | 'COMPLETED' | 'DRAFT' | 'ARCHIVED';
+  release_date?: string | null;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface Book {
   id: string; // UUID PK
   series_id: string; // UUID FK
+  volume_id?: string | null; // Optional Volume FK (Supports Direct Series -> Book)
   title: string; // String Title
+  japanese_title?: string | null;
+  slug?: string;
   summary: string | null; // String? Summary
+  language?: string; // 'English', 'Japanese', etc.
+  author?: string;
+  artist?: string;
+  category?: string;
+  genres?: string[];
+  tags?: string[];
   cover_image: string | null; // String? Cover
-  coin_price: number; // Int Price
-  status: 'ONGOING' | 'COMPLETED'; // Enum Status
+  banner_image?: string | null;
+  thumbnail_image?: string | null;
+  release_date?: string | null;
+
+  // Book default pricing model
+  pricing_model?: 'FREE' | 'PER_PAGE' | 'PER_CHAPTER' | 'PER_BOOK' | 'SUBSCRIPTION';
+  coin_price: number; // Int Price (for PER_BOOK or default fallback)
+  default_coins_per_page?: number;
+  default_free_chapters?: number;
+  default_free_pages?: number;
+  is_premium?: boolean;
+
+  status: 'DRAFT' | 'PROCESSING' | 'READY' | 'PUBLISHED' | 'ARCHIVED' | 'ONGOING' | 'COMPLETED';
+  chapter_count?: number;
+  page_count?: number;
   created_at: string; // DateTime Created
+  updated_at?: string;
+}
+
+export interface UploadJob {
+  id: string;
+  file_name: string;
+  file_size?: number;
+  series_id?: string;
+  series_title?: string;
+  volume_id?: string | null;
+  volume_title?: string | null;
+  book_title?: string;
+  status: 'UPLOADED' | 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'PUBLISHED';
+  progress: number;
+  stage?: 'Uploading' | 'Processing' | 'Extracting' | 'Validating' | 'Generating pages' | 'Completed' | 'Failed';
+  chapters_detected: number;
+  pages_detected: number;
+  warnings?: string[];
+  error?: string | null;
+  detected_structure?: {
+    series_title: string;
+    volume_title?: string | null;
+    book_title: string;
+    chapters: Array<{
+      chapter_no: number;
+      title: string;
+      pages_count: number;
+      file_names: string[];
+    }>;
+  };
+  started_at: string;
+  completed_at?: string | null;
 }
 
 export interface Chapter {

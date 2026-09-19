@@ -6,15 +6,18 @@ import {
     Trash2,
     FolderKanban,
     Layers,
-    FileText,
-    ArrowUpDown
+    BookOpen,
+    ChevronUp,
+    ChevronDown,
+    Archive,
+    CheckCircle2
 } from 'lucide-react';
 import {
-    adminBookService,
+    adminVolumeService,
     adminSeriesService,
-    adminChapterService
+    adminBookService
 } from '../../services/admin/adminServices';
-import type { Book, BookSeries, Chapter } from '../../types';
+import type { Volume, BookSeries, Book } from '../../types';
 import {
     PageHeader,
     SearchBar,
@@ -30,41 +33,42 @@ import styles from '../components/AdminUI.module.css';
 
 export const AdminVolumes: React.FC = () => {
     const navigate = useNavigate();
-    const [volumes, setVolumes] = useState<Book[]>([]);
+    const [volumes, setVolumes] = useState<Volume[]>([]);
     const [seriesList, setSeriesList] = useState<BookSeries[]>([]);
-    const [chapters, setChapters] = useState<Chapter[]>([]);
+    const [books, setBooks] = useState<Book[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedSeriesId, setSelectedSeriesId] = useState<string>('');
 
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    // Modal
+    // Modal state for Create / Edit
     const [modalOpen, setModalOpen] = useState(false);
-    const [editingVolume, setEditingVolume] = useState<Book | null>(null);
+    const [editingVolume, setEditingVolume] = useState<Volume | null>(null);
     const [formSeriesId, setFormSeriesId] = useState('');
-    const [formTitle, setFormTitle] = useState('');
     const [formVolumeNo, setFormVolumeNo] = useState(1);
-    const [formPrice, setFormPrice] = useState(0);
-    const [formStatus, setFormStatus] = useState<'ONGOING' | 'COMPLETED'>('ONGOING');
+    const [formTitle, setFormTitle] = useState('');
+    const [formDesc, setFormDesc] = useState('');
+    const [formStatus, setFormStatus] = useState<'ONGOING' | 'COMPLETED' | 'DRAFT' | 'ARCHIVED'>('ONGOING');
+    const [formReleaseDate, setFormReleaseDate] = useState(new Date().toISOString().split('T')[0]);
 
-    // Delete
-    const [deleteTarget, setDeleteTarget] = useState<Book | null>(null);
+    // Delete / Archive dialog
+    const [confirmAction, setConfirmAction] = useState<{
+        type: 'delete' | 'archive';
+        volume: Volume;
+    } | null>(null);
 
     const loadData = async () => {
         setLoading(true);
         try {
-            const [sList, bList, cList] = await Promise.all([
+            const [sList, vList, bList] = await Promise.all([
                 adminSeriesService.getAll(),
-                adminBookService.getAll({ seriesId: selectedSeriesId || undefined }),
-                adminChapterService.getAll()
+                adminVolumeService.getAll(selectedSeriesId || undefined),
+                adminBookService.getAll()
             ]);
             setSeriesList(sList);
-            setVolumes(bList);
-            setChapters(cList);
-            if (!selectedSeriesId && sList.length > 0) {
-                // Keep default or first
-            }
+            setVolumes(vList);
+            setBooks(bList);
         } catch (err: any) {
             setErrorMessage(err.message || 'Unable to load volumes.');
         } finally {
@@ -78,24 +82,25 @@ export const AdminVolumes: React.FC = () => {
 
     const openCreateModal = () => {
         setEditingVolume(null);
-        setFormSeriesId(selectedSeriesId || seriesList[0]?.id || '');
-        const currentSeriesCount = volumes.filter(v => !selectedSeriesId || v.series_id === (selectedSeriesId || seriesList[0]?.id)).length;
-        setFormVolumeNo(currentSeriesCount + 1);
-        setFormTitle(`Volume ${currentSeriesCount + 1}`);
-        setFormPrice(0);
+        const targetSeriesId = selectedSeriesId || seriesList[0]?.id || '';
+        setFormSeriesId(targetSeriesId);
+        const seriesVolCount = volumes.filter(v => v.series_id === targetSeriesId).length;
+        setFormVolumeNo(seriesVolCount + 1);
+        setFormTitle(`Volume ${seriesVolCount + 1}`);
+        setFormDesc('');
         setFormStatus('ONGOING');
+        setFormReleaseDate(new Date().toISOString().split('T')[0]);
         setModalOpen(true);
     };
 
-    const openEditModal = (volume: Book) => {
+    const openEditModal = (volume: Volume) => {
         setEditingVolume(volume);
         setFormSeriesId(volume.series_id);
+        setFormVolumeNo(volume.volume_no);
         setFormTitle(volume.title);
-        // Extract volume number if present
-        const match = volume.title.match(/Volume\s+(\d+)/i);
-        setFormVolumeNo(match ? parseInt(match[1]) : 1);
-        setFormPrice(volume.coin_price || 0);
+        setFormDesc(volume.description || '');
         setFormStatus(volume.status || 'ONGOING');
+        setFormReleaseDate(volume.release_date || new Date().toISOString().split('T')[0]);
         setModalOpen(true);
     };
 
@@ -104,23 +109,37 @@ export const AdminVolumes: React.FC = () => {
         setErrorMessage(null);
         setSuccessMessage(null);
 
+        // Validation against duplicate volume number in the same series
+        const duplicate = volumes.some(v =>
+            (!editingVolume || v.id !== editingVolume.id) &&
+            v.series_id === formSeriesId &&
+            v.volume_no === Number(formVolumeNo)
+        );
+
+        if (duplicate) {
+            setErrorMessage(`Volume ${formVolumeNo} already exists for this series.`);
+            return;
+        }
+
         try {
             if (editingVolume) {
-                await adminBookService.update(editingVolume.id, {
+                await adminVolumeService.update(editingVolume.id, {
                     series_id: formSeriesId,
+                    volume_no: Number(formVolumeNo),
                     title: formTitle,
-                    coin_price: Number(formPrice),
-                    status: formStatus
+                    description: formDesc,
+                    status: formStatus,
+                    release_date: formReleaseDate
                 });
                 setSuccessMessage(`Volume "${formTitle}" updated.`);
             } else {
-                await adminBookService.create({
+                await adminVolumeService.create({
                     series_id: formSeriesId,
+                    volume_no: Number(formVolumeNo),
                     title: formTitle,
-                    summary: `Volume compiled release for series.`,
-                    cover_image: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400",
-                    coin_price: Number(formPrice),
-                    status: formStatus
+                    description: formDesc,
+                    status: formStatus,
+                    release_date: formReleaseDate
                 });
                 setSuccessMessage(`Volume "${formTitle}" created.`);
             }
@@ -131,26 +150,54 @@ export const AdminVolumes: React.FC = () => {
         }
     };
 
-    const handleDelete = async () => {
-        if (!deleteTarget) return;
+    // Reorder Volume Up / Down
+    const handleReorder = async (vol: Volume, direction: 'up' | 'down') => {
+        const seriesVolumes = volumes.filter(v => v.series_id === vol.series_id).sort((a, b) => a.volume_no - b.volume_no);
+        const currentIndex = seriesVolumes.findIndex(v => v.id === vol.id);
+        if (currentIndex === -1) return;
+        if (direction === 'up' && currentIndex === 0) return;
+        if (direction === 'down' && currentIndex === seriesVolumes.length - 1) return;
+
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        const copy = [...seriesVolumes];
+        const [moved] = copy.splice(currentIndex, 1);
+        copy.splice(targetIndex, 0, moved);
+
+        const orderedIds = copy.map(v => v.id);
         try {
-            await adminBookService.delete(deleteTarget.id);
-            setSuccessMessage(`Volume "${deleteTarget.title}" deleted.`);
-            setDeleteTarget(null);
+            await adminVolumeService.reorder(vol.series_id, orderedIds);
+            setSuccessMessage('Volume sequence reordered.');
             loadData();
         } catch (err: any) {
-            setErrorMessage(err.message || 'Failed to delete volume.');
+            setErrorMessage(err.message || 'Failed to reorder volume.');
+        }
+    };
+
+    const handleConfirmAction = async () => {
+        if (!confirmAction) return;
+        try {
+            if (confirmAction.type === 'archive') {
+                await adminVolumeService.update(confirmAction.volume.id, { status: 'ARCHIVED' });
+                setSuccessMessage(`Volume "${confirmAction.volume.title}" archived.`);
+            } else {
+                await adminVolumeService.delete(confirmAction.volume.id);
+                setSuccessMessage(`Volume "${confirmAction.volume.title}" deleted.`);
+            }
+            setConfirmAction(null);
+            loadData();
+        } catch (err: any) {
+            setErrorMessage(err.message || 'Action failed.');
         }
     };
 
     return (
         <div>
             <PageHeader
-                title="Volume & Release Ordering"
-                subtitle="Organize series into ordered volumes and maintain deterministic release numbering."
+                title="Volume Management"
+                subtitle="Organize series into canonical volumes, manage volume numbering, and view book compilation counts."
                 actions={
                     <button className={styles.btnPrimary} onClick={openCreateModal}>
-                        <Plus size={16} /> New Volume
+                        <Plus size={16} /> + New Volume
                     </button>
                 }
             />
@@ -160,13 +207,13 @@ export const AdminVolumes: React.FC = () => {
 
             <div className={styles.filterBar}>
                 <div className={styles.filterGroup}>
-                    <label style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Filter by Series:</label>
+                    <label style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Filter by Franchise:</label>
                     <select
                         className={styles.selectInput}
                         value={selectedSeriesId}
                         onChange={(e) => setSelectedSeriesId(e.target.value)}
                     >
-                        <option value="">All Series ({seriesList.length})</option>
+                        <option value="">All Franchises ({seriesList.length})</option>
                         {seriesList.map((s) => (
                             <option key={s.id} value={s.id}>
                                 {s.title}
@@ -178,11 +225,11 @@ export const AdminVolumes: React.FC = () => {
 
             <div className={styles.tableCard}>
                 {loading ? (
-                    <LoadingState message="Loading volumes..." />
+                    <LoadingState message="Loading volumes catalog..." />
                 ) : volumes.length === 0 ? (
                     <EmptyState
                         title="No volumes found"
-                        description="No volumes found for the selected series."
+                        description="Create volumes to group chapters into official manga tankobon compilations."
                         action={
                             <button className={styles.btnPrimary} onClick={openCreateModal}>
                                 <Plus size={14} /> Add Volume
@@ -194,66 +241,87 @@ export const AdminVolumes: React.FC = () => {
                         <table className={styles.dataTable}>
                             <thead>
                                 <tr>
+                                    <th>Vol #</th>
                                     <th>Volume Title</th>
-                                    <th>Series</th>
-                                    <th>Chapters Count</th>
-                                    <th>Volume Price</th>
+                                    <th>Parent Series</th>
+                                    <th>Books in Volume</th>
                                     <th>Status</th>
+                                    <th>Release Date</th>
                                     <th style={{ textAlign: 'right' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {volumes.map((vol) => {
+                                {volumes.map((vol, idx) => {
                                     const parentSeries = seriesList.find((s) => s.id === vol.series_id);
-                                    const volChapters = chapters.filter((c) => c.book_id === vol.id);
+                                    const booksInVol = books.filter((b) => b.volume_id === vol.id);
 
                                     return (
                                         <tr key={vol.id}>
+                                            <td style={{ fontWeight: 800, color: 'var(--primary)' }}>
+                                                Vol. {vol.volume_no}
+                                            </td>
                                             <td>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                    <FolderKanban size={16} color="var(--primary)" />
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <FolderKanban size={15} color="var(--primary)" />
                                                     <span style={{ fontWeight: 700, color: '#ffffff' }}>{vol.title}</span>
                                                 </div>
+                                                {vol.description && (
+                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{vol.description}</div>
+                                                )}
                                             </td>
-                                            <td>{parentSeries?.title || 'Unknown Series'}</td>
                                             <td>
-                                                <span style={{ fontWeight: 600, color: '#ffffff' }}>
-                                                    {volChapters.length} Chapter(s)
+                                                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                                    {parentSeries?.title || 'Unknown Series'}
                                                 </span>
                                             </td>
                                             <td>
-                                                {vol.coin_price > 0 ? (
-                                                    <StatusBadge status={`${vol.coin_price} Coins`} type="coin" />
-                                                ) : (
-                                                    <StatusBadge status="FREE" type="info" />
-                                                )}
+                                                <span style={{ fontWeight: 600, color: '#ffffff' }}>
+                                                    {booksInVol.length} Book(s)
+                                                </span>
                                             </td>
                                             <td>
                                                 <StatusBadge status={vol.status} />
                                             </td>
+                                            <td style={{ fontSize: '12px' }}>
+                                                {vol.release_date || new Date(vol.created_at).toLocaleDateString()}
+                                            </td>
                                             <td style={{ textAlign: 'right' }}>
-                                                <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                                <div style={{ display: 'inline-flex', gap: '4px' }}>
                                                     <button
-                                                        className={styles.btnSecondary}
-                                                        style={{ padding: '6px 10px', fontSize: '12px' }}
-                                                        onClick={() => navigate('/admin/chapters')}
+                                                        className={styles.btnIcon}
+                                                        title="Move Up in Order"
+                                                        onClick={() => handleReorder(vol, 'up')}
                                                     >
-                                                        <FileText size={12} /> Chapters
+                                                        <ChevronUp size={13} />
+                                                    </button>
+                                                    <button
+                                                        className={styles.btnIcon}
+                                                        title="Move Down in Order"
+                                                        onClick={() => handleReorder(vol, 'down')}
+                                                    >
+                                                        <ChevronDown size={13} />
                                                     </button>
                                                     <button
                                                         className={styles.btnIcon}
                                                         title="Edit Volume"
                                                         onClick={() => openEditModal(vol)}
                                                     >
-                                                        <Edit2 size={14} />
+                                                        <Edit2 size={13} />
+                                                    </button>
+                                                    <button
+                                                        className={styles.btnIcon}
+                                                        title="Archive Volume"
+                                                        onClick={() => setConfirmAction({ type: 'archive', volume: vol })}
+                                                    >
+                                                        <Archive size={13} />
                                                     </button>
                                                     <button
                                                         className={styles.btnIcon}
                                                         style={{ color: '#ef4444' }}
                                                         title="Delete Volume"
-                                                        onClick={() => setDeleteTarget(vol)}
+                                                        onClick={() => setConfirmAction({ type: 'delete', volume: vol })}
                                                     >
-                                                        <Trash2 size={14} />
+                                                        <Trash2 size={13} />
                                                     </button>
                                                 </div>
                                             </td>
@@ -299,6 +367,35 @@ export const AdminVolumes: React.FC = () => {
                         </select>
                     </div>
 
+                    <div className={styles.formGrid}>
+                        <div className={styles.formGroup}>
+                            <label className={styles.formLabel}>Volume Number *</label>
+                            <input
+                                type="number"
+                                min={1}
+                                className={styles.formInput}
+                                value={formVolumeNo}
+                                onChange={(e) => setFormVolumeNo(parseInt(e.target.value) || 1)}
+                                required
+                            />
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Unique sequence number within the series</p>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.formLabel}>Status</label>
+                            <select
+                                className={styles.formSelect}
+                                value={formStatus}
+                                onChange={(e) => setFormStatus(e.target.value as any)}
+                            >
+                                <option value="ONGOING">ONGOING</option>
+                                <option value="COMPLETED">COMPLETED</option>
+                                <option value="DRAFT">DRAFT</option>
+                                <option value="ARCHIVED">ARCHIVED</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div className={styles.formGroup}>
                         <label className={styles.formLabel}>Volume Title *</label>
                         <input
@@ -311,41 +408,42 @@ export const AdminVolumes: React.FC = () => {
                         />
                     </div>
 
-                    <div className={styles.formGrid}>
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>Volume Unlock Cost (Coins)</label>
-                            <input
-                                type="number"
-                                min={0}
-                                className={styles.formInput}
-                                value={formPrice}
-                                onChange={(e) => setFormPrice(parseInt(e.target.value) || 0)}
-                            />
-                        </div>
+                    <div className={styles.formGroup}>
+                        <label className={styles.formLabel}>Release Date</label>
+                        <input
+                            type="date"
+                            className={styles.formInput}
+                            value={formReleaseDate}
+                            onChange={(e) => setFormReleaseDate(e.target.value)}
+                        />
+                    </div>
 
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>Status</label>
-                            <select
-                                className={styles.formSelect}
-                                value={formStatus}
-                                onChange={(e) => setFormStatus(e.target.value as 'ONGOING' | 'COMPLETED')}
-                            >
-                                <option value="ONGOING">ONGOING</option>
-                                <option value="COMPLETED">COMPLETED</option>
-                            </select>
-                        </div>
+                    <div className={styles.formGroup}>
+                        <label className={styles.formLabel}>Description / Notes</label>
+                        <textarea
+                            className={styles.formTextarea}
+                            rows={2}
+                            placeholder="Volume overview notes..."
+                            value={formDesc}
+                            onChange={(e) => setFormDesc(e.target.value)}
+                        />
                     </div>
                 </form>
             </Modal>
 
             {/* Confirm Dialog */}
             <ConfirmDialog
-                isOpen={!!deleteTarget}
-                onClose={() => setDeleteTarget(null)}
-                onConfirm={handleDelete}
-                title="Delete Volume"
-                message={`Are you sure you want to delete "${deleteTarget?.title}"?`}
-                confirmText="Delete Volume"
+                isOpen={!!confirmAction}
+                onClose={() => setConfirmAction(null)}
+                onConfirm={handleConfirmAction}
+                title={confirmAction?.type === 'archive' ? 'Archive Volume' : 'Delete Volume'}
+                message={
+                    confirmAction?.type === 'archive'
+                        ? `Are you sure you want to archive "${confirmAction?.volume.title}"?`
+                        : `Are you sure you want to delete "${confirmAction?.volume.title}"? Associated books will remain in the series without an assigned volume.`
+                }
+                danger={confirmAction?.type === 'delete'}
+                confirmText={confirmAction?.type === 'archive' ? 'Archive Volume' : 'Delete Volume'}
             />
         </div>
     );

@@ -38,7 +38,7 @@ export const AdminSeries: React.FC = () => {
     const [formTitle, setFormTitle] = useState('');
     const [formDesc, setFormDesc] = useState('');
     const [formCover, setFormCover] = useState('');
-    const [formStatus, setFormStatus] = useState<'ONGOING' | 'COMPLETED'>('ONGOING');
+    const [formStatus, setFormStatus] = useState<'ONGOING' | 'COMPLETED' | 'DRAFT' | 'ARCHIVED'>('ONGOING');
 
     // Delete dialog
     const [deleteTarget, setDeleteTarget] = useState<BookSeries | null>(null);
@@ -189,7 +189,12 @@ export const AdminSeries: React.FC = () => {
                                             <img src={s.cover_image || ''} alt={s.title} className={styles.tableCoverThumb} />
                                         </td>
                                         <td>
-                                            <div style={{ fontWeight: 700, color: '#ffffff' }}>{s.title}</div>
+                                            <div
+                                                style={{ fontWeight: 700, color: '#ffffff', cursor: 'pointer' }}
+                                                onClick={() => navigate(`/admin/series/${s.id}`)}
+                                            >
+                                                {s.title}
+                                            </div>
                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 {s.description || 'No description'}
                                             </div>
@@ -202,6 +207,14 @@ export const AdminSeries: React.FC = () => {
                                         </td>
                                         <td style={{ textAlign: 'right' }}>
                                             <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                                <button
+                                                    className={styles.btnSecondary}
+                                                    style={{ padding: '4px 8px', fontSize: '11px' }}
+                                                    title="View Volumes & Books"
+                                                    onClick={() => navigate(`/admin/series/${s.id}`)}
+                                                >
+                                                    Overview
+                                                </button>
                                                 <button
                                                     className={styles.btnIcon}
                                                     title="Toggle Status"
@@ -275,10 +288,12 @@ export const AdminSeries: React.FC = () => {
                         <select
                             className={styles.formSelect}
                             value={formStatus}
-                            onChange={(e) => setFormStatus(e.target.value as 'ONGOING' | 'COMPLETED')}
+                            onChange={(e) => setFormStatus(e.target.value as any)}
                         >
                             <option value="ONGOING">ONGOING</option>
                             <option value="COMPLETED">COMPLETED</option>
+                            <option value="DRAFT">DRAFT</option>
+                            <option value="ARCHIVED">ARCHIVED</option>
                         </select>
                     </div>
 

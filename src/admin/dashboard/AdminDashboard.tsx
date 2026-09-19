@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Users,
     BookOpen,
     Layers,
+    FolderKanban,
     FileText,
-    Coins,
-    TrendingUp,
-    Plus,
+    FileImage,
+    CheckCircle2,
+    Clock,
     UploadCloud,
+    AlertTriangle,
+    Plus,
     ArrowUpRight,
-    CheckCircle2
+    ExternalLink
 } from 'lucide-react';
 import {
     adminDashboardService,
@@ -23,6 +25,7 @@ import {
     ErrorBanner,
     StatusBadge
 } from '../components/AdminUI';
+import { AddBookChoiceModal } from '../books/AddBookChoiceModal';
 import styles from '../components/AdminUI.module.css';
 
 export const AdminDashboard: React.FC = () => {
@@ -30,6 +33,7 @@ export const AdminDashboard: React.FC = () => {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [choiceModalOpen, setChoiceModalOpen] = useState(false);
 
     const loadStats = async () => {
         setLoading(true);
@@ -49,80 +53,119 @@ export const AdminDashboard: React.FC = () => {
     }, []);
 
     if (loading) {
-        return <LoadingState message="Loading platform metrics and dashboard data..." />;
+        return <LoadingState message="Loading catalog metrics and publishing activity..." />;
     }
 
     return (
         <div>
             <PageHeader
-                title="Admin Dashboard"
-                subtitle="Overview of platform catalog, users, reader activity, and digital manga publications."
+                title="Admin Publishing Dashboard"
+                subtitle="High-level catalog hierarchy, ingestion queue health, and digital manga publications."
                 actions={
-                    <>
-                        <button className={styles.btnSecondary} onClick={() => navigate('/admin/pages')}>
-                            <UploadCloud size={14} /> Page Compiler
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <button
+                            className={styles.btnSecondary}
+                            onClick={() => navigate('/admin/uploads')}
+                        >
+                            <UploadCloud size={14} /> Uploads Monitor
                         </button>
-                        <button className={styles.btnPrimary} onClick={() => navigate('/admin/books')}>
-                            <Plus size={14} /> Create Book
+                        <button
+                            className={styles.btnPrimary}
+                            onClick={() => setChoiceModalOpen(true)}
+                        >
+                            <Plus size={14} /> + Add Book
                         </button>
-                    </>
+                    </div>
                 }
             />
 
             {error && <ErrorBanner message={error} />}
 
-            {/* KPI Metrics Grid */}
-            <div className={styles.statGrid}>
+            {/* 9 Content-Management Metric KPI Cards */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 200px), 1fr))',
+                gap: '14px',
+                marginBottom: '24px'
+            }}>
                 <StatCard
-                    title="Total Registered Users"
-                    value={stats?.totalUsers || 0}
-                    icon={<Users size={20} />}
-                    subtitle={`${stats?.totalActiveUsers || 0} active reading sessions`}
-                    trendColor="#3b82f6"
-                />
-                <StatCard
-                    title="Manga Series"
+                    title="Total Series"
                     value={stats?.totalSeries || 0}
-                    icon={<Layers size={20} />}
-                    subtitle="Ongoing & completed titles"
+                    icon={<Layers size={18} />}
+                    subtitle="Franchise series"
                     trendColor="#8b5cf6"
                 />
                 <StatCard
-                    title="Published Books"
+                    title="Total Volumes"
+                    value={stats?.totalVolumes || 0}
+                    icon={<FolderKanban size={18} />}
+                    subtitle="Compiled volumes"
+                    trendColor="#ec4899"
+                />
+                <StatCard
+                    title="Total Books"
                     value={stats?.totalBooks || 0}
-                    icon={<BookOpen size={20} />}
-                    subtitle={`${stats?.totalPublishedBooks || 0} live in catalog`}
-                    trendColor="#10b981"
+                    icon={<BookOpen size={18} />}
+                    subtitle="All catalog titles"
+                    trendColor="#3b82f6"
                 />
                 <StatCard
                     title="Total Chapters"
                     value={stats?.totalChapters || 0}
-                    icon={<FileText size={20} />}
-                    subtitle={`${stats?.totalPages || 0} optimized DRM pages`}
+                    icon={<FileText size={18} />}
+                    subtitle="Across all books"
+                    trendColor="#10b981"
+                />
+                <StatCard
+                    title="Total Pages"
+                    value={stats?.totalPages || 0}
+                    icon={<FileImage size={18} />}
+                    subtitle="DRM-optimized pages"
+                    trendColor="#06b6d4"
+                />
+                <StatCard
+                    title="Published Books"
+                    value={stats?.publishedBooks || 0}
+                    icon={<CheckCircle2 size={18} />}
+                    subtitle="Live to readers"
+                    trendColor="#22c55e"
+                />
+                <StatCard
+                    title="Draft Books"
+                    value={stats?.draftBooks || 0}
+                    icon={<Clock size={18} />}
+                    subtitle="In progress / review"
                     trendColor="#f59e0b"
                 />
                 <StatCard
-                    title="Coins Economy"
-                    value={`${stats?.totalCoinsCirculating?.toLocaleString() || 0} 🪙`}
-                    icon={<Coins size={20} />}
-                    subtitle={`$${stats?.totalRevenue?.toFixed(2) || '0.00'} est. revenue`}
-                    trendColor="#ffd700"
+                    title="Processing Uploads"
+                    value={stats?.processingUploads || 0}
+                    icon={<UploadCloud size={18} />}
+                    subtitle="Ingestion jobs active"
+                    trendColor="#3b82f6"
+                />
+                <StatCard
+                    title="Failed Uploads"
+                    value={stats?.failedUploads || 0}
+                    icon={<AlertTriangle size={18} />}
+                    subtitle="Requires attention"
+                    trendColor="#ef4444"
                 />
             </div>
 
-            {/* Content Tables Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '16px' }}>
-                {/* Recent Series / Catalog Additions */}
+            {/* 3 Content Activity Sections */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '16px' }}>
+                {/* 1. Recent Books */}
                 <div className={styles.tableCard}>
-                    <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Recent Manga Series</h3>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Latest catalog entries added</p>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Recent Books</h3>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Latest additions to the book catalog</p>
                         </div>
                         <button
                             className={styles.btnSecondary}
-                            style={{ padding: '6px 10px', fontSize: '12px' }}
-                            onClick={() => navigate('/admin/series')}
+                            style={{ padding: '4px 10px', fontSize: '11px', height: '28px' }}
+                            onClick={() => navigate('/admin/books')}
                         >
                             View All <ArrowUpRight size={12} />
                         </button>
@@ -132,24 +175,50 @@ export const AdminDashboard: React.FC = () => {
                         <table className={styles.dataTable}>
                             <thead>
                                 <tr>
-                                    <th>Title</th>
+                                    <th>Book</th>
+                                    <th>Series</th>
                                     <th>Status</th>
-                                    <th>Created Date</th>
+                                    <th style={{ textAlign: 'right' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {stats?.recentContent && stats.recentContent.length > 0 ? (
-                                    stats.recentContent.map((item) => (
-                                        <tr key={item.id}>
-                                            <td style={{ fontWeight: 600, color: '#ffffff' }}>{item.title}</td>
-                                            <td><StatusBadge status={item.status} /></td>
-                                            <td style={{ fontSize: '12px' }}>{new Date(item.date).toLocaleDateString()}</td>
+                                {stats?.recentBooks && stats.recentBooks.length > 0 ? (
+                                    stats.recentBooks.map((b) => (
+                                        <tr key={b.id}>
+                                            <td>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    {b.coverImage ? (
+                                                        <img
+                                                            src={b.coverImage}
+                                                            alt={b.title}
+                                                            style={{ width: '32px', height: '44px', objectFit: 'cover', borderRadius: '4px' }}
+                                                        />
+                                                    ) : (
+                                                        <div style={{ width: '32px', height: '44px', background: '#222', borderRadius: '4px' }} />
+                                                    )}
+                                                    <div>
+                                                        <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '13px' }}>{b.title}</div>
+                                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{b.chapterCount} chapters</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{b.seriesTitle}</td>
+                                            <td><StatusBadge status={b.status} /></td>
+                                            <td style={{ textAlign: 'right' }}>
+                                                <button
+                                                    className={styles.btnIcon}
+                                                    title="Manage Book"
+                                                    onClick={() => navigate(`/admin/books/${b.id}`)}
+                                                >
+                                                    <ExternalLink size={13} />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={3} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                                            No series entries recorded yet.
+                                        <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                                            No recent books found.
                                         </td>
                                     </tr>
                                 )}
@@ -158,17 +227,17 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Recent Users Overview */}
+                {/* 2. Recent Uploads & Ingestion */}
                 <div className={styles.tableCard}>
-                    <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Recent Users & Staff</h3>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Registered accounts & roles</p>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Recent Uploads</h3>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>ZIP batch ingestion jobs</p>
                         </div>
                         <button
                             className={styles.btnSecondary}
-                            style={{ padding: '6px 10px', fontSize: '12px' }}
-                            onClick={() => navigate('/admin/users')}
+                            style={{ padding: '4px 10px', fontSize: '11px', height: '28px' }}
+                            onClick={() => navigate('/admin/uploads')}
                         >
                             View All <ArrowUpRight size={12} />
                         </button>
@@ -178,27 +247,87 @@ export const AdminDashboard: React.FC = () => {
                         <table className={styles.dataTable}>
                             <thead>
                                 <tr>
-                                    <th>User</th>
-                                    <th>Role</th>
+                                    <th>Package / Book</th>
+                                    <th>Stage</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {stats?.recentUsers && stats.recentUsers.length > 0 ? (
-                                    stats.recentUsers.map((u) => (
+                                {stats?.recentUploads && stats.recentUploads.length > 0 ? (
+                                    stats.recentUploads.map((u) => (
                                         <tr key={u.id}>
                                             <td>
-                                                <div style={{ fontWeight: 600, color: '#ffffff' }}>{u.name}</div>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{u.email}</div>
+                                                <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>{u.bookTitle}</div>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{u.fileName}</div>
                                             </td>
-                                            <td><StatusBadge status={u.role} type="info" /></td>
-                                            <td><StatusBadge status="ACTIVE" type="success" /></td>
+                                            <td>
+                                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{u.stage}</span>
+                                                <div style={{ width: '60px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '4px' }}>
+                                                    <div style={{ width: `${u.progress}%`, height: '100%', background: u.status === 'FAILED' ? '#ef4444' : 'var(--primary)', borderRadius: '2px' }} />
+                                                </div>
+                                            </td>
+                                            <td><StatusBadge status={u.status} /></td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
                                         <td colSpan={3} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                                            No users found.
+                                            No recent upload jobs.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* 3. Recently Updated Chapters */}
+                <div className={styles.tableCard}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Recently Updated Chapters</h3>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Latest chapter revisions & pricing</p>
+                        </div>
+                        <button
+                            className={styles.btnSecondary}
+                            style={{ padding: '4px 10px', fontSize: '11px', height: '28px' }}
+                            onClick={() => navigate('/admin/chapters')}
+                        >
+                            View All <ArrowUpRight size={12} />
+                        </button>
+                    </div>
+
+                    <div className={styles.tableWrapper}>
+                        <table className={styles.dataTable}>
+                            <thead>
+                                <tr>
+                                    <th>Chapter</th>
+                                    <th>Book</th>
+                                    <th>Access</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {stats?.recentlyUpdatedChapters && stats.recentlyUpdatedChapters.length > 0 ? (
+                                    stats.recentlyUpdatedChapters.map((c) => (
+                                        <tr key={c.id}>
+                                            <td>
+                                                <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>Ch. {c.chapterNo}</div>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{c.title}</div>
+                                            </td>
+                                            <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{c.bookTitle}</td>
+                                            <td>
+                                                {c.coinCost > 0 ? (
+                                                    <StatusBadge status={`${c.coinCost} Coins`} type="coin" />
+                                                ) : (
+                                                    <StatusBadge status="FREE" type="info" />
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={3} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                                            No recent chapters recorded.
                                         </td>
                                     </tr>
                                 )}
@@ -207,6 +336,12 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* "+ Add Book" choice modal */}
+            <AddBookChoiceModal
+                isOpen={choiceModalOpen}
+                onClose={() => setChoiceModalOpen(false)}
+            />
         </div>
     );
 };

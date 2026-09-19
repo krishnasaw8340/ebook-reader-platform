@@ -13,7 +13,9 @@ import {
     ArrowLeft,
     Menu,
     X,
-    Shield
+    Shield,
+    UploadCloud,
+    Settings
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import styles from './AdminLayout.module.css';
@@ -30,19 +32,26 @@ export const AdminLayout: React.FC = () => {
         navigate('/login');
     };
 
-    const navItems = [
+    const catalogNavItems = [
         { path: '/admin/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
         { path: '/admin/books', label: 'Books', icon: <BookOpen size={18} /> },
         { path: '/admin/series', label: 'Series', icon: <Layers size={18} /> },
         { path: '/admin/volumes', label: 'Volumes', icon: <FolderKanban size={18} /> },
         { path: '/admin/chapters', label: 'Chapters', icon: <FileText size={18} /> },
         { path: '/admin/pages', label: 'Pages & DRM', icon: <FileImage size={18} /> },
-        { path: '/admin/users', label: 'Users & Roles', icon: <Users size={18} /> },
-        { path: '/admin/pricing', label: 'Pricing & Coins', icon: <Coins size={18} /> },
+        { path: '/admin/uploads', label: 'Uploads & Ingestion', icon: <UploadCloud size={18} /> },
     ];
 
+    const platformNavItems = [
+        { path: '/admin/users', label: 'Users & Roles', icon: <Users size={18} /> },
+        { path: '/admin/pricing', label: 'Pricing / Coins', icon: <Coins size={18} /> },
+        { path: '/admin/settings', label: 'Settings', icon: <Settings size={18} /> },
+    ];
+
+    const allNavItems = [...catalogNavItems, ...platformNavItems];
+
     // Current page title derived from path
-    const currentNavItem = navItems.find((item) => location.pathname.startsWith(item.path));
+    const currentNavItem = allNavItems.find((item) => location.pathname.startsWith(item.path));
     const pageTitle = currentNavItem ? currentNavItem.label : 'Admin Portal';
 
     return (
@@ -74,7 +83,7 @@ export const AdminLayout: React.FC = () => {
 
                 <nav className={styles.navSection}>
                     <div className={styles.navLabel}>Catalog Management</div>
-                    {navItems.slice(0, 6).map((item) => (
+                    {catalogNavItems.map((item) => (
                         <NavLink
                             key={item.path}
                             to={item.path}
@@ -89,7 +98,7 @@ export const AdminLayout: React.FC = () => {
                     ))}
 
                     <div className={styles.navLabel} style={{ marginTop: '12px' }}>Platform Operations</div>
-                    {navItems.slice(6).map((item) => (
+                    {platformNavItems.map((item) => (
                         <NavLink
                             key={item.path}
                             to={item.path}

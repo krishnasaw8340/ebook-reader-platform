@@ -256,21 +256,42 @@
 }
 
 .selectInput {
-    background: var(--card);
-    border: 1px solid var(--glass-border);
+    color-scheme: dark;
+    background-color: #181818;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a6a6a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--border-radius-sm);
     color: #ffffff;
-    padding: 10px 14px;
+    padding: 10px 38px 10px 14px;
     font-size: 13px;
     outline: none;
     cursor: pointer;
     min-height: 42px;
     max-width: 100%;
+    transition: all var(--transition-fast);
+}
+
+.selectInput:focus {
+    border-color: var(--primary);
+    background-color: #202020;
+    box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
 }
 
 .selectInput option {
-    background: #181818;
-    color: #ffffff;
+    background-color: #181818 !important;
+    color: #ffffff !important;
+    padding: 10px 14px;
+}
+
+.selectInput option:checked {
+    background-color: #e63946 !important;
+    color: #ffffff !important;
 }
 
 /* Data Table */
@@ -483,7 +504,7 @@
     margin-bottom: 6px;
 }
 
-.formInput, .formTextarea, .formSelect {
+.formInput, .formTextarea {
     width: 100%;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -496,9 +517,162 @@
     min-height: 42px;
 }
 
-.formInput:focus, .formTextarea:focus, .formSelect:focus {
+.formInput:focus, .formTextarea:focus {
     border-color: var(--primary);
     background: rgba(255, 255, 255, 0.06);
+}
+
+.formSelect {
+    color-scheme: dark;
+    width: 100%;
+    background-color: #181818;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a6a6a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--border-radius-sm);
+    padding: 10px 38px 10px 14px;
+    color: #ffffff;
+    font-size: 14px;
+    outline: none;
+    transition: all var(--transition-fast);
+    min-height: 42px;
+    cursor: pointer;
+}
+
+.formSelect:focus {
+    border-color: var(--primary);
+    background-color: #202020;
+    box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
+}
+
+.formSelect option {
+    background-color: #181818 !important;
+    color: #ffffff !important;
+    padding: 10px 14px;
+}
+
+.formSelect option:checked {
+    background-color: #e63946 !important;
+    color: #ffffff !important;
+}
+
+/* Reusable Custom Select Component */
+.customSelectWrapper {
+    position: relative;
+    width: 100%;
+}
+
+.customSelectTrigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #181818;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--border-radius-sm);
+    padding: 10px 14px;
+    color: #ffffff;
+    font-size: 14px;
+    cursor: pointer;
+    min-height: 42px;
+    text-align: left;
+    transition: all var(--transition-fast);
+    user-select: none;
+}
+
+.customSelectTrigger:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    background: #202020;
+}
+
+.customSelectTriggerActive, .customSelectTrigger:focus-visible {
+    border-color: var(--primary) !important;
+    background: #202020;
+    box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
+}
+
+.customSelectValue {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #ffffff;
+    font-weight: 500;
+}
+
+.customSelectPlaceholder {
+    color: var(--text-muted);
+}
+
+.customSelectChevron {
+    color: var(--text-secondary);
+    transition: transform var(--transition-fast);
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.customSelectChevronOpen {
+    transform: rotate(180deg);
+    color: var(--primary);
+}
+
+.customSelectDropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: #181818;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--border-radius-sm);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    z-index: 1050;
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 6px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.customSelectOption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    border-radius: 6px;
+    font-size: 13.5px;
+    color: #dedede;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+}
+
+.customSelectOption:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+.customSelectOptionSelected {
+    background: rgba(230, 57, 70, 0.15) !important;
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+.customSelectOptionContent {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.customSelectOptionSublabel {
+    font-size: 11px;
+    color: var(--text-muted);
 }
 
 .formGrid {

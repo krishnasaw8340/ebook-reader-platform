@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Search,
     X,
@@ -6,7 +6,9 @@ import {
     AlertCircle,
     CheckCircle2,
     Trash2,
-    Image as ImageIcon
+    Image as ImageIcon,
+    ChevronDown,
+    Check
 } from 'lucide-react';
 import styles from './AdminUI.module.css';
 
@@ -305,3 +307,109 @@ export const ErrorBanner: React.FC<{ message: string }> = ({ message }) => (
         <span>{message}</span>
     </div>
 );
+
+// Reusable Custom Select Component
+export interface CustomSelectOption {
+    value: string;
+    label: string;
+    sublabel?: string;
+}
+
+export const CustomSelect: React.FC<{
+    value: string;
+    onChange: (value: string) => void;
+    options: CustomSelectOption[] | string[];
+    placeholder?: string;
+    label?: string;
+    disabled?: boolean;
+    required?: boolean;
+    className?: string;
+}> = ({
+    value,
+    onChange,
+    options,
+    placeholder = 'Select an option...',
+    label,
+    disabled = false,
+    className
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    const normalizedOptions: CustomSelectOption[] = options.map(opt =>
+        typeof opt === 'string' ? { value: opt, label: opt } : opt
+    );
+
+    const selectedOption = normalizedOptions.find(o => o.value === value);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setIsOpen(false);
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('keydown', handleKeyDown);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen]);
+
+    return (
+        <div className={`${styles.customSelectWrapper} ${className || ''}`} ref={wrapperRef}>
+            {label && <label className={styles.formLabel}>{label}</label>}
+            <button
+                type="button"
+                disabled={disabled}
+                className={`${styles.customSelectTrigger} ${isOpen ? styles.customSelectTriggerActive : ''}`}
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
+            >
+                <span className={selectedOption ? styles.customSelectValue : styles.customSelectPlaceholder}>
+                    {selectedOption ? selectedOption.label : placeholder}
+                </span>
+                <ChevronDown
+                    size={16}
+                    className={`${styles.customSelectChevron} ${isOpen ? styles.customSelectChevronOpen : ''}`}
+                />
+            </button>
+
+            {isOpen && (
+                <div className={styles.customSelectDropdown} role="listbox">
+                    {normalizedOptions.map((opt) => {
+                        const isSelected = opt.value === value;
+                        return (
+                            <div
+                                key={opt.value}
+                                role="option"
+                                aria-selected={isSelected}
+                                className={`${styles.customSelectOption} ${isSelected ? styles.customSelectOptionSelected : ''}`}
+                                onClick={() => {
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                            >
+                                <div className={styles.customSelectOptionContent}>
+                                    <span>{opt.label}</span>
+                                    {opt.sublabel && (
+                                        <span className={styles.customSelectOptionSublabel}>{opt.sublabel}</span>
+                                    )}
+                                </div>
+                                {isSelected && <Check size={14} color="var(--primary)" />}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+

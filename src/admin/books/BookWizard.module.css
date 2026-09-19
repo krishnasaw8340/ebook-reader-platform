@@ -1,0 +1,172 @@
+.wizardContainer {
+    max-width: 960px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+}
+
+/* Stepper Header */
+.stepperHeader {
+    background: var(--card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+}
+
+.stepperMeta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.stepTitleBig {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.stepCounter {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+    background: rgba(230, 57, 70, 0.15);
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.stepperProgressTrack {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.stepperProgressBar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, #ff6b6b 100%);
+    transition: width 0.3s ease;
+}
+
+.stepsList {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.stepPill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition-fast);
+}
+
+.stepPill:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.stepPillActive {
+    background: rgba(230, 57, 70, 0.15);
+    border-color: rgba(230, 57, 70, 0.4);
+    color: #ffffff;
+}
+
+.stepPillCompleted {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+/* Step Card */
+.stepCard {
+    background: var(--card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    padding: 28px;
+    margin-bottom: 24px;
+}
+
+.stepCardHeader {
+    margin-bottom: 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 14px;
+}
+
+.stepCardTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+
+.stepCardSubtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* Chip Selectors */
+.chipsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.chipSelected {
+    background: rgba(230, 57, 70, 0.2);
+    border-color: var(--primary);
+    color: #ffffff;
+}
+
+.chipRemoveBtn {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0;
+}
+
+/* Media Previews Row */
+.mediaRow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 14px;
+}
+
+/* Wizard Footer Controls */
+.wizardFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}

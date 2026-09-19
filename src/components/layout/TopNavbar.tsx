@@ -246,8 +246,14 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
                       <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/library'); }}>
                         <Bookmark size={15} /> My Library ({userLibrary.length})
                       </div>
+                      <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/profile'); }}>
+                        <User size={15} /> Account Settings
+                      </div>
                       <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/wallet'); }}>
-                        <Coins size={15} /> Wallet Coins
+                        <Coins size={15} /> My Coins ({wallet?.balance || 0})
+                      </div>
+                      <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/library?tab=history'); }}>
+                        <Sparkles size={15} /> Reading History
                       </div>
                       {isAdmin && (
                         <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/admin'); }} style={{ color: '#ff6b6b', fontWeight: 700 }}>
@@ -255,9 +261,6 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
                           <span style={{ marginLeft: 'auto', fontSize: '9px', background: '#e50914', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>ADMIN</span>
                         </div>
                       )}
-                      <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/profile'); }}>
-                        <User size={15} /> Account Settings
-                      </div>
                       {isAuthenticated ? (
                         <div className={`${styles.profileItem} ${styles.signOut}`} onClick={async () => { setProfileOpen(false); await logout(); navigate('/login'); }}>
                           <LogOut size={15} /> Sign Out

@@ -126,6 +126,7 @@ Because the access token resides only in memory, reloading the browser (`F5`) re
 A full administrative management portal protected by role guards (`AdminRoute`):
 - **📊 Analytics Dashboard**: Live metrics for users, active readers, books, series, chapters, pages, circulating coins, and platform revenue.
 - **📚 Series & Volume Manager**: Complete CRUD operations for manga series, volume hierarchies, and publishing metadata.
+- **📦 Automated ZIP Ingestion Studio**: Batch upload of compressed manga archives (ZIP) with automatic chapter directory extraction, sequential page parsing, DRM compilation, and flexible Series / Volume assignment.
 - **📑 Chapter & Page Reorder**: Chapter creation, coin pricing configuration, and deterministic drag-and-drop page re-indexing.
 - **🔒 Digital DRM Pipeline Simulator**: WebP compression optimization and AES-256 DRM encryption simulator.
 - **👥 User & Permission Center**: Account status moderation (`ACTIVE` / `SUSPENDED`) and role inspection.
@@ -148,6 +149,7 @@ ebook-reader-platform/
 │   │   ├── pages/           # DRM compiler & page reorder views
 │   │   ├── pricing/         # Coin package configuration
 │   │   ├── series/          # Manga series management views
+│   │   ├── uploads/         # Automated ZIP archive ingestion & DRM pipeline
 │   │   ├── users/           # User moderation & role management
 │   │   └── volumes/         # Volume & book grouping views
 │   ├── assets/              # High-res covers, banners, and vectors
