@@ -1,18 +1,20 @@
-import axios from 'axios';
+import axios, { type InternalAxiosRequestConfig } from 'axios';
+import { useAuthStore } from '../store/auth.store';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 export const api = axios.create({
     baseURL: API_BASE_URL,
+    withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// Request Interceptor: Attach Access Token if present
+// Request Interceptor: Attach Access Token from in-memory Zustand store
 api.interceptors.request.use(
-    (config) => {
-        const accessToken = localStorage.getItem('ky_access_token');
+    (config: InternalAxiosRequestConfig) => {
+        const accessToken = useAuthStore.getState().accessToken;
         if (accessToken && config.headers) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
@@ -21,7 +23,7 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Automatic Refresh Token Rotation handling
+// Response Interceptor: Single-flight automatic token refresh with HttpOnly cookie
 let isRefreshing = false;
 let failedQueue: Array<{
     resolve: (token: string) => void;
@@ -44,19 +46,28 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        // Skip refresh loop for refresh/login/register calls
-        if (
-            error.response?.status === 401 &&
-            !originalRequest._retry &&
-            !originalRequest.url?.includes('/auth/login') &&
-            !originalRequest.url?.includes('/auth/register') &&
-            !originalRequest.url?.includes('/auth/refresh')
-        ) {
+        if (!originalRequest) {
+            return Promise.reject(error);
+        }
+
+        const url = originalRequest.url || '';
+        const isAuthEndpoint =
+            url.includes('/auth/login') ||
+            url.includes('/auth/register') ||
+            url.includes('/auth/refresh') ||
+            url.includes('/auth/verify-email') ||
+            url.includes('/auth/forgot-password') ||
+            url.includes('/auth/reset-password');
+
+        // Handle 401 errors for non-auth requests with single-flight refresh
+        if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({
                         resolve: (token: string) => {
-                            originalRequest.headers.Authorization = `Bearer ${token}`;
+                            if (originalRequest.headers) {
+                                originalRequest.headers.Authorization = `Bearer ${token}`;
+                            }
                             resolve(api(originalRequest));
                         },
                         reject: (err: any) => {
@@ -69,36 +80,28 @@ api.interceptors.response.use(
             originalRequest._retry = true;
             isRefreshing = true;
 
-            const refreshToken = localStorage.getItem('ky_refresh_token');
-
-            if (!refreshToken) {
-                localStorage.removeItem('ky_access_token');
-                localStorage.removeItem('ky_refresh_token');
-                window.dispatchEvent(new Event('auth:unauthorized'));
-                return Promise.reject(error);
-            }
-
             try {
-                const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-                    refreshToken,
-                });
+                // Browser automatically sends HttpOnly refresh token cookie
+                const res = await axios.post<{ accessToken: string }>(
+                    `${API_BASE_URL}/auth/refresh`,
+                    {},
+                    { withCredentials: true }
+                );
 
                 const newAccessToken = res.data.accessToken;
-                const newRefreshToken = res.data.refreshToken;
 
-                localStorage.setItem('ky_access_token', newAccessToken);
-                localStorage.setItem('ky_refresh_token', newRefreshToken);
+                // Update access token in Zustand memory
+                useAuthStore.getState().setAccessToken(newAccessToken);
 
-                api.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
-                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                if (originalRequest.headers) {
+                    originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                }
 
                 processQueue(null, newAccessToken);
                 return api(originalRequest);
             } catch (refreshErr) {
                 processQueue(refreshErr, null);
-                localStorage.removeItem('ky_access_token');
-                localStorage.removeItem('ky_refresh_token');
-                window.dispatchEvent(new Event('auth:unauthorized'));
+                useAuthStore.getState().clearAuth();
                 return Promise.reject(refreshErr);
             } finally {
                 isRefreshing = false;
@@ -108,3 +111,7 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+export default api;
+
+

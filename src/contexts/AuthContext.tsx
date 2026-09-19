@@ -11,7 +11,6 @@ import type {
 export interface AuthContextType {
     user: JwtUser | null;
     accessToken: string | null;
-    refreshToken: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
     isAdmin: boolean;
@@ -39,7 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = () => {
     const user = useAuthStore((s) => s.user);
     const accessToken = useAuthStore((s) => s.accessToken);
-    const refreshToken = useAuthStore((s) => s.refreshToken);
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const isLoading = useAuthStore((s) => s.isLoading);
     const login = useAuthStore((s) => s.login);
@@ -55,7 +53,6 @@ export const useAuth = () => {
     return {
         user,
         accessToken,
-        refreshToken,
         isAuthenticated,
         isLoading,
         isAdmin,
@@ -70,3 +67,4 @@ export const useAuth = () => {
         clearError: () => {},
     };
 };
+

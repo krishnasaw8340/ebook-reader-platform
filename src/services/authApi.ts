@@ -27,9 +27,10 @@ export interface AuthResponse {
         avatarUrl?: string;
         isEmailVerified: boolean;
         status: string;
+        roles?: string[];
     };
     accessToken: string;
-    refreshToken: string;
+    refreshToken?: string;
 }
 
 export interface ForgotPasswordPayload {
@@ -44,8 +45,14 @@ export interface ResetPasswordPayload {
 
 export interface JwtUser {
     userId: string;
+    id?: string;
     email: string;
     roles: string[];
+    username?: string;
+    fullName?: string;
+    avatarUrl?: string;
+    isEmailVerified?: boolean;
+    status?: string;
 }
 
 export const authApi = {
@@ -69,18 +76,20 @@ export const authApi = {
         return response.data;
     },
 
-    refresh: async (refreshToken: string) => {
-        const response = await api.post<{ accessToken: string; refreshToken: string }>('/auth/refresh', { refreshToken });
+    refresh: async () => {
+        // Browser automatically sends HttpOnly refresh-token cookie
+        const response = await api.post<{ accessToken: string; user?: JwtUser }>('/auth/refresh');
         return response.data;
     },
 
-    logout: async (refreshToken: string) => {
-        const response = await api.post('/auth/logout', { refreshToken });
+    logout: async () => {
+        // Browser automatically sends HttpOnly refresh-token cookie to be invalidated
+        const response = await api.post<{ message?: string }>('/auth/logout');
         return response.data;
     },
 
     logoutAll: async () => {
-        const response = await api.post('/auth/logout-all');
+        const response = await api.post<{ message?: string }>('/auth/logout-all');
         return response.data;
     },
 
@@ -99,3 +108,4 @@ export const authApi = {
         return response.data;
     },
 };
+

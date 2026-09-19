@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, LogIn, ChevronRight, User as UserIcon, Shield, KeyRound, CheckCircle2, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,6 +9,7 @@ type AuthMode = 'LOGIN' | 'REGISTER' | 'VERIFY_EMAIL' | 'FORGOT_PASSWORD' | 'RES
 
 export const Login: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { login, register, verifyEmail, resendVerificationOtp, forgotPassword, resetPassword, isLoading } = useAuth();
 
     const [mode, setMode] = useState<AuthMode>('LOGIN');
@@ -38,8 +39,10 @@ export const Login: React.FC = () => {
         resetFeedback();
         try {
             await login({ email, password });
-            navigate('/');
+            const destination = (location.state as any)?.from?.pathname || '/';
+            navigate(destination, { replace: true });
         } catch (err: any) {
+
             const msg = err.response?.data?.message || 'Login failed. Please check your credentials.';
             const formattedMsg = Array.isArray(msg) ? msg.join(', ') : msg;
             setErrorMessage(formattedMsg);
