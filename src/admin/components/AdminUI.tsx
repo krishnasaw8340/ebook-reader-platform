@@ -249,7 +249,7 @@ export const FileUploadDropzone: React.FC<{
                             style={{ width: '56px', height: '74px', objectFit: 'cover', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}
                         />
                         <div style={{ textAlign: 'left' }}>
-                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#ffffff' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                                 {fileName || 'Selected Cover Image'}
                             </div>
                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
@@ -287,7 +287,7 @@ export const EmptyState: React.FC<{
 }> = ({ title, description, action }) => (
     <div className={styles.stateContainer}>
         <ImageIcon size={40} color="var(--text-muted)" />
-        <h3 style={{ fontSize: '16px', color: '#ffffff', fontWeight: 700 }}>{title}</h3>
+        <h3 style={{ fontSize: '16px', color: 'var(--color-text-primary)', fontWeight: 700 }}>{title}</h3>
         {description && <p style={{ fontSize: '13px', maxWidth: '380px' }}>{description}</p>}
         {action && <div style={{ marginTop: '8px' }}>{action}</div>}
     </div>

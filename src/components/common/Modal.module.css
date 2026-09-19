@@ -29,9 +29,9 @@
   overflow: hidden;
   position: relative;
   z-index: 10;
-  background: rgba(24, 24, 24, 0.8);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-soft);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--color-shadow-lg);
 }
 
 .modalHeader {
@@ -39,7 +39,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .modalHeader h3 {
@@ -49,7 +49,7 @@
 }
 
 .closeBtn {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   cursor: pointer;
   width: 28px;
   height: 28px;
@@ -57,13 +57,14 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
   transition: var(--transition-fast);
 }
 
 .closeBtn:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: var(--text-primary);
+  background-color: var(--color-surface-active);
+  color: var(--color-text-primary);
 }
 
 .modalBody {
@@ -103,8 +104,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  background-color: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   cursor: pointer;
   transition: var(--transition-fast);
@@ -112,18 +113,18 @@
 }
 
 .packageRow:hover {
-  background-color: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
   transform: translateY(-1px);
 }
 
 .popularRow {
-  border-color: var(--primary);
-  background: linear-gradient(90deg, rgba(230, 57, 70, 0.04) 0%, rgba(24, 24, 24, 0) 100%);
+  border-color: var(--color-brand-primary);
+  background: var(--color-brand-primary-subtle);
 }
 
 .popularRow:hover {
-  border-color: var(--primary);
+  border-color: var(--color-brand-primary);
 }
 
 .popularBadge {
@@ -131,7 +132,7 @@
   top: -8px;
   right: 18px;
   background-color: var(--primary);
-  color: var(--text-primary);
+  color: #ffffff;
   font-size: 8px;
   font-weight: 800;
   padding: 2px 6px;
@@ -180,19 +181,20 @@
 }
 
 .priceBtn {
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
   font-weight: 700;
   font-size: 13px;
   padding: 8px 16px;
   border-radius: var(--border-radius-sm);
-  color: var(--text-primary);
+  color: var(--color-text-primary);
   transition: var(--transition-fast);
 }
 
 .packageRow:hover .priceBtn {
   background-color: var(--primary);
   border-color: var(--primary);
+  color: #ffffff;
   box-shadow: var(--shadow-glow);
 }
 

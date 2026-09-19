@@ -1,0 +1,81 @@
+/**
+ * KuroYomi Design System - Primitive Design Tokens
+ * Global primitive palettes, elevation scales, radii, typography, and motion definitions.
+ */
+
+:root {
+  /* ============================================================ */
+  /* 1. PRIMITIVE COLOR PALETTES                                  */
+  /* ============================================================ */
+
+  /* Neutral Scale */
+  --palette-neutral-0: #FFFFFF;
+  --palette-neutral-50: #F8F9FA;
+  --palette-neutral-100: #F1F3F5;
+  --palette-neutral-200: #E9ECEF;
+  --palette-neutral-300: #DEE2E6;
+  --palette-neutral-400: #CED4DA;
+  --palette-neutral-500: #ADB5BD;
+  --palette-neutral-600: #6C757D;
+  --palette-neutral-700: #495057;
+  --palette-neutral-800: #343A40;
+  --palette-neutral-850: #262626;
+  --palette-neutral-900: #181818;
+  --palette-neutral-925: #141414;
+  --palette-neutral-950: #0D0D0D;
+  --palette-neutral-1000: #000000;
+
+  /* Brand Crimson Scale (Manga signature primary) */
+  --palette-crimson-100: #FFECEE;
+  --palette-crimson-200: #FFCCD1;
+  --palette-crimson-300: #FFA8B1;
+  --palette-crimson-400: #FF707E;
+  --palette-crimson-500: #E63946; /* Base Brand */
+  --palette-crimson-600: #D62839;
+  --palette-crimson-700: #B91C1C;
+  --palette-crimson-800: #991B1B;
+  --palette-crimson-900: #7F1D1D;
+  --palette-crimson-rgb: 230, 57, 70;
+
+  /* Status Colors */
+  --palette-emerald-400: #34D399;
+  --palette-emerald-500: #2ECC71;
+  --palette-emerald-600: #10B981;
+  --palette-amber-400: #FBBF24;
+  --palette-amber-500: #F39C12;
+  --palette-amber-600: #D97706;
+  --palette-rose-400: #F87171;
+  --palette-rose-500: #E74C3C;
+  --palette-rose-600: #DC2626;
+  --palette-blue-400: #60A5FA;
+  --palette-blue-500: #3B82F6;
+  --palette-blue-600: #2563EB;
+  --palette-gold-500: #FFD700;
+
+  /* ============================================================ */
+  /* 2. TYPOGRAPHY & LAYOUT                                       */
+  /* ============================================================ */
+  --font-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Border Radii */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+  --radius-full: 9999px;
+
+  /* Layout dimensions */
+  --layout-nav-height: 72px;
+  --layout-mobile-nav-height: 64px;
+  --layout-sidebar-width: 260px;
+  --layout-max-width: 1400px;
+
+  /* Transitions & Animation Easing */
+  --ease-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}

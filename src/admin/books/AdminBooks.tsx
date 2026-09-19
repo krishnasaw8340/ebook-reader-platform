@@ -296,7 +296,7 @@ export const AdminBooks: React.FC = () => {
                                         </td>
                                         <td>
                                             <div
-                                                style={{ fontWeight: 700, color: '#ffffff', cursor: 'pointer' }}
+                                                style={{ fontWeight: 700, color: 'var(--color-text-primary)', cursor: 'pointer' }}
                                                 onClick={() => navigate(`/admin/books/${b.id}`)}
                                             >
                                                 {b.title}
@@ -309,7 +309,7 @@ export const AdminBooks: React.FC = () => {
                                             </div>
                                         </td>
                                         <td>
-                                            <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>
+                                            <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '13px' }}>
                                                 {getSeriesTitle(b.series_id)}
                                             </div>
                                             <div style={{ fontSize: '11px', color: b.volume_id ? 'var(--primary)' : 'var(--text-muted)' }}>
@@ -323,7 +323,7 @@ export const AdminBooks: React.FC = () => {
                                             />
                                         </td>
                                         <td>
-                                            <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>
+                                            <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '13px' }}>
                                                 {b.chapter_count || 0} Ch.
                                             </div>
                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -399,7 +399,7 @@ export const AdminBooks: React.FC = () => {
                             >
                                 <ChevronLeft size={14} /> Previous
                             </button>
-                            <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', fontWeight: 600, color: '#ffffff' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                                 Page {currentPage} of {totalPages}
                             </span>
                             <button

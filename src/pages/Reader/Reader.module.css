@@ -5,8 +5,8 @@
   right: 0;
   bottom: 0;
   z-index: 200;
-  background-color: #000000;
-  color: var(--text-primary);
+  background-color: var(--color-reader-bg);
+  color: var(--color-reader-text);
   display: flex;
   flex-direction: column;
   user-select: none;
@@ -95,19 +95,19 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--color-reader-controls);
+  border: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-primary);
+  color: var(--color-reader-text);
   transition: var(--transition-fast);
 }
 
 .hudBtn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--color-surface-hover);
 }
 
 .activeBtn {
@@ -156,7 +156,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background-color: #080808;
+  background-color: var(--color-reader-bg);
   position: relative;
   width: 100%;
 }
@@ -298,6 +298,21 @@
   z-index: 10;
 }
 
+.settingsModal {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 300px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  z-index: 220;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--color-shadow-lg);
+}
+
 .lockCard {
   width: 100%;
   max-width: 400px;
@@ -342,7 +357,7 @@
   font-weight: 700;
   font-size: 14px;
   background-color: var(--primary);
-  color: var(--text-primary);
+  color: #ffffff;
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   box-shadow: var(--shadow-glow);

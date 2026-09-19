@@ -164,7 +164,7 @@ export const AdminPricing: React.FC = () => {
             {/* Coin Store Packages */}
             <div style={{ marginBottom: '32px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>Coin Refill Packages</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-primary)' }}>Coin Refill Packages</h3>
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Configured for Stripe / Sandbox payment gateway</span>
                 </div>
 
@@ -186,7 +186,7 @@ export const AdminPricing: React.FC = () => {
                                 <tbody>
                                     {packages.map((pkg) => (
                                         <tr key={pkg.id}>
-                                            <td style={{ fontWeight: 700, color: '#ffffff' }}>{pkg.name}</td>
+                                            <td style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{pkg.name}</td>
                                             <td>
                                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 800, color: '#ffd700' }}>
                                                     🪙 {pkg.coins} Coins
@@ -219,7 +219,7 @@ export const AdminPricing: React.FC = () => {
             {/* Chapter Pricing Rules */}
             <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>Content Pricing & Free Preview Rules</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-primary)' }}>Content Pricing & Free Preview Rules</h3>
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Configure chapter unlocking requirements</span>
                 </div>
 
@@ -246,7 +246,7 @@ export const AdminPricing: React.FC = () => {
 
                                         return (
                                             <tr key={ch.id}>
-                                                <td style={{ fontWeight: 700, color: '#ffffff' }}>
+                                                <td style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>
                                                     Ch. {ch.chapter_no}: {ch.title}
                                                 </td>
                                                 <td>{parentBook?.title || 'Unknown Volume'}</td>

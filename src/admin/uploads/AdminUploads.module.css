@@ -5,8 +5,8 @@
 
 /* Ingestion Pipeline Modal / Drawer */
 .pipelineCard {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--glass-border);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     padding: 20px;
     margin-bottom: 20px;
@@ -34,8 +34,8 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.06);
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-surface-hover);
+    border: 2px solid var(--color-border);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -46,16 +46,16 @@
 }
 
 .stageDotActive {
-    background: rgba(230, 57, 70, 0.2);
-    border-color: var(--primary);
-    color: var(--primary);
+    background: var(--color-brand-primary-subtle);
+    border-color: var(--color-brand-primary);
+    color: var(--color-brand-primary);
     box-shadow: 0 0 12px rgba(230, 57, 70, 0.4);
 }
 
 .stageDotDone {
-    background: rgba(16, 185, 129, 0.2);
-    border-color: #10b981;
-    color: #10b981;
+    background: var(--color-status-success-subtle);
+    border-color: var(--color-status-success);
+    color: var(--color-status-success);
 }
 
 .stageLabel {
@@ -65,13 +65,13 @@
 }
 
 .stageLabelActive {
-    color: #ffffff;
+    color: var(--color-text-primary);
 }
 
 /* Review Screen */
 .reviewBox {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--glass-border);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     padding: 20px;
     margin-top: 16px;
@@ -85,8 +85,8 @@
 }
 
 .detectedItem {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-subtle);
     border-radius: 6px;
     padding: 12px;
 }
@@ -102,7 +102,7 @@
 .detectedVal {
     font-size: 15px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text-primary);
 }
 
 .warningBox {

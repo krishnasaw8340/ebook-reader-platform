@@ -71,7 +71,7 @@
 
 .btnBrowse {
   background-color: var(--primary);
-  color: var(--text-primary);
+  color: #ffffff;
   font-weight: 700;
   font-size: 13px;
   padding: 10px 24px;

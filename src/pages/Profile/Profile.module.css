@@ -79,10 +79,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--color-surface);
   padding: 10px 16px;
   border-radius: var(--border-radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
 }
 
 .statInfo {
@@ -147,8 +147,8 @@
   align-items: flex-start;
   gap: 16px;
   padding: 12px;
-  background-color: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius-sm);
 }
 
@@ -220,16 +220,16 @@
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background-color: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   transition: var(--transition-fast);
 }
 
 .settingItem:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
 }
 
 .settingItem span {

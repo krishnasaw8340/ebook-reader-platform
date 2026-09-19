@@ -12,9 +12,9 @@
   aspect-ratio: 2/3;
   border-radius: var(--border-radius);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: var(--shadow-soft);
-  background-color: var(--secondary);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--color-shadow-sm);
+  background-color: var(--color-surface);
 }
 
 .cover {
@@ -105,6 +105,7 @@
 .actionBtn:hover {
   background-color: var(--primary);
   border-color: var(--primary);
+  color: #ffffff;
   transform: scale(1.1);
 }
 
@@ -126,7 +127,8 @@
   align-items: center;
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
   z-index: 5;
 }
 
@@ -163,7 +165,7 @@
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.02em;
-  color: var(--text-primary);
+  color: #ffffff;
   position: relative;
   z-index: 1;
 }

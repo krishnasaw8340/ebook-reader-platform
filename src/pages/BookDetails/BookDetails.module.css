@@ -19,6 +19,12 @@
   z-index: 0;
 }
 
+[data-theme="light"] .backdrop {
+  filter: blur(80px) brightness(1.1) saturate(1.4);
+  -webkit-filter: blur(80px) brightness(1.1) saturate(1.4);
+  opacity: 0.15;
+}
+
 .layout {
   position: relative;
   z-index: 1;
@@ -81,8 +87,8 @@
 }
 
 .btnRead {
-  background-color: var(--primary);
-  color: var(--text-primary);
+  background-color: var(--color-primary);
+  color: #ffffff;
   box-shadow: var(--shadow-glow);
 }
 
@@ -92,13 +98,14 @@
 }
 
 .btnBookmark, .btnLike {
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-primary);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
 }
 
 .btnBookmark:hover, .btnLike:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
   transform: translateY(-1px);
 }
 
@@ -347,8 +354,8 @@
 
 /* Preview Tab Layout */
 .previewPane {
-  background-color: #050505;
-  border: 1px solid var(--glass-border);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   padding: 24px;
   display: flex;
@@ -381,7 +388,7 @@
   width: 100%;
   padding-top: 80px;
   padding-bottom: 20px;
-  background: linear-gradient(to top, #050505 0%, rgba(5, 5, 5, 0) 100%);
+  background: linear-gradient(to top, var(--color-surface) 0%, rgba(0, 0, 0, 0) 100%);
   text-align: center;
   z-index: 5;
   display: flex;

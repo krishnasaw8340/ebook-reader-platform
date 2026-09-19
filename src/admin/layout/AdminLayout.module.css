@@ -1,8 +1,8 @@
 .adminContainer {
     display: flex;
     min-height: 100vh;
-    background: #0d0d0f;
-    color: var(--text-primary);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
     font-family: var(--font-body);
     position: relative;
     overflow-x: hidden;
@@ -11,8 +11,8 @@
 /* Sidebar */
 .sidebar {
     width: 260px;
-    background: #141417;
-    border-right: 1px solid rgba(255, 255, 255, 0.07);
+    background: var(--color-bg-secondary);
+    border-right: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -28,7 +28,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--color-border-subtle);
     user-select: none;
 }
 
@@ -42,7 +42,7 @@
     width: 36px;
     height: 36px;
     border-radius: 10px;
-    background: linear-gradient(135deg, var(--primary) 0%, #b91c1c 100%);
+    background: linear-gradient(135deg, var(--color-brand-primary) 0%, var(--color-brand-primary-active) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -60,28 +60,28 @@
 .brandName {
     font-size: 16px;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--color-text-primary);
     letter-spacing: -0.02em;
     line-height: 1.2;
 }
 
 .brandName span {
-    color: var(--primary);
+    color: var(--color-brand-primary);
 }
 
 .adminTag {
     font-size: 10px;
     font-weight: 800;
-    color: #ffd700;
+    color: var(--color-brand-coin);
     letter-spacing: 0.5px;
     text-transform: uppercase;
 }
 
 .sidebarCloseBtn {
     display: none;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #ffffff;
+    background: var(--color-surface-hover);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
     width: 32px;
     height: 32px;
     border-radius: 8px;
@@ -103,7 +103,7 @@
 .navLabel {
     font-size: 11px;
     font-weight: 700;
-    color: var(--text-muted);
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.8px;
     padding: 10px 14px 4px 14px;
@@ -115,7 +115,7 @@
     gap: 12px;
     padding: 12px 14px;
     border-radius: var(--border-radius-sm);
-    color: var(--text-secondary);
+    color: var(--color-text-secondary);
     font-size: 14px;
     font-weight: 600;
     text-decoration: none;
@@ -125,24 +125,24 @@
 }
 
 .navLink:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #ffffff;
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
 }
 
 .navLinkActive {
-    background: rgba(230, 57, 70, 0.12);
-    color: #ffffff;
-    border-left: 3px solid var(--primary);
+    background: var(--color-brand-primary-subtle);
+    color: var(--color-brand-primary);
+    border-left: 3px solid var(--color-brand-primary);
     padding-left: 11px;
 }
 
 .navLinkActive svg {
-    color: var(--primary);
+    color: var(--color-brand-primary);
 }
 
 .sidebarFooter {
     padding: 16px 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid var(--color-border-subtle);
 }
 
 .readerBackLink {
@@ -151,7 +151,7 @@
     gap: 10px;
     padding: 12px 14px;
     border-radius: var(--border-radius-sm);
-    color: var(--text-muted);
+    color: var(--color-text-muted);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -160,8 +160,8 @@
 }
 
 .readerBackLink:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text-primary);
+    background: var(--color-surface-hover);
 }
 
 /* Main Content Area */
@@ -177,10 +177,10 @@
 /* Top Header */
 .topHeader {
     height: 70px;
-    background: rgba(20, 20, 23, 0.9);
+    background: var(--color-glass-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--color-glass-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -198,9 +198,9 @@
 
 .mobileMenuToggle {
     display: none;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #ffffff;
+    background: var(--color-surface-hover);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
     cursor: pointer;
     width: 40px;
     height: 40px;
@@ -213,7 +213,7 @@
 .headerTitle {
     font-size: 16px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -231,8 +231,8 @@
     gap: 10px;
     padding: 6px 12px;
     border-radius: 20px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
 }
 
 .adminAvatar {
@@ -251,7 +251,7 @@
 .adminEmail {
     font-size: 12px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text-primary);
     line-height: 1.2;
     max-width: 140px;
     white-space: nowrap;
@@ -262,7 +262,7 @@
 .adminRoleBadge {
     font-size: 9px;
     font-weight: 800;
-    color: var(--primary);
+    color: var(--color-brand-primary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -271,9 +271,9 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.25);
-    color: #ef4444;
+    background: var(--color-status-error-subtle);
+    border: 1px solid var(--color-status-error);
+    color: var(--color-status-error);
     padding: 8px 14px;
     border-radius: var(--border-radius-sm);
     font-size: 12px;
@@ -285,7 +285,7 @@
 }
 
 .btnLogout:hover {
-    background: #ef4444;
+    background: var(--color-status-error);
     color: #ffffff;
 }
 
@@ -295,6 +295,7 @@
     flex: 1;
     width: 100%;
     max-width: 100%;
+    background: var(--color-bg-primary);
 }
 
 /* Mobile Overlay Backdrop */

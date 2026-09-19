@@ -537,7 +537,7 @@ export const BookWizard: React.FC = () => {
                                                     style={{ width: '40px', height: '56px', objectFit: 'cover', borderRadius: '4px' }}
                                                 />
                                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                         {s.title}
                                                     </div>
                                                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Status: {s.status}</div>
@@ -632,7 +632,7 @@ export const BookWizard: React.FC = () => {
                             }}
                         >
                             <Layers size={24} color={volumeChoice === 'none' ? 'var(--primary)' : 'var(--text-muted)'} style={{ margin: '0 auto 8px' }} />
-                            <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '14px' }}>[ No Volume ]</div>
+                            <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '14px' }}>[ No Volume ]</div>
                             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
                                 Direct Series ➔ Book
                             </div>
@@ -651,7 +651,7 @@ export const BookWizard: React.FC = () => {
                             }}
                         >
                             <FolderKanban size={24} color={volumeChoice === 'existing' ? 'var(--primary)' : 'var(--text-muted)'} style={{ margin: '0 auto 8px' }} />
-                            <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '14px' }}>[ Select Existing Volume ]</div>
+                            <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '14px' }}>[ Select Existing Volume ]</div>
                             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
                                 {seriesVolumes.length} volume(s) available
                             </div>
@@ -670,7 +670,7 @@ export const BookWizard: React.FC = () => {
                             }}
                         >
                             <Plus size={24} color={volumeChoice === 'new' ? 'var(--primary)' : 'var(--text-muted)'} style={{ margin: '0 auto 8px' }} />
-                            <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '14px' }}>[ + Create Volume ]</div>
+                            <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '14px' }}>[ + Create Volume ]</div>
                             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
                                 Create new volume compilation
                             </div>
@@ -703,7 +703,7 @@ export const BookWizard: React.FC = () => {
 
                     {volumeChoice === 'new' && (
                         <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
-                            <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', marginBottom: '12px' }}>New Volume Details</h4>
+                            <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '12px' }}>New Volume Details</h4>
                             <div className={uiStyles.formGrid}>
                                 <div className={uiStyles.formGroup}>
                                     <label className={uiStyles.formLabel}>Volume Number *</label>
@@ -1018,7 +1018,7 @@ export const BookWizard: React.FC = () => {
                             onChange={(e) => setIsPremium(e.target.checked)}
                             style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
                         />
-                        <label htmlFor="premiumToggle" style={{ fontSize: '13px', color: '#ffffff', cursor: 'pointer', fontWeight: 600 }}>
+                        <label htmlFor="premiumToggle" style={{ fontSize: '13px', color: 'var(--color-text-primary)', cursor: 'pointer', fontWeight: 600 }}>
                             Premium Badge Enabled (Highlight in storefront carousel)
                         </label>
                     </div>
@@ -1300,7 +1300,7 @@ export const BookWizard: React.FC = () => {
                     ) : (
                         <div style={{ textAlign: 'center', padding: '40px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
                             <FileImage size={36} color="var(--text-muted)" style={{ margin: '0 auto 8px' }} />
-                            <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff' }}>No pages uploaded for Chapter {currentChapter?.chapterNo}</h4>
+                            <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>No pages uploaded for Chapter {currentChapter?.chapterNo}</h4>
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>
                                 Add individual scans or upload high-resolution manga pages in bulk.
                             </p>
@@ -1338,7 +1338,7 @@ export const BookWizard: React.FC = () => {
                                     style={{ width: '70px', height: '100px', objectFit: 'cover', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}
                                 />
                                 <div>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>{bookTitle}</h3>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-text-primary)' }}>{bookTitle}</h3>
                                     {japaneseTitle && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{japaneseTitle}</div>}
                                     <div style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 700 }}>
                                         Series: {selectedSeriesObj?.title}
@@ -1352,11 +1352,11 @@ export const BookWizard: React.FC = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Language:</span>
-                                    <span style={{ color: '#ffffff', fontWeight: 600 }}>{language}</span>
+                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{language}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Author / Artist:</span>
-                                    <span style={{ color: '#ffffff', fontWeight: 600 }}>{author} / {artist}</span>
+                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{author} / {artist}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Pricing Model:</span>
@@ -1364,18 +1364,18 @@ export const BookWizard: React.FC = () => {
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Total Chapters:</span>
-                                    <span style={{ color: '#ffffff', fontWeight: 700 }}>{chapters.length}</span>
+                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{chapters.length}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Total Pages:</span>
-                                    <span style={{ color: '#ffffff', fontWeight: 700 }}>{chapters.reduce((sum, c) => sum + c.pages.length, 0)}</span>
+                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{chapters.reduce((sum, c) => sum + c.pages.length, 0)}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Validation Checklist */}
                         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '20px' }}>
-                            <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', marginBottom: '14px' }}>Pre-Flight Checklist</h4>
+                            <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '14px' }}>Pre-Flight Checklist</h4>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: selectedSeriesId ? '#10b981' : '#ef4444' }}>

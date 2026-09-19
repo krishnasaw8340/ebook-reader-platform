@@ -70,7 +70,7 @@
 .activeChip {
   background-color: var(--primary);
   border-color: var(--primary);
-  color: var(--text-primary);
+  color: #ffffff;
   box-shadow: var(--shadow-glow);
 }
 

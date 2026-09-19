@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Coins, Bell, Plus, User, Bookmark, Sparkles, LogOut, Shield, ArrowLeft, X, Flame } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { ThemeToggle } from '../common/ThemeToggle';
 import styles from './Layout.module.css';
 
 export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearchTrigger }) => {
@@ -228,6 +229,9 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
                 <div className={styles.notifBadge}></div>
               </div>
 
+              {/* Theme Toggle Button */}
+              <ThemeToggle variant="menu" />
+
               {/* Profile Dropdown */}
               <div className={`${styles.profileWrapper} ${styles.desktopOnlyAction}`} ref={dropdownRef}>
                 <img 
@@ -261,6 +265,12 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
                           <span style={{ marginLeft: 'auto', fontSize: '9px', background: '#e50914', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>ADMIN</span>
                         </div>
                       )}
+                      
+                      <div style={{ padding: '8px 12px', borderTop: '1px solid var(--color-border-subtle)', borderBottom: '1px solid var(--color-border-subtle)', margin: '4px 0' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '6px', fontWeight: 600 }}>APPEARANCE</div>
+                        <ThemeToggle variant="segmented" />
+                      </div>
+
                       {isAuthenticated ? (
                         <div className={`${styles.profileItem} ${styles.signOut}`} onClick={async () => { setProfileOpen(false); await logout(); navigate('/login'); }}>
                           <LogOut size={15} /> Sign Out

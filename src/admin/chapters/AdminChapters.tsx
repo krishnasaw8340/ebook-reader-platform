@@ -245,12 +245,12 @@ export const AdminChapters: React.FC = () => {
                                                 Ch. {ch.chapter_no}
                                             </td>
                                             <td>
-                                                <div style={{ fontWeight: 700, color: '#ffffff' }}>{ch.title}</div>
+                                                <div style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{ch.title}</div>
                                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {ch.id}</div>
                                             </td>
                                             <td>{getBookTitle(ch.book_id)}</td>
                                             <td>
-                                                <span style={{ fontWeight: 600, color: pageCount > 0 ? '#ffffff' : 'var(--text-muted)' }}>
+                                                <span style={{ fontWeight: 600, color: pageCount > 0 ? 'var(--color-text-primary)' : 'var(--text-muted)' }}>
                                                     {pageCount} page(s)
                                                 </span>
                                             </td>

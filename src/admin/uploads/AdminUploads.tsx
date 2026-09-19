@@ -297,7 +297,7 @@ export const AdminUploads: React.FC = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <FileArchive size={16} color="var(--primary)" />
                                                 <div>
-                                                    <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '13px' }}>
+                                                    <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '13px' }}>
                                                         {job.file_name}
                                                     </div>
                                                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -307,7 +307,7 @@ export const AdminUploads: React.FC = () => {
                                             </div>
                                         </td>
                                         <td>
-                                            <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>
+                                            <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '13px' }}>
                                                 {job.book_title || 'Untitled Book'}
                                             </div>
                                             <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
@@ -321,7 +321,7 @@ export const AdminUploads: React.FC = () => {
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '110px' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
                                                     <span style={{ color: 'var(--text-secondary)' }}>{job.stage || job.status}</span>
-                                                    <span style={{ fontWeight: 700, color: '#ffffff' }}>{job.progress}%</span>
+                                                    <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{job.progress}%</span>
                                                 </div>
                                                 <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
                                                     <div
@@ -336,7 +336,7 @@ export const AdminUploads: React.FC = () => {
                                             </div>
                                         </td>
                                         <td>
-                                            <span style={{ fontSize: '12px', fontWeight: 600, color: '#ffffff' }}>
+                                            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                                                 {job.chapters_detected} Ch • {job.pages_detected} Pgs
                                             </span>
                                             {job.warnings && job.warnings.length > 0 && (
@@ -528,7 +528,7 @@ export const AdminUploads: React.FC = () => {
                             <FileArchive size={36} color="var(--primary)" style={{ margin: '0 auto 8px' }} />
                             {selectedFile ? (
                                 <div>
-                                    <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '14px' }}>
+                                    <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '14px' }}>
                                         {selectedFile.name}
                                     </div>
                                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -537,7 +537,7 @@ export const AdminUploads: React.FC = () => {
                                 </div>
                             ) : (
                                 <div>
-                                    <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>
+                                    <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '13px' }}>
                                         Click or drop <strong>book.zip</strong> package archive
                                     </div>
                                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -638,7 +638,7 @@ export const AdminUploads: React.FC = () => {
                         )}
 
                         {/* Detected Chapter List */}
-                        <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff', marginBottom: '8px' }}>
+                        <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '8px' }}>
                             Detected Chapters Hierarchy
                         </h4>
                         <div className={styles.chapterCardList}>
@@ -646,7 +646,7 @@ export const AdminUploads: React.FC = () => {
                                 <div key={ch.chapter_no} className={styles.chapterPreviewItem}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <span style={{ fontWeight: 800, color: 'var(--primary)' }}>#{ch.chapter_no}</span>
-                                        <span style={{ color: '#ffffff', fontWeight: 600 }}>{ch.title}</span>
+                                        <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{ch.title}</span>
                                     </div>
                                     <span style={{ color: 'var(--text-muted)' }}>{ch.pages_count} pages detected</span>
                                 </div>
@@ -690,7 +690,7 @@ export const AdminUploads: React.FC = () => {
                     <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
                         <XCircle size={28} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
                         <div>
-                            <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', marginBottom: '6px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '6px' }}>
                                 Ingestion Failed on {errorModalJob.file_name}
                             </div>
                             <p style={{ fontSize: '13px', color: '#fca5a5', background: 'rgba(239, 68, 68, 0.1)', padding: '10px 12px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.25)', fontFamily: 'monospace' }}>

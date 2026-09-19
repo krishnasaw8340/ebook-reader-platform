@@ -292,7 +292,7 @@ export const AdminPages: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', width: '100%' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '140px' }}>
                         <Layers size={18} color="var(--primary)" />
-                        <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '13px' }}>Target Chapter:</span>
+                        <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '13px' }}>Target Chapter:</span>
                     </div>
 
                     <select
@@ -313,7 +313,7 @@ export const AdminPages: React.FC = () => {
 
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: '100%', justifyContent: 'space-between', marginTop: '6px' }}>
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                            Total Pages: <strong style={{ color: '#ffffff' }}>{pages.length}</strong>
+                            Total Pages: <strong style={{ color: 'var(--color-text-primary)' }}>{pages.length}</strong>
                         </span>
                         <span style={{ fontSize: '12px', color: currentChapter?.access_type === 'PAID' ? '#ffd700' : '#2ecc71', fontWeight: 700 }}>
                             {currentChapter?.access_type === 'PAID' ? `PAID (${currentChapter.coin_cost} Coins)` : 'FREE'}
@@ -326,7 +326,7 @@ export const AdminPages: React.FC = () => {
             {isUploading && (
                 <div style={{ marginTop: '16px', background: 'var(--card)', padding: '16px', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--glass-border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-                        <span style={{ color: '#ffffff', fontWeight: 600 }}>Optimizing & encrypting pages (WebP / DRM)...</span>
+                        <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>Optimizing & encrypting pages (WebP / DRM)...</span>
                         <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{uploadProgress}%</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>

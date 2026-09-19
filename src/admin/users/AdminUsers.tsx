@@ -149,7 +149,7 @@ export const AdminUsers: React.FC = () => {
                                                         style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
                                                     />
                                                     <div>
-                                                        <div style={{ fontWeight: 700, color: '#ffffff' }}>
+                                                        <div style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>
                                                             {u.full_name || u.username || 'KuroYomi Reader'}
                                                         </div>
                                                         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -243,7 +243,7 @@ export const AdminUsers: React.FC = () => {
                                 style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover' }}
                             />
                             <div>
-                                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-text-primary)' }}>
                                     {viewingUser.full_name || viewingUser.username || 'User Profile'}
                                 </h3>
                                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{viewingUser.email}</div>

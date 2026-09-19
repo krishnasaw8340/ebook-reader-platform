@@ -109,7 +109,7 @@
 
 .popularCard {
   border-color: var(--primary);
-  background: linear-gradient(180deg, rgba(230, 57, 70, 0.04) 0%, rgba(24, 24, 24, 0) 100%);
+  background: var(--color-brand-primary-subtle);
 }
 
 .popularCard:hover {
@@ -120,7 +120,7 @@
   position: absolute;
   top: -9px;
   background-color: var(--primary);
-  color: var(--text-primary);
+  color: #ffffff;
   font-size: 9px;
   font-weight: 800;
   padding: 2px 8px;
@@ -156,8 +156,8 @@
 }
 
 .priceBtn {
-  background-color: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   padding: 8px 24px;
   border-radius: var(--border-radius-sm);
   font-weight: 700;
@@ -170,6 +170,7 @@
 .packageCard:hover .priceBtn {
   background-color: var(--primary);
   border-color: var(--primary);
+  color: #ffffff;
   box-shadow: var(--shadow-glow);
 }
 

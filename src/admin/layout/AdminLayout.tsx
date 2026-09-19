@@ -18,6 +18,7 @@ import {
     Settings
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
+import { ThemeToggle } from '../../components/common/ThemeToggle';
 import styles from './AdminLayout.module.css';
 
 export const AdminLayout: React.FC = () => {
@@ -114,6 +115,9 @@ export const AdminLayout: React.FC = () => {
                 </nav>
 
                 <div className={styles.sidebarFooter}>
+                    <div style={{ marginBottom: '12px' }}>
+                        <ThemeToggle variant="segmented" />
+                    </div>
                     <div className={styles.readerBackLink} onClick={() => navigate('/')}>
                         <ArrowLeft size={16} />
                         <span>Return to Reader App</span>
@@ -137,6 +141,8 @@ export const AdminLayout: React.FC = () => {
                     </div>
 
                     <div className={styles.headerRight}>
+                        <ThemeToggle variant="menu" />
+
                         <div className={styles.adminProfilePill}>
                             <img
                                 src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&width=100&auto=format&fit=crop"

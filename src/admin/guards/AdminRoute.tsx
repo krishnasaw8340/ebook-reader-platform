@@ -83,18 +83,18 @@ export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
                         <ShieldAlert size={32} />
                     </div>
 
-                    <h2 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px', color: '#ffffff' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px', color: 'var(--color-text-primary)' }}>
                         403 - Forbidden
                     </h2>
                     <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
-                        The Admin Portal is restricted to platform administrators. Your account (<strong style={{ color: '#fff' }}>{user?.email}</strong>) has role <span style={{ color: '#f59e0b', fontWeight: 700 }}>{user?.roles?.join(', ') || 'USER'}</span> and does not have the required administrative permissions.
+                        The Admin Portal is restricted to platform administrators. Your account (<strong style={{ color: 'var(--color-text-primary)' }}>{user?.email}</strong>) has role <span style={{ color: '#f59e0b', fontWeight: 700 }}>{user?.roles?.join(', ') || 'USER'}</span> and does not have the required administrative permissions.
                     </p>
 
                     <div style={{
                         padding: '12px',
-                        background: 'rgba(0,0,0,0.4)',
+                        background: 'var(--color-surface-sunken)',
                         borderRadius: '8px',
-                        border: '1px solid rgba(255,255,255,0.06)',
+                        border: '1px solid var(--color-border-subtle)',
                         fontSize: '12px',
                         color: 'var(--text-muted)',
                         marginBottom: '24px',
@@ -114,9 +114,9 @@ export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
                                 alignItems: 'center',
                                 gap: '8px',
                                 padding: '10px 18px',
-                                background: 'rgba(255,255,255,0.06)',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                color: '#ffffff',
+                                background: 'var(--color-surface)',
+                                border: '1px solid var(--color-border-default)',
+                                color: 'var(--color-text-primary)',
                                 borderRadius: '8px',
                                 fontSize: '13px',
                                 fontWeight: 600,

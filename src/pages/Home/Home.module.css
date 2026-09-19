@@ -8,7 +8,12 @@
   height: 520px;
   overflow: hidden;
   margin-bottom: 40px;
-  background-color: #050505;
+  background-color: #0b0c10;
+}
+
+[data-theme="light"] .heroSection {
+  border-bottom: 1px solid var(--color-border-subtle);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 768px) {
@@ -35,9 +40,16 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at 60% 40%, rgba(13, 13, 13, 0.1) 0%, rgba(13, 13, 13, 0.95) 80%),
-              linear-gradient(to top, var(--background) 0%, rgba(13, 13, 13, 0.2) 60%, rgba(13, 13, 13, 0.3) 100%);
+  background: radial-gradient(circle at 65% 35%, rgba(11, 12, 16, 0.15) 0%, rgba(11, 12, 16, 0.92) 75%),
+              linear-gradient(to top, #0b0c10 0%, rgba(11, 12, 16, 0.3) 55%, rgba(11, 12, 16, 0.5) 100%),
+              linear-gradient(to right, rgba(11, 12, 16, 0.96) 0%, rgba(11, 12, 16, 0.78) 42%, rgba(11, 12, 16, 0.15) 100%);
   z-index: 1;
+}
+
+:root:not([data-theme="light"]) .heroBackdrop {
+  background: radial-gradient(circle at 65% 35%, rgba(11, 12, 16, 0.15) 0%, rgba(11, 12, 16, 0.92) 75%),
+              linear-gradient(to top, var(--color-bg-primary) 0%, rgba(11, 12, 16, 0.3) 55%, rgba(11, 12, 16, 0.5) 100%),
+              linear-gradient(to right, rgba(11, 12, 16, 0.96) 0%, rgba(11, 12, 16, 0.78) 42%, rgba(11, 12, 16, 0.15) 100%);
 }
 
 .heroSlideBgBlur {
@@ -67,8 +79,8 @@
 }
 
 .badgeFeatured {
-  background-color: var(--primary);
-  color: var(--text-primary);
+  background-color: var(--color-primary);
+  color: #ffffff;
   padding: 4px 10px;
   border-radius: 6px;
   font-family: var(--font-heading);
@@ -80,13 +92,14 @@
 }
 
 .badgeStatus {
-  background-color: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-secondary);
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.92);
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 10px;
   font-weight: 600;
+  backdrop-filter: blur(8px);
 }
 
 .heroTitle {
@@ -95,8 +108,8 @@
   font-weight: 800;
   line-height: 1.1;
   margin-bottom: 14px;
-  color: var(--text-primary);
-  text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  color: #ffffff;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.85), 0 1px 3px rgba(0,0,0,0.9);
 }
 
 @media (min-width: 768px) {
@@ -111,7 +124,7 @@
   flex-wrap: wrap;
   gap: 12px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.75);
   margin-bottom: 18px;
   font-weight: 500;
 }
@@ -130,16 +143,16 @@
 }
 
 .heroTag {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.12);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 10px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .heroDesc {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.88);
   line-height: 1.6;
   margin-bottom: 24px;
   display: -webkit-box;
@@ -147,6 +160,7 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.8);
 }
 
 .heroActions {
@@ -155,8 +169,8 @@
 }
 
 .btnRead {
-  background-color: var(--primary);
-  color: var(--text-primary);
+  background-color: var(--color-primary);
+  color: #ffffff;
   font-weight: 700;
   font-size: 14px;
   padding: 12px 24px;
@@ -175,9 +189,9 @@
 }
 
 .btnBookmark {
-  background-color: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
   font-weight: 700;
   font-size: 14px;
   padding: 12px 24px;
@@ -187,10 +201,12 @@
   gap: 8px;
   cursor: pointer;
   transition: var(--transition-fast);
+  backdrop-filter: blur(8px);
 }
 
 .btnBookmark:hover {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
   transform: translateY(-2px);
 }
 
@@ -204,8 +220,8 @@
   aspect-ratio: 2/3;
   border-radius: var(--border-radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: var(--shadow-soft), 0 0 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: var(--shadow-soft), 0 0 30px rgba(0, 0, 0, 0.6);
   z-index: 2;
 }
 
@@ -242,14 +258,14 @@
   width: 16px;
   height: 3px;
   border-radius: 3px;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.3);
   cursor: pointer;
   transition: var(--transition-smooth);
 }
 
 .activeIndicator {
   width: 32px;
-  background-color: var(--primary);
+  background-color: var(--color-primary);
   box-shadow: var(--shadow-glow);
 }
 
@@ -319,8 +335,9 @@
 .genreCard {
   flex: 0 0 auto;
   padding: 10px 20px;
-  background-color: var(--secondary);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
   border-radius: 30px;
   font-family: var(--font-heading);
   font-size: 13px;
@@ -330,14 +347,15 @@
 }
 
 .genreCard:hover {
-  border-color: rgba(230, 57, 70, 0.3);
-  background-color: rgba(255, 255, 255, 0.03);
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
 .activeGenre {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--text-primary);
+  background: var(--color-brand-primary) !important;
+  border-color: var(--color-brand-primary) !important;
+  color: #ffffff !important;
   box-shadow: var(--shadow-glow);
 }
 

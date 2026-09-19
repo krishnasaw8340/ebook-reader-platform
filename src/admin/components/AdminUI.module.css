@@ -18,7 +18,7 @@
 .pageTitleGroup h1 {
     font-size: 24px;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--color-text-primary);
     letter-spacing: -0.02em;
     margin-bottom: 4px;
     line-height: 1.2;
@@ -26,7 +26,7 @@
 
 .pageSubtitle {
     font-size: 13px;
-    color: var(--text-secondary);
+    color: var(--color-text-secondary);
     line-height: 1.5;
 }
 
@@ -79,14 +79,14 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.06);
-    color: #ffffff;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
     padding: 10px 16px;
     border-radius: var(--border-radius-sm);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--color-border);
     transition: var(--transition-fast);
     min-height: 40px;
     touch-action: manipulation;
@@ -94,7 +94,8 @@
 }
 
 .btnSecondary:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-hover);
 }
 
 .btnDanger {
@@ -127,17 +128,18 @@
     width: 36px;
     height: 36px;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-secondary);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
     cursor: pointer;
     transition: var(--transition-fast);
     touch-action: manipulation;
 }
 
 .btnIcon:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-hover);
 }
 
 .btnIcon:disabled {
@@ -154,8 +156,8 @@
 }
 
 .statCard {
-    background: var(--card);
-    border: 1px solid var(--glass-border);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     padding: 20px;
     display: flex;
@@ -164,11 +166,13 @@
     position: relative;
     overflow: hidden;
     transition: transform var(--transition-smooth), border-color var(--transition-smooth);
+    box-shadow: var(--color-shadow-sm);
 }
 
 .statCard:hover {
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--color-border-hover);
     transform: translateY(-2px);
+    box-shadow: var(--color-shadow-md);
 }
 
 .statHeader {
@@ -180,7 +184,7 @@
 .statTitle {
     font-size: 12px;
     font-weight: 700;
-    color: var(--text-secondary);
+    color: var(--color-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -192,19 +196,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-surface-hover);
 }
 
 .statValue {
     font-size: 26px;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--color-text-primary);
     line-height: 1.1;
 }
 
 .statFooter {
     font-size: 12px;
-    color: var(--text-muted);
+    color: var(--color-text-muted);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -224,8 +228,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    background: var(--card);
-    border: 1px solid var(--glass-border);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius-sm);
     padding: 10px 14px;
     flex: 1;
@@ -237,7 +241,7 @@
 .searchInput {
     flex: 1;
     font-size: 14px;
-    color: #ffffff;
+    color: var(--color-text-primary);
     border: none;
     outline: none;
     background: transparent;
@@ -256,8 +260,8 @@
 }
 
 .selectInput {
-    color-scheme: dark;
-    background-color: #181818;
+    color-scheme: inherit;
+    background-color: var(--color-surface);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a6a6a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 14px center;
@@ -265,9 +269,9 @@
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius-sm);
-    color: #ffffff;
+    color: var(--color-text-primary);
     padding: 10px 38px 10px 14px;
     font-size: 13px;
     outline: none;
@@ -278,29 +282,59 @@
 }
 
 .selectInput:focus {
-    border-color: var(--primary);
-    background-color: #202020;
-    box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
+    border-color: var(--color-brand-primary);
+    background-color: var(--color-surface-hover);
+    box-shadow: 0 0 0 2px var(--color-interaction-focus-ring);
 }
 
 .selectInput option {
-    background-color: #181818 !important;
-    color: #ffffff !important;
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
     padding: 10px 14px;
 }
 
 .selectInput option:checked {
-    background-color: #e63946 !important;
+    background-color: var(--color-brand-primary) !important;
+    color: #ffffff !important;
+}
+
+/* Explicit Theme Overrides for Native Select Elements */
+/* Native OS popups in Chromium/WebKit require explicit hex & color-scheme to render correctly in device emulation */
+:global([data-theme="light"]) .selectInput,
+:global([data-theme="light"]) .formSelect {
+    color-scheme: light;
+    background-color: #ffffff;
+    color: #111827;
+    border-color: rgba(0, 0, 0, 0.15);
+}
+
+:global([data-theme="light"]) .selectInput option,
+:global([data-theme="light"]) .formSelect option {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+}
+
+:global([data-theme="dark"]) .selectInput,
+:global([data-theme="dark"]) .formSelect {
+    color-scheme: dark;
+    background-color: #181818;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+:global([data-theme="dark"]) .selectInput option,
+:global([data-theme="dark"]) .formSelect option {
+    background-color: #181818 !important;
     color: #ffffff !important;
 }
 
 /* Data Table */
 .tableCard {
-    background: var(--card);
-    border: 1px solid var(--glass-border);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     overflow: hidden;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--color-shadow-md);
     width: 100%;
 }
 
@@ -318,22 +352,31 @@
     font-size: 13px;
 }
 
+.compactTable {
+    min-width: 100%;
+}
+
+.compactTable th,
+.compactTable td {
+    padding: 10px 12px;
+}
+
 .dataTable th {
     padding: 14px 16px;
-    background: rgba(0, 0, 0, 0.35);
-    color: var(--text-muted);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-muted);
     font-weight: 600;
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 1px solid var(--glass-border);
+    border-bottom: 1px solid var(--color-border-subtle);
     white-space: nowrap;
 }
 
 .dataTable td {
     padding: 14px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    color: var(--text-secondary);
+    border-bottom: 1px solid var(--color-border-subtle);
+    color: var(--color-text-secondary);
     vertical-align: middle;
 }
 
@@ -342,7 +385,7 @@
 }
 
 .dataTable tbody tr:hover {
-    background: rgba(255, 255, 255, 0.025);
+    background: var(--color-surface-hover);
 }
 
 .tableCoverThumb {
@@ -350,7 +393,7 @@
     height: 60px;
     border-radius: 6px;
     object-fit: cover;
-    background: #222;
+    background: var(--color-surface-sunken);
 }
 
 /* Badges */
@@ -415,15 +458,15 @@
 }
 
 .modalContent {
-    background: #141416;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     max-width: 580px;
     width: 100%;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9);
+    box-shadow: var(--color-shadow-lg);
     animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
 }
@@ -444,21 +487,21 @@
     justify-content: space-between;
     align-items: center;
     padding: 18px 22px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--color-border-subtle);
     flex-shrink: 0;
 }
 
 .modalHeader h2 {
     font-size: 17px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text-primary);
     line-height: 1.2;
 }
 
 .modalClose {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: var(--text-muted);
+    background: var(--color-surface-hover);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
     cursor: pointer;
     width: 32px;
     height: 32px;
@@ -470,8 +513,8 @@
 }
 
 .modalClose:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.12);
+    color: var(--color-text-primary);
+    background: var(--color-surface-active);
 }
 
 .modalBody {
@@ -486,8 +529,8 @@
     justify-content: flex-end;
     gap: 10px;
     padding: 16px 22px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-secondary);
     flex-shrink: 0;
 }
 
@@ -500,17 +543,17 @@
     display: block;
     font-size: 13px;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-text-primary);
     margin-bottom: 6px;
 }
 
 .formInput, .formTextarea {
     width: 100%;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius-sm);
     padding: 10px 14px;
-    color: #ffffff;
+    color: var(--color-text-primary);
     font-size: 14px;
     outline: none;
     transition: border-color var(--transition-fast);
@@ -518,14 +561,14 @@
 }
 
 .formInput:focus, .formTextarea:focus {
-    border-color: var(--primary);
-    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--color-brand-primary);
+    background: var(--color-surface-hover);
 }
 
 .formSelect {
-    color-scheme: dark;
+    color-scheme: inherit;
     width: 100%;
-    background-color: #181818;
+    background-color: var(--color-surface);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a6a6a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 14px center;
@@ -533,10 +576,10 @@
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius-sm);
     padding: 10px 38px 10px 14px;
-    color: #ffffff;
+    color: var(--color-text-primary);
     font-size: 14px;
     outline: none;
     transition: all var(--transition-fast);
@@ -545,19 +588,19 @@
 }
 
 .formSelect:focus {
-    border-color: var(--primary);
-    background-color: #202020;
-    box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
+    border-color: var(--color-brand-primary);
+    background-color: var(--color-surface-hover);
+    box-shadow: 0 0 0 2px var(--color-interaction-focus-ring);
 }
 
 .formSelect option {
-    background-color: #181818 !important;
-    color: #ffffff !important;
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
     padding: 10px 14px;
 }
 
 .formSelect option:checked {
-    background-color: #e63946 !important;
+    background-color: var(--color-brand-primary) !important;
     color: #ffffff !important;
 }
 
@@ -572,11 +615,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #181818;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius-sm);
     padding: 10px 14px;
-    color: #ffffff;
+    color: var(--color-text-primary);
     font-size: 14px;
     cursor: pointer;
     min-height: 42px;
@@ -586,14 +629,14 @@
 }
 
 .customSelectTrigger:hover {
-    border-color: rgba(255, 255, 255, 0.25);
-    background: #202020;
+    border-color: var(--color-border-hover);
+    background: var(--color-surface-hover);
 }
 
 .customSelectTriggerActive, .customSelectTrigger:focus-visible {
-    border-color: var(--primary) !important;
-    background: #202020;
-    box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.2);
+    border-color: var(--color-brand-primary) !important;
+    background: var(--color-surface-hover);
+    box-shadow: 0 0 0 2px var(--color-interaction-focus-ring);
 }
 
 .customSelectValue {
@@ -603,16 +646,16 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #ffffff;
+    color: var(--color-text-primary);
     font-weight: 500;
 }
 
 .customSelectPlaceholder {
-    color: var(--text-muted);
+    color: var(--color-text-muted);
 }
 
 .customSelectChevron {
-    color: var(--text-secondary);
+    color: var(--color-text-secondary);
     transition: transform var(--transition-fast);
     flex-shrink: 0;
     margin-left: 8px;
@@ -620,7 +663,7 @@
 
 .customSelectChevronOpen {
     transform: rotate(180deg);
-    color: var(--primary);
+    color: var(--color-brand-primary);
 }
 
 .customSelectDropdown {
@@ -628,10 +671,10 @@
     top: calc(100% + 6px);
     left: 0;
     right: 0;
-    background: #181818;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius-sm);
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    box-shadow: var(--color-shadow-md);
     z-index: 1050;
     max-height: 240px;
     overflow-y: auto;
@@ -647,20 +690,20 @@
     padding: 9px 12px;
     border-radius: 6px;
     font-size: 13.5px;
-    color: #dedede;
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: all var(--transition-fast);
     user-select: none;
 }
 
 .customSelectOption:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
 }
 
 .customSelectOptionSelected {
-    background: rgba(230, 57, 70, 0.15) !important;
-    color: #ffffff !important;
+    background: var(--color-brand-primary-subtle) !important;
+    color: var(--color-brand-primary) !important;
     font-weight: 600;
 }
 
@@ -672,7 +715,7 @@
 
 .customSelectOptionSublabel {
     font-size: 11px;
-    color: var(--text-muted);
+    color: var(--color-text-muted);
 }
 
 .formGrid {

@@ -263,7 +263,7 @@ export const AdminVolumes: React.FC = () => {
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <FolderKanban size={15} color="var(--primary)" />
-                                                    <span style={{ fontWeight: 700, color: '#ffffff' }}>{vol.title}</span>
+                                                    <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{vol.title}</span>
                                                 </div>
                                                 {vol.description && (
                                                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{vol.description}</div>
@@ -275,7 +275,7 @@ export const AdminVolumes: React.FC = () => {
                                                 </span>
                                             </td>
                                             <td>
-                                                <span style={{ fontWeight: 600, color: '#ffffff' }}>
+                                                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
                                                     {booksInVol.length} Book(s)
                                                 </span>
                                             </td>

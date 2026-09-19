@@ -155,7 +155,7 @@ export const AdminSeriesDetail: React.FC = () => {
                 <div className={uiStyles.tableCard}>
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Volumes ({volumes.length})</h3>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Volumes ({volumes.length})</h3>
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Structured book compilations</p>
                         </div>
                         <button
@@ -185,7 +185,7 @@ export const AdminSeriesDetail: React.FC = () => {
                                             <tr key={v.id}>
                                                 <td style={{ fontWeight: 800, color: 'var(--primary)' }}>Vol. {v.volume_no}</td>
                                                 <td>
-                                                    <span style={{ fontWeight: 600, color: '#ffffff' }}>{v.title}</span>
+                                                    <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{v.title}</span>
                                                 </td>
                                                 <td>{booksInVol.length} Book(s)</td>
                                                 <td><StatusBadge status={v.status} /></td>
@@ -208,7 +208,7 @@ export const AdminSeriesDetail: React.FC = () => {
                 <div className={uiStyles.tableCard}>
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Direct Books ({directBooksWithoutVolume.length})</h3>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Direct Books ({directBooksWithoutVolume.length})</h3>
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Books attached directly to series without volume</p>
                         </div>
                         <button
@@ -235,7 +235,7 @@ export const AdminSeriesDetail: React.FC = () => {
                                     directBooksWithoutVolume.map(b => (
                                         <tr key={b.id}>
                                             <td>
-                                                <div style={{ fontWeight: 600, color: '#ffffff' }}>{b.title}</div>
+                                                <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{b.title}</div>
                                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{b.chapter_count || 0} chapters</div>
                                             </td>
                                             <td>{b.language || 'English'}</td>

@@ -149,7 +149,7 @@
 
 .btnPublish {
   background-color: var(--primary);
-  color: var(--text-primary);
+  color: #ffffff;
   padding: 14px;
   border-radius: var(--border-radius-sm);
   font-weight: 700;
@@ -316,7 +316,7 @@
 
 .tabBtnActive {
   background-color: var(--primary) !important;
-  color: var(--text-primary) !important;
+  color: #ffffff !important;
   box-shadow: var(--shadow-glow);
 }
 

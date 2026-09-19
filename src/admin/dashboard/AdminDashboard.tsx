@@ -159,7 +159,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className={styles.tableCard}>
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Recent Books</h3>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Recent Books</h3>
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Latest additions to the book catalog</p>
                         </div>
                         <button
@@ -172,7 +172,7 @@ export const AdminDashboard: React.FC = () => {
                     </div>
 
                     <div className={styles.tableWrapper}>
-                        <table className={styles.dataTable}>
+                        <table className={`${styles.dataTable} ${styles.compactTable}`}>
                             <thead>
                                 <tr>
                                     <th>Book</th>
@@ -197,7 +197,7 @@ export const AdminDashboard: React.FC = () => {
                                                         <div style={{ width: '32px', height: '44px', background: '#222', borderRadius: '4px' }} />
                                                     )}
                                                     <div>
-                                                        <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '13px' }}>{b.title}</div>
+                                                        <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '13px' }}>{b.title}</div>
                                                         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{b.chapterCount} chapters</div>
                                                     </div>
                                                 </div>
@@ -231,7 +231,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className={styles.tableCard}>
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Recent Uploads</h3>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Recent Uploads</h3>
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>ZIP batch ingestion jobs</p>
                         </div>
                         <button
@@ -244,7 +244,7 @@ export const AdminDashboard: React.FC = () => {
                     </div>
 
                     <div className={styles.tableWrapper}>
-                        <table className={styles.dataTable}>
+                        <table className={`${styles.dataTable} ${styles.compactTable}`}>
                             <thead>
                                 <tr>
                                     <th>Package / Book</th>
@@ -257,13 +257,13 @@ export const AdminDashboard: React.FC = () => {
                                     stats.recentUploads.map((u) => (
                                         <tr key={u.id}>
                                             <td>
-                                                <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>{u.bookTitle}</div>
+                                                <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '13px' }}>{u.bookTitle}</div>
                                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{u.fileName}</div>
                                             </td>
                                             <td>
                                                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{u.stage}</span>
-                                                <div style={{ width: '60px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '4px' }}>
-                                                    <div style={{ width: `${u.progress}%`, height: '100%', background: u.status === 'FAILED' ? '#ef4444' : 'var(--primary)', borderRadius: '2px' }} />
+                                                <div style={{ width: '60px', height: '4px', background: 'var(--color-border-default)', borderRadius: '2px', marginTop: '4px' }}>
+                                                    <div style={{ width: `${u.progress}%`, height: '100%', background: u.status === 'FAILED' ? '#ef4444' : u.status === 'COMPLETED' ? '#10b981' : 'var(--color-primary)', borderRadius: '2px' }} />
                                                 </div>
                                             </td>
                                             <td><StatusBadge status={u.status} /></td>
@@ -285,7 +285,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className={styles.tableCard}>
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Recently Updated Chapters</h3>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Recently Updated Chapters</h3>
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Latest chapter revisions & pricing</p>
                         </div>
                         <button
@@ -298,7 +298,7 @@ export const AdminDashboard: React.FC = () => {
                     </div>
 
                     <div className={styles.tableWrapper}>
-                        <table className={styles.dataTable}>
+                        <table className={`${styles.dataTable} ${styles.compactTable}`}>
                             <thead>
                                 <tr>
                                     <th>Chapter</th>
@@ -311,7 +311,7 @@ export const AdminDashboard: React.FC = () => {
                                     stats.recentlyUpdatedChapters.map((c) => (
                                         <tr key={c.id}>
                                             <td>
-                                                <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '13px' }}>Ch. {c.chapterNo}</div>
+                                                <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '13px' }}>Ch. {c.chapterNo}</div>
                                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{c.title}</div>
                                             </td>
                                             <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{c.bookTitle}</td>

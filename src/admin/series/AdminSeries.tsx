@@ -190,7 +190,7 @@ export const AdminSeries: React.FC = () => {
                                         </td>
                                         <td>
                                             <div
-                                                style={{ fontWeight: 700, color: '#ffffff', cursor: 'pointer' }}
+                                                style={{ fontWeight: 700, color: 'var(--color-text-primary)', cursor: 'pointer' }}
                                                 onClick={() => navigate(`/admin/series/${s.id}`)}
                                             >
                                                 {s.title}

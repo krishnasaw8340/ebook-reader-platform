@@ -5,10 +5,10 @@
   right: 0;
   height: var(--nav-height);
   z-index: 100;
-  background: rgba(13, 13, 13, 0.75);
+  background: var(--color-glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--color-glass-border);
 }
 
 .headerContainer {
@@ -40,9 +40,10 @@
   justify-content: center;
   font-family: var(--font-heading);
   font-weight: 800;
-  color: var(--text-primary);
+  color: #ffffff;
   font-size: 18px;
   box-shadow: var(--shadow-glow);
+  flex-shrink: 0;
 }
 
 .brandName {
@@ -51,6 +52,10 @@
   font-size: 22px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
 .brandName span {
@@ -121,17 +126,18 @@
 
 .searchInput {
   width: 100%;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 50px;
   padding: 8px 16px 8px 40px;
   font-size: 13px;
+  color: var(--color-text-primary);
   transition: var(--transition-fast);
 }
 
 .searchInput:focus {
-  background-color: rgba(255, 255, 255, 0.08);
-  border-color: rgba(230, 57, 70, 0.4);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-brand-primary);
   box-shadow: 0 0 10px rgba(230, 57, 70, 0.15);
 }
 
@@ -145,8 +151,9 @@
   max-height: 350px;
   overflow-y: auto;
   z-index: 110;
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-soft);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--color-shadow-md);
 }
 
 .searchItem {
@@ -160,7 +167,7 @@
 }
 
 .searchItem:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--color-surface-hover);
 }
 
 .searchItem img {
@@ -217,7 +224,7 @@
 
 .walletAdd {
   background-color: var(--primary);
-  color: var(--text-primary);
+  color: #ffffff;
   width: 16px;
   height: 16px;
   border-radius: 50%;
@@ -236,15 +243,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: var(--transition-fast);
 }
 
 .navBtn:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: var(--primary);
+  background-color: var(--color-surface-hover);
+  color: var(--color-brand-primary);
+  border-color: var(--color-border-hover);
 }
 
 .notifBadge {
@@ -255,7 +264,7 @@
   height: 8px;
   background-color: var(--primary);
   border-radius: 50%;
-  border: 2px solid var(--background);
+  border: 2px solid var(--color-surface);
 }
 
 .profileWrapper {
@@ -267,12 +276,12 @@
   height: 38px;
   border-radius: 50%;
   cursor: pointer;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--color-border);
   transition: var(--transition-fast);
 }
 
 .profileAvatar:hover {
-  border-color: var(--primary);
+  border-color: var(--color-brand-primary);
 }
 
 .profileDropdown {
@@ -283,13 +292,14 @@
   border-radius: var(--border-radius);
   padding: 12px;
   z-index: 110;
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-soft);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--color-shadow-md);
   animation: fadeIn 0.2s ease-out;
 }
 
 .profileDropdownHeader {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--color-border-subtle);
   padding-bottom: 12px;
   margin-bottom: 10px;
 }
@@ -297,11 +307,12 @@
 .profileName {
   font-weight: 700;
   font-size: 14px;
+  color: var(--color-text-primary);
 }
 
 .profileEmail {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .profileMenu {
@@ -317,19 +328,19 @@
   padding: 8px 10px;
   border-radius: var(--border-radius-sm);
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: var(--transition-fast);
 }
 
 .profileItem:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
 .signOut {
   color: var(--primary) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--color-border-subtle);
   margin-top: 6px;
   padding-top: 14px;
 }
@@ -342,10 +353,10 @@
   right: 0;
   height: var(--mobile-nav-height);
   z-index: 100;
-  background: rgba(13, 13, 13, 0.85);
+  background: var(--color-glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid var(--glass-border);
+  border-top: 1px solid var(--color-glass-border);
   display: block;
 }
 
@@ -416,11 +427,11 @@
 }
 
 /* Global Footer */
-.footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: #080808;
-  padding: 64px 0 32px 0;
-  margin-top: 64px;
+.globalFooter {
+  border-top: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-secondary);
+  padding: 60px 0 100px;
+  margin-top: 80px;
 }
 
 .footerContainer {
@@ -605,7 +616,8 @@
 
 @media (max-width: 900px) {
   .brandName {
-    display: none; /* Hide logo text, keep only logo icon "黒" */
+    font-size: 16px;
+    display: flex;
   }
   .desktopNav ul {
     gap: 12px;
@@ -615,6 +627,27 @@
   }
   .actions {
     gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerContainer {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .brand {
+    gap: 8px;
+  }
+  .brandIcon {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+  .brandName {
+    font-size: 15px;
+  }
+  .actions {
+    gap: 6px;
   }
 }
 

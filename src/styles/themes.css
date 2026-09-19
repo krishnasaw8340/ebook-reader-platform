@@ -1,0 +1,205 @@
+/**
+ * KuroYomi Design System - Semantic Theme Tokens
+ * Defines semantic color assignments for Dark Mode and Light Mode,
+ * plus backward-compatible aliases for existing codebase styling.
+ */
+
+/* ============================================================ */
+/* DARK THEME (Default)                                         */
+/* ============================================================ */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* 1. Backgrounds */
+  --color-bg-primary: #0D0D0D;
+  --color-bg-secondary: #141414;
+  --color-bg-tertiary: #1C1C1C;
+  --color-surface: #181818;
+  --color-surface-elevated: #222222;
+  --color-surface-hover: rgba(255, 255, 255, 0.06);
+  --color-surface-active: rgba(255, 255, 255, 0.1);
+  --color-surface-sunken: #080808;
+
+  /* 2. Text & Typography */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #A6A6A6;
+  --color-text-muted: #666666;
+  --color-text-disabled: #444444;
+  --color-text-inverse: #0D0D0D;
+
+  /* 3. Brand & Accent */
+  --color-brand-primary: var(--palette-crimson-500);
+  --color-brand-primary-hover: var(--palette-crimson-600);
+  --color-brand-primary-active: var(--palette-crimson-700);
+  --color-brand-primary-rgb: var(--palette-crimson-rgb);
+  --color-brand-primary-subtle: rgba(230, 57, 70, 0.12);
+  --color-brand-secondary: #2B2D42;
+  --color-brand-coin: var(--palette-gold-500);
+  --color-brand-coin-subtle: rgba(255, 215, 0, 0.12);
+
+  /* 4. Borders & Dividers */
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+  --color-border-hover: rgba(255, 255, 255, 0.25);
+
+  /* 5. Status */
+  --color-status-success: var(--palette-emerald-500);
+  --color-status-success-subtle: rgba(46, 204, 113, 0.12);
+  --color-status-warning: var(--palette-amber-500);
+  --color-status-warning-subtle: rgba(243, 156, 18, 0.12);
+  --color-status-error: var(--palette-rose-500);
+  --color-status-error-subtle: rgba(231, 76, 60, 0.12);
+  --color-status-info: var(--palette-blue-500);
+  --color-status-info-subtle: rgba(59, 130, 246, 0.12);
+
+  /* 6. Interaction & Focus */
+  --color-interaction-focus: var(--palette-crimson-500);
+  --color-interaction-focus-ring: rgba(230, 57, 70, 0.35);
+  --color-interaction-selected: rgba(230, 57, 70, 0.15);
+  --color-interaction-hover: rgba(255, 255, 255, 0.04);
+
+  /* 7. Glassmorphism & Overlays */
+  --color-glass-bg: rgba(24, 24, 24, 0.75);
+  --color-glass-border: rgba(255, 255, 255, 0.06);
+  --color-overlay: rgba(0, 0, 0, 0.75);
+  --color-overlay-heavy: rgba(0, 0, 0, 0.88);
+
+  /* 8. Shadows */
+  --color-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --color-shadow-md: 0 8px 30px rgba(0, 0, 0, 0.5);
+  --color-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.7);
+  --color-shadow-glow: 0 0 24px rgba(230, 57, 70, 0.28);
+
+  /* 9. Manga Reader Specific */
+  --color-reader-bg: #000000;
+  --color-reader-surface: #121212;
+  --color-reader-overlay: rgba(0, 0, 0, 0.82);
+  --color-reader-controls: #1E1E1E;
+  --color-reader-text: #FFFFFF;
+  --color-reader-progress: var(--palette-crimson-500);
+
+  /* 10. Shimmer Skeleton */
+  --color-shimmer-base: #18181A;
+  --color-shimmer-highlight: #28282E;
+}
+
+/* ============================================================ */
+/* LIGHT THEME                                                  */
+/* ============================================================ */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* 1. Backgrounds */
+  --color-bg-primary: #F8F9FA;
+  --color-bg-secondary: #F1F3F5;
+  --color-bg-tertiary: #E9ECEF;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-hover: rgba(0, 0, 0, 0.04);
+  --color-surface-active: rgba(0, 0, 0, 0.07);
+  --color-surface-sunken: #EDEDED;
+
+  /* 2. Text & Typography */
+  --color-text-primary: #111827;
+  --color-text-secondary: #4B5563;
+  --color-text-muted: #6B7280;
+  --color-text-disabled: #9CA3AF;
+  --color-text-inverse: #FFFFFF;
+
+  /* 3. Brand & Accent (Preserving signature manga crimson) */
+  --color-brand-primary: var(--palette-crimson-500);
+  --color-brand-primary-hover: var(--palette-crimson-600);
+  --color-brand-primary-active: var(--palette-crimson-700);
+  --color-brand-primary-rgb: var(--palette-crimson-rgb);
+  --color-brand-primary-subtle: rgba(230, 57, 70, 0.08);
+  --color-brand-secondary: #1F2937;
+  --color-brand-coin: #B45309; /* Darker amber for accessible light-mode contrast */
+  --color-brand-coin-subtle: rgba(245, 158, 11, 0.12);
+
+  /* 4. Borders & Dividers */
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-strong: rgba(0, 0, 0, 0.18);
+  --color-border-hover: rgba(0, 0, 0, 0.22);
+
+  /* 5. Status */
+  --color-status-success: #059669;
+  --color-status-success-subtle: rgba(5, 150, 105, 0.1);
+  --color-status-warning: #D97706;
+  --color-status-warning-subtle: rgba(217, 119, 6, 0.1);
+  --color-status-error: #DC2626;
+  --color-status-error-subtle: rgba(220, 38, 38, 0.1);
+  --color-status-info: #2563EB;
+  --color-status-info-subtle: rgba(37, 99, 235, 0.1);
+
+  /* 6. Interaction & Focus */
+  --color-interaction-focus: var(--palette-crimson-500);
+  --color-interaction-focus-ring: rgba(230, 57, 70, 0.25);
+  --color-interaction-selected: rgba(230, 57, 70, 0.08);
+  --color-interaction-hover: rgba(0, 0, 0, 0.03);
+
+  /* 7. Glassmorphism & Overlays */
+  --color-glass-bg: rgba(255, 255, 255, 0.85);
+  --color-glass-border: rgba(0, 0, 0, 0.08);
+  --color-overlay: rgba(17, 24, 39, 0.6);
+  --color-overlay-heavy: rgba(17, 24, 39, 0.8);
+
+  /* 8. Shadows */
+  --color-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --color-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --color-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+  --color-shadow-glow: 0 0 20px rgba(230, 57, 70, 0.15);
+
+  /* 9. Manga Reader Specific */
+  --color-reader-bg: #141416; /* Clean dark canvas preserved for scan clarity */
+  --color-reader-surface: #222226;
+  --color-reader-overlay: rgba(0, 0, 0, 0.75);
+  --color-reader-controls: #2D2D32;
+  --color-reader-text: #FFFFFF;
+  --color-reader-progress: var(--palette-crimson-500);
+
+  /* 10. Shimmer Skeleton */
+  --color-shimmer-base: #E5E7EB;
+  --color-shimmer-highlight: #F3F4F6;
+}
+
+/* ============================================================ */
+/* BACKWARD-COMPATIBLE ALIASES                                  */
+/* Ensures all existing CSS referencing legacy tokens continues */
+/* working flawlessly while adapting dynamically to active theme*/
+/* ============================================================ */
+:root {
+  --color-primary: var(--color-brand-primary);
+  --color-primary-hover: var(--color-brand-primary-hover);
+  --color-primary-active: var(--color-brand-primary-active);
+  --color-primary-contrast: #ffffff;
+
+  --primary: var(--color-brand-primary);
+  --primary-rgb: var(--color-brand-primary-rgb);
+  --secondary: var(--color-bg-secondary);
+  --background: var(--color-bg-primary);
+  --card: var(--color-surface);
+  --card-hover: var(--color-surface-hover);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+  --success: var(--color-status-success);
+  --warning: var(--color-status-warning);
+  --error: var(--color-status-error);
+  --coin: var(--color-brand-coin);
+  --glass-bg: var(--color-glass-bg);
+  --glass-border: var(--color-glass-border);
+  --shadow-soft: var(--color-shadow-md);
+  --shadow-glow: var(--color-shadow-glow);
+
+  --border-radius: var(--radius-lg);
+  --border-radius-sm: var(--radius-sm);
+  --border-radius-lg: var(--radius-2xl);
+  --nav-height: var(--layout-nav-height);
+  --mobile-nav-height: var(--layout-mobile-nav-height);
+
+  --transition-fast: var(--ease-fast);
+  --transition-smooth: var(--ease-smooth);
+}
