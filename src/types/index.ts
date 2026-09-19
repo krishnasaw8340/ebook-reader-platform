@@ -48,61 +48,273 @@ export interface RefreshToken {
 }
 
 // Schema: catalog
+export type SeriesStatus = 'DRAFT' | 'ONGOING' | 'COMPLETED' | 'HIATUS' | 'PUBLISHED' | 'ARCHIVED';
+
 export interface BookSeries {
   id: string; // UUID PK
-  title: string; // String Title
-  description: string | null; // String? Desc
-  cover_image: string | null; // String? Cover
-  status: 'ONGOING' | 'COMPLETED' | 'DRAFT' | 'ARCHIVED'; // Enum Status
-  created_at: string; // DateTime Created
+  name?: string; // Franchise Name from Backend
+  title: string; // Title alias for UI compatibility
+  slug?: string; // Unique URL-friendly slug
+  description: string | null; // Synopsis
+  cover_image: string | null; // Cover image URL
+  status: SeriesStatus; // Series publication status
+  created_at: string; // Creation timestamp
   updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  volumes?: Volume[];
 }
+
+export interface CreateSeriesPayload {
+  name: string;
+  slug?: string;
+  description?: string;
+  status?: SeriesStatus;
+}
+
+export interface UpdateSeriesPayload {
+  name?: string;
+  slug?: string;
+  description?: string;
+  status?: SeriesStatus;
+}
+
+export interface QuerySeriesParams {
+  search?: string;
+  status?: SeriesStatus;
+  page?: number;
+  limit?: number;
+  sortBy?: 'createdAt' | 'name' | 'status';
+  sortOrder?: 'ASC' | 'DESC';
+}
+
+export interface PaginatedSeriesResponse {
+  data: BookSeries[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+// Volume types & DTOs
+export type VolumeStatus = 'DRAFT' | 'ONGOING' | 'PUBLISHED' | 'ARCHIVED';
 
 export interface Volume {
   id: string; // UUID PK
   series_id: string; // UUID FK
+  seriesId?: string; // Backend camelCase alias
   volume_no: number; // Order in series
+  volumeNumber?: number; // Backend camelCase alias
   title: string;
+  slug?: string;
   description?: string | null;
   cover_image?: string | null;
-  status: 'ONGOING' | 'COMPLETED' | 'DRAFT' | 'ARCHIVED';
+  status: VolumeStatus;
+  sortOrder?: number;
+  sort_order?: number;
   release_date?: string | null;
+  releaseDate?: string | null;
+  publishedAt?: string | null;
   created_at: string;
   updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  series?: BookSeries;
+  books?: Book[];
 }
+
+export interface CreateVolumePayload {
+  seriesId: string;
+  volumeNumber: number;
+  title?: string;
+  slug?: string;
+  description?: string;
+  sortOrder?: number;
+  releaseDate?: string;
+  status?: VolumeStatus;
+  publishedAt?: string;
+}
+
+export interface UpdateVolumePayload {
+  seriesId?: string;
+  volumeNumber?: number;
+  title?: string;
+  slug?: string;
+  description?: string;
+  sortOrder?: number;
+  releaseDate?: string;
+  status?: VolumeStatus;
+  publishedAt?: string;
+}
+
+export interface QueryVolumeParams {
+  seriesId?: string;
+  search?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC' | 'asc' | 'desc';
+}
+
+export interface PaginatedVolumeResponse {
+  data: Volume[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+// Book types & DTOs
+export type BookStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'ARCHIVED' | 'READY' | 'ONGOING' | 'COMPLETED' | 'PROCESSING';
+export type PricingModel = 'FREE' | 'PER_PAGE' | 'PER_CHAPTER' | 'PER_BOOK' | 'SUBSCRIPTION';
 
 export interface Book {
   id: string; // UUID PK
   series_id: string; // UUID FK
+  seriesId?: string; // Backend camelCase
   volume_id?: string | null; // Optional Volume FK (Supports Direct Series -> Book)
+  volumeId?: string | null; // Backend camelCase
   title: string; // String Title
   japanese_title?: string | null;
+  japaneseTitle?: string | null;
   slug?: string;
   summary: string | null; // String? Summary
+  description?: string | null;
   language?: string; // 'English', 'Japanese', etc.
+  languageId?: string;
   author?: string;
+  authorId?: string;
   artist?: string;
+  artistId?: string;
   category?: string;
+  categoryId?: string;
   genres?: string[];
+  genreIds?: string[];
   tags?: string[];
+  tagIds?: string[];
   cover_image: string | null; // String? Cover
+  coverImage?: string | null;
   banner_image?: string | null;
+  bannerImage?: string | null;
   thumbnail_image?: string | null;
+  thumbnailImage?: string | null;
   release_date?: string | null;
+  releaseDate?: string | null;
+  publishedAt?: string | null;
 
   // Book default pricing model
-  pricing_model?: 'FREE' | 'PER_PAGE' | 'PER_CHAPTER' | 'PER_BOOK' | 'SUBSCRIPTION';
+  pricing_model?: PricingModel;
+  pricingModel?: PricingModel;
   coin_price: number; // Int Price (for PER_BOOK or default fallback)
+  coinPrice?: number;
   default_coins_per_page?: number;
+  defaultCoinPerPage?: number;
   default_free_chapters?: number;
+  defaultFreeChapters?: number;
   default_free_pages?: number;
+  defaultFreePages?: number;
   is_premium?: boolean;
+  isPremium?: boolean;
 
-  status: 'DRAFT' | 'PROCESSING' | 'READY' | 'PUBLISHED' | 'ARCHIVED' | 'ONGOING' | 'COMPLETED';
+  status: BookStatus;
   chapter_count?: number;
+  totalChapters?: number;
   page_count?: number;
+  totalPages?: number;
+  averageRating?: number;
+  totalViews?: number;
   created_at: string; // DateTime Created
   updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  series?: BookSeries;
+  volume?: Volume;
+}
+
+export interface CreateBookPayload {
+  seriesId: string;
+  volumeId?: string | null;
+  title: string;
+  japaneseTitle?: string;
+  slug?: string;
+  description?: string;
+  authorId?: string;
+  artistId?: string;
+  languageId: string;
+  categoryId: string;
+  genreIds?: string[];
+  tagIds?: string[];
+  status?: BookStatus;
+  pricingModel?: PricingModel;
+  defaultCoinPerPage?: number;
+  defaultFreeChapters?: number;
+  defaultFreePages?: number;
+  isPremium?: boolean;
+  releaseDate?: string;
+  publishedAt?: string;
+}
+
+export interface UpdateBookPayload {
+  seriesId?: string;
+  volumeId?: string | null;
+  title?: string;
+  japaneseTitle?: string;
+  slug?: string;
+  description?: string;
+  authorId?: string;
+  artistId?: string;
+  languageId?: string;
+  categoryId?: string;
+  genreIds?: string[];
+  tagIds?: string[];
+  status?: BookStatus;
+  pricingModel?: PricingModel;
+  defaultCoinPerPage?: number;
+  defaultFreeChapters?: number;
+  defaultFreePages?: number;
+  isPremium?: boolean;
+  releaseDate?: string;
+  publishedAt?: string;
+}
+
+export interface QueryBookParams {
+  seriesId?: string;
+  volumeId?: string;
+  authorId?: string;
+  artistId?: string;
+  languageId?: string;
+  categoryId?: string;
+  genreId?: string;
+  tagId?: string;
+  status?: string;
+  pricingModel?: string;
+  isPremium?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC' | 'asc' | 'desc';
+}
+
+export interface PaginatedBookResponse {
+  data: Book[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
 }
 
 export interface UploadJob {
@@ -136,23 +348,106 @@ export interface UploadJob {
   completed_at?: string | null;
 }
 
+// Chapter types & DTOs
+export type ChapterPricingModel = 'FREE' | 'PARTIAL' | 'PARTIAL_FREE' | 'PAID';
+
 export interface Chapter {
   id: string; // UUID PK
   book_id: string; // UUID FK
+  bookId?: string; // Backend camelCase
   chapter_no: number; // Int Order
+  chapterNumber?: number; // Backend camelCase
   title: string; // String Title
-  access_type: 'FREE' | 'PARTIAL' | 'PAID'; // Enum FREE/PARTIAL/PAID
+  sort_order?: number;
+  sortOrder?: number;
+  access_type: ChapterPricingModel; // Enum FREE/PARTIAL/PAID
+  pricing_model?: ChapterPricingModel;
+  pricingModel?: ChapterPricingModel;
   free_pages: number; // Int Free
+  freePageCount?: number;
   coin_cost: number; // Int Cost
+  coinCost?: number;
+  page_count?: number;
+  pageCount?: number;
+  published?: boolean;
+  publishedAt?: string | null;
   created_at: string; // DateTime Created
+  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  book?: Book;
+  pages?: Page[];
 }
 
+export interface CreateChapterPayload {
+  bookId: string;
+  chapterNumber: number;
+  title?: string;
+  sortOrder?: number;
+  pricingModel?: ChapterPricingModel;
+  freePageCount?: number;
+  coinCost?: number;
+  pageCount?: number;
+  published?: boolean;
+  publishedAt?: string;
+}
+
+export interface UpdateChapterPayload {
+  bookId?: string;
+  chapterNumber?: number;
+  title?: string;
+  sortOrder?: number;
+  pricingModel?: ChapterPricingModel;
+  freePageCount?: number;
+  coinCost?: number;
+  pageCount?: number;
+  published?: boolean;
+  publishedAt?: string;
+}
+
+export interface QueryChapterParams {
+  bookId?: string;
+  pricingModel?: string;
+  published?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC' | 'asc' | 'desc';
+}
+
+export interface PaginatedChapterResponse {
+  data: Chapter[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+// Page types & DTOs
 export interface Page {
   id: string; // UUID PK
   chapter_id: string; // UUID FK
+  chapterId?: string;
   page_no: number; // Int Order
+  pageNumber?: number;
   image_url: string; // String Image
+  imageUrl?: string;
+  is_drm_protected?: boolean;
   created_at: string; // DateTime Created
+  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface QueryPageParams {
+  chapterId?: string;
+  page?: number;
+  limit?: number;
 }
 
 // Schema: reading

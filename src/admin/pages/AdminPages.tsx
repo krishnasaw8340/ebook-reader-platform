@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
-    UploadCloud,
     Trash2,
     MoveLeft,
     MoveRight,
@@ -9,11 +8,14 @@ import {
     RefreshCw,
     Save,
     GripVertical,
-    FileImage,
     Layers,
     ArrowUpToLine,
     ArrowDownToLine,
-    ListOrdered
+    ListOrdered,
+    AlertTriangle,
+    CloudOff,
+    BookOpen,
+    FileImage
 } from 'lucide-react';
 import {
     adminChapterService,
@@ -32,8 +34,39 @@ import {
 } from '../components/AdminUI';
 import styles from '../components/AdminUI.module.css';
 
+// ─── Deferred Upload Notice Banner ────────────────────────────────────────────
+const DeferredUploadBanner: React.FC = () => (
+    <div style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '14px',
+        padding: '16px 20px',
+        background: 'linear-gradient(135deg, rgba(251,191,36,0.08) 0%, rgba(245,158,11,0.04) 100%)',
+        border: '1px solid rgba(251,191,36,0.25)',
+        borderRadius: 'var(--border-radius)',
+        marginBottom: '20px'
+    }}>
+        <div style={{ flexShrink: 0, marginTop: '2px' }}>
+            <CloudOff size={20} color="#fbbf24" />
+        </div>
+        <div>
+            <div style={{ fontWeight: 700, fontSize: '13px', color: '#fbbf24', marginBottom: '4px' }}>
+                S3 / R2 Direct Upload — Scheduled for Next Phase
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                Direct manga scan uploads to cloud object storage (AWS S3 / Cloudflare R2) via presigned URLs
+                are being implemented in the <strong style={{ color: 'var(--color-text-primary)' }}>next development phase</strong>.
+                Page reordering, metadata management, and sequence locking are fully functional now.
+                Use the <strong style={{ color: 'var(--color-text-primary)' }}>Batch Ingest</strong> upload system for complete
+                chapter packages in the meantime.
+            </div>
+        </div>
+    </div>
+);
+
 export const AdminPages: React.FC = () => {
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const initialChapterId = searchParams.get('chapterId') || '';
 
     const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -47,18 +80,11 @@ export const AdminPages: React.FC = () => {
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    // Multi-upload state
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState<number>(0);
-    const multiInputRef = useRef<HTMLInputElement>(null);
-
     // Drag-and-drop state
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-    // Preview / Replace modal
+    // Preview modal
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [replacePageTarget, setReplacePageTarget] = useState<Page | null>(null);
-    const replaceInputRef = useRef<HTMLInputElement>(null);
 
     // Position mover modal for mobile
     const [movePageTarget, setMovePageTarget] = useState<Page | null>(null);
@@ -81,7 +107,8 @@ export const AdminPages: React.FC = () => {
                     setSelectedChapterId(cList[0].id);
                 }
             } catch (err: any) {
-                setErrorMessage(err.message || 'Unable to load chapters.');
+                const msg = err.response?.data?.message || err.message || 'Unable to load chapters.';
+                setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
             }
         };
         fetchInitial();
@@ -95,7 +122,8 @@ export const AdminPages: React.FC = () => {
             const data = await adminPageService.getByChapter(chapId);
             setPages(data);
         } catch (err: any) {
-            setErrorMessage(err.message || 'Unable to load chapter pages.');
+            const msg = err.response?.data?.message || err.message || 'Unable to load chapter pages.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
         } finally {
             setLoading(false);
         }
@@ -104,40 +132,10 @@ export const AdminPages: React.FC = () => {
     useEffect(() => {
         if (selectedChapterId) {
             loadPages(selectedChapterId);
+        } else {
+            setLoading(false);
         }
     }, [selectedChapterId]);
-
-    // Handle multiple file upload
-    const handleMultiUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files || files.length === 0 || !selectedChapterId) return;
-
-        setIsUploading(true);
-        setUploadProgress(10);
-        setErrorMessage(null);
-        setSuccessMessage(null);
-
-        try {
-            const urls: string[] = [];
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const objectUrl = URL.createObjectURL(file);
-                urls.push(objectUrl);
-            }
-
-            setUploadProgress(60);
-
-            const created = await adminPageService.uploadPages(selectedChapterId, urls);
-            setUploadProgress(100);
-            setSuccessMessage(`Successfully uploaded ${created.length} new manga page(s).`);
-            loadPages(selectedChapterId);
-        } catch (err: any) {
-            setErrorMessage(err.message || 'Failed to upload pages.');
-        } finally {
-            setIsUploading(false);
-            if (multiInputRef.current) multiInputRef.current.value = '';
-        }
-    };
 
     // Reordering: Move Left / Move Right
     const movePage = (fromIndex: number, toIndex: number) => {
@@ -145,7 +143,7 @@ export const AdminPages: React.FC = () => {
         const copy = [...pages];
         const [moved] = copy.splice(fromIndex, 1);
         copy.splice(toIndex, 0, moved);
-        const reordered = copy.map((p, idx) => ({ ...p, page_no: idx + 1 }));
+        const reordered = copy.map((p, idx) => ({ ...p, page_no: idx + 1, pageNumber: idx + 1 }));
         setPages(reordered);
     };
 
@@ -159,7 +157,7 @@ export const AdminPages: React.FC = () => {
         const copy = [...pages];
         const [moved] = copy.splice(currentIndex, 1);
         copy.splice(newIndex, 0, moved);
-        const reordered = copy.map((p, idx) => ({ ...p, page_no: idx + 1 }));
+        const reordered = copy.map((p, idx) => ({ ...p, page_no: idx + 1, pageNumber: idx + 1 }));
         setPages(reordered);
         setMovePageTarget(null);
         setSuccessMessage(`Page moved to position ${newIndex + 1}.`);
@@ -177,7 +175,7 @@ export const AdminPages: React.FC = () => {
         const draggedItem = copy[draggedIndex];
         copy.splice(draggedIndex, 1);
         copy.splice(index, 0, draggedItem);
-        const reordered = copy.map((p, idx) => ({ ...p, page_no: idx + 1 }));
+        const reordered = copy.map((p, idx) => ({ ...p, page_no: idx + 1, pageNumber: idx + 1 }));
         setDraggedIndex(index);
         setPages(reordered);
     };
@@ -195,31 +193,14 @@ export const AdminPages: React.FC = () => {
 
         try {
             const pageIds = pages.map((p) => p.id);
-            await adminPageService.reorderPages(selectedChapterId, pageIds);
+            await adminPageService.reorder(selectedChapterId, pageIds);
             setSuccessMessage('Page sequence successfully saved and locked to DRM catalog.');
             loadPages(selectedChapterId);
         } catch (err: any) {
-            setErrorMessage(err.message || 'Failed to save page ordering.');
+            const msg = err.response?.data?.message || err.message || 'Failed to save page ordering.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
         } finally {
             setSavingOrder(false);
-        }
-    };
-
-    // Replace image handler
-    const handleReplaceFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files || files.length === 0 || !replacePageTarget) return;
-
-        const file = files[0];
-        const newUrl = URL.createObjectURL(file);
-
-        try {
-            await adminPageService.replacePageImage(replacePageTarget.id, newUrl);
-            setSuccessMessage(`Page ${replacePageTarget.page_no} replaced.`);
-            setReplacePageTarget(null);
-            loadPages(selectedChapterId);
-        } catch (err: any) {
-            setErrorMessage(err.message || 'Failed to replace page.');
         }
     };
 
@@ -227,68 +208,71 @@ export const AdminPages: React.FC = () => {
     const handleDeletePage = async () => {
         if (!deletePageTarget) return;
         try {
-            await adminPageService.deletePage(deletePageTarget.id);
+            await adminPageService.delete(deletePageTarget.id);
             setSuccessMessage(`Page ${deletePageTarget.page_no} deleted and sequence reindexed.`);
             setDeletePageTarget(null);
             loadPages(selectedChapterId);
         } catch (err: any) {
-            setErrorMessage(err.message || 'Failed to delete page.');
+            const msg = err.response?.data?.message || err.message || 'Failed to delete page.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
         }
     };
 
     const currentChapter = chapters.find((c) => c.id === selectedChapterId);
+    const currentBook = currentChapter ? books.find(b => b.id === (currentChapter.bookId || currentChapter.book_id)) : null;
+
+    const pricingLabel = () => {
+        const model = currentChapter?.pricingModel || currentChapter?.pricing_model || currentChapter?.access_type || 'FREE';
+        if (model === 'PAID') return `PAID (${currentChapter?.coinCost ?? currentChapter?.coin_cost ?? 0} Coins)`;
+        if (model === 'PARTIAL_FREE' || model === 'PARTIAL') return `PARTIAL (${currentChapter?.freePageCount ?? currentChapter?.free_pages ?? 0} free pgs)`;
+        return 'FREE';
+    };
+
+    const pricingColor = () => {
+        const model = currentChapter?.pricingModel || currentChapter?.pricing_model || currentChapter?.access_type || 'FREE';
+        if (model === 'PAID') return '#ffd700';
+        if (model === 'PARTIAL_FREE' || model === 'PARTIAL') return '#38bdf8';
+        return '#2ecc71';
+    };
 
     return (
         <div>
             <PageHeader
                 title="Manga Page Management & DRM Compiler"
-                subtitle="Upload scans from desktop or mobile device, manage deterministic page ordering, and inspect DRM sequences."
+                subtitle="View and reorder chapter page scans, manage deterministic DRM sequences, and lock page ordering."
+                breadcrumbs={[
+                    { label: 'Dashboard', path: '/admin/dashboard' },
+                    { label: 'Books', path: '/admin/books' },
+                    ...(currentBook ? [{ label: currentBook.title, path: `/admin/books/${currentBook.id}` }] : []),
+                    { label: 'Chapters', path: currentBook ? `/admin/chapters?bookId=${currentBook.id}` : '/admin/chapters' },
+                    { label: 'Pages' }
+                ]}
                 actions={
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
-                        <button
-                            className={styles.btnSecondary}
-                            onClick={() => multiInputRef.current?.click()}
-                            disabled={!selectedChapterId || isUploading}
-                            style={{ flex: 1, minWidth: '160px' }}
-                        >
-                            <UploadCloud size={16} /> Batch Upload Scans
-                        </button>
-                        <button
-                            className={styles.btnPrimary}
-                            onClick={saveDeterministicOrder}
-                            disabled={pages.length === 0 || savingOrder}
-                            style={{ flex: 1, minWidth: '160px' }}
-                        >
-                            <Save size={16} /> {savingOrder ? 'Saving...' : 'Lock Page Order'}
-                        </button>
-                    </div>
+                    <button
+                        className={styles.btnPrimary}
+                        onClick={saveDeterministicOrder}
+                        disabled={pages.length === 0 || savingOrder}
+                        style={{ minWidth: '160px' }}
+                    >
+                        <Save size={16} /> {savingOrder ? 'Saving...' : 'Lock Page Order'}
+                    </button>
                 }
-            />
-
-            {/* Hidden file input for batch upload */}
-            <input
-                type="file"
-                ref={multiInputRef}
-                multiple
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={handleMultiUpload}
-            />
-
-            {/* Hidden file input for single page replacement */}
-            <input
-                type="file"
-                ref={replaceInputRef}
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={handleReplaceFile}
             />
 
             {successMessage && <SuccessBanner message={successMessage} />}
             {errorMessage && <ErrorBanner message={errorMessage} />}
 
+            {/* Deferred Upload Notice */}
+            <DeferredUploadBanner />
+
             {/* Chapter Selection Bar */}
-            <div className={styles.filterBar} style={{ background: 'var(--card)', padding: '16px', borderRadius: 'var(--border-radius)', border: '1px solid var(--glass-border)' }}>
+            <div className={styles.filterBar} style={{
+                background: 'var(--card)',
+                padding: '16px',
+                borderRadius: 'var(--border-radius)',
+                border: '1px solid var(--glass-border)',
+                marginBottom: '20px'
+            }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', width: '100%' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '140px' }}>
                         <Layers size={18} color="var(--primary)" />
@@ -302,51 +286,59 @@ export const AdminPages: React.FC = () => {
                         onChange={(e) => setSelectedChapterId(e.target.value)}
                     >
                         {chapters.map((ch) => {
-                            const b = books.find((book) => book.id === ch.book_id);
+                            const b = books.find((book) => book.id === (ch.bookId || ch.book_id));
                             return (
                                 <option key={ch.id} value={ch.id}>
-                                    {b ? `[${b.title}] ` : ''}Ch. {ch.chapter_no}: {ch.title} ({ch.access_type})
+                                    {b ? `[${b.title}] ` : ''}Ch. {ch.chapterNumber ?? ch.chapter_no}: {ch.title}
                                 </option>
                             );
                         })}
                     </select>
 
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: '100%', justifyContent: 'space-between', marginTop: '6px' }}>
-                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                            Total Pages: <strong style={{ color: 'var(--color-text-primary)' }}>{pages.length}</strong>
-                        </span>
-                        <span style={{ fontSize: '12px', color: currentChapter?.access_type === 'PAID' ? '#ffd700' : '#2ecc71', fontWeight: 700 }}>
-                            {currentChapter?.access_type === 'PAID' ? `PAID (${currentChapter.coin_cost} Coins)` : 'FREE'}
-                        </span>
-                    </div>
+                    {currentChapter && (
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', width: '100%', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--glass-border)' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                Total Pages: <strong style={{ color: 'var(--color-text-primary)' }}>{pages.length}</strong>
+                            </span>
+                            <span style={{ fontSize: '12px', color: pricingColor(), fontWeight: 700 }}>
+                                {pricingLabel()}
+                            </span>
+                            {currentBook && (
+                                <button
+                                    className={styles.btnSecondary}
+                                    style={{ padding: '4px 10px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                    onClick={() => navigate(`/admin/chapters?bookId=${currentBook.id}`)}
+                                >
+                                    <BookOpen size={11} /> View All Chapters
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Upload Progress Indicator */}
-            {isUploading && (
-                <div style={{ marginTop: '16px', background: 'var(--card)', padding: '16px', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--glass-border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-                        <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>Optimizing & encrypting pages (WebP / DRM)...</span>
-                        <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{uploadProgress}%</span>
-                    </div>
-                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ width: `${uploadProgress}%`, height: '100%', background: 'var(--primary)', transition: 'width 0.3s' }} />
-                    </div>
-                </div>
-            )}
-
             {/* Pages Grid with Deterministic Ordering */}
-            <div style={{ marginTop: '20px' }}>
+            <div>
                 {loading ? (
                     <LoadingState message="Loading manga pages..." />
+                ) : !selectedChapterId ? (
+                    <div className={styles.tableCard}>
+                        <EmptyState
+                            title="No chapter selected"
+                            description="Select a chapter above to view and manage its pages."
+                        />
+                    </div>
                 ) : pages.length === 0 ? (
                     <div className={styles.tableCard}>
                         <EmptyState
                             title="No pages uploaded for this chapter"
-                            description="Upload or select manga page scans to compile this chapter."
+                            description="Pages will appear here once they are uploaded via the Batch Ingest system. Direct S3/R2 upload is coming in the next phase."
                             action={
-                                <button className={styles.btnPrimary} onClick={() => multiInputRef.current?.click()}>
-                                    <UploadCloud size={14} /> Upload First Pages
+                                <button
+                                    className={styles.btnSecondary}
+                                    onClick={() => navigate('/admin/uploads')}
+                                >
+                                    <FileImage size={14} /> Go to Batch Ingest
                                 </button>
                             }
                         />
@@ -395,7 +387,7 @@ export const AdminPages: React.FC = () => {
                                             borderRadius: '4px',
                                             letterSpacing: '0.5px'
                                         }}>
-                                            PAGE {page.page_no}
+                                            PAGE {page.page_no ?? page.pageNumber}
                                         </span>
                                         <div style={{ color: 'var(--text-muted)' }}>
                                             <GripVertical size={14} />
@@ -413,33 +405,29 @@ export const AdminPages: React.FC = () => {
                                             background: '#0e0e11',
                                             border: '1px solid rgba(255,255,255,0.06)'
                                         }}
-                                        onClick={() => setPreviewUrl(page.image_url)}
+                                        onClick={() => setPreviewUrl(page.image_url || page.imageUrl || null)}
                                     >
-                                        <img
-                                            src={page.image_url}
-                                            alt={`Page ${page.page_no}`}
-                                            loading="lazy"
-                                            style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover'
-                                            }}
-                                        />
+                                        {(page.image_url || page.imageUrl) ? (
+                                            <img
+                                                src={page.image_url || page.imageUrl}
+                                                alt={`Page ${page.page_no}`}
+                                                loading="lazy"
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            />
+                                        ) : (
+                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <AlertTriangle size={24} color="var(--text-muted)" />
+                                            </div>
+                                        )}
 
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: 6,
-                                            right: 6,
-                                            display: 'flex',
-                                            gap: '4px'
-                                        }}>
+                                        <div style={{ position: 'absolute', top: 6, right: 6 }}>
                                             <button
                                                 className={styles.btnIcon}
                                                 style={{ width: '28px', height: '28px', background: 'rgba(0,0,0,0.7)', color: '#ffffff' }}
                                                 title="Full Preview"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setPreviewUrl(page.image_url);
+                                                    setPreviewUrl(page.image_url || page.imageUrl || null);
                                                 }}
                                             >
                                                 <Eye size={12} />
@@ -474,7 +462,7 @@ export const AdminPages: React.FC = () => {
                                                 title="Jump to Position"
                                                 onClick={() => {
                                                     setMovePageTarget(page);
-                                                    setTargetPosition(page.page_no);
+                                                    setTargetPosition(page.page_no ?? page.pageNumber ?? idx + 1);
                                                 }}
                                             >
                                                 <ListOrdered size={13} />
@@ -482,17 +470,6 @@ export const AdminPages: React.FC = () => {
                                         </div>
 
                                         <div style={{ display: 'flex', gap: '3px' }}>
-                                            <button
-                                                className={styles.btnIcon}
-                                                style={{ width: '32px', height: '32px' }}
-                                                title="Replace Image"
-                                                onClick={() => {
-                                                    setReplacePageTarget(page);
-                                                    replaceInputRef.current?.click();
-                                                }}
-                                            >
-                                                <RefreshCw size={13} />
-                                            </button>
                                             <button
                                                 className={styles.btnIcon}
                                                 style={{ width: '32px', height: '32px', color: '#ef4444' }}
@@ -514,7 +491,7 @@ export const AdminPages: React.FC = () => {
             <Modal
                 isOpen={!!movePageTarget}
                 onClose={() => setMovePageTarget(null)}
-                title={`Move Page ${movePageTarget?.page_no} to Position`}
+                title={`Move Page ${movePageTarget?.page_no ?? movePageTarget?.pageNumber} to Position`}
                 footer={
                     <>
                         <button className={styles.btnSecondary} onClick={() => setMovePageTarget(null)}>
@@ -591,7 +568,7 @@ export const AdminPages: React.FC = () => {
                 onClose={() => setDeletePageTarget(null)}
                 onConfirm={handleDeletePage}
                 title="Delete Manga Page"
-                message={`Are you sure you want to delete Page ${deletePageTarget?.page_no}? The remaining pages will automatically re-index in sequential order.`}
+                message={`Are you sure you want to delete Page ${deletePageTarget?.page_no ?? deletePageTarget?.pageNumber}? The remaining pages will automatically re-index in sequential order.`}
                 confirmText="Delete Page"
             />
         </div>

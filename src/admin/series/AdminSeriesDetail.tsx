@@ -104,7 +104,7 @@ export const AdminSeriesDetail: React.FC = () => {
                             <ExternalLink size={14} /> Reader Storefront
                         </button>
                         <button className={uiStyles.btnPrimary} onClick={() => navigate('/admin/books/new')}>
-                            <Plus size={14} /> + Add Book to Series
+                            <Plus size={14} /> Add Book to Series
                         </button>
                     </div>
                 }
@@ -126,6 +126,12 @@ export const AdminSeriesDetail: React.FC = () => {
                         <h1 className={styles.bookTitle}>{series.title}</h1>
                         <StatusBadge status={series.status} />
                     </div>
+
+                    {series.slug && (
+                        <div style={{ fontSize: '12px', color: 'var(--color-brand-primary)', fontFamily: 'monospace', marginBottom: '8px' }}>
+                            Slug: /{series.slug}
+                        </div>
+                    )}
 
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '14px' }}>
                         {series.description || 'No franchise synopsis recorded.'}

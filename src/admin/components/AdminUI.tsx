@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Search,
     X,
@@ -8,18 +9,58 @@ import {
     Trash2,
     Image as ImageIcon,
     ChevronDown,
+    ChevronRight,
     Check
 } from 'lucide-react';
 import styles from './AdminUI.module.css';
+
+// Breadcrumbs Component for Hierarchical Admin Navigation
+export interface BreadcrumbItem {
+    label: string;
+    path?: string;
+}
+
+export const Breadcrumbs: React.FC<{ items: BreadcrumbItem[] }> = ({ items }) => {
+    const navigate = useNavigate();
+
+    return (
+        <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px', flexWrap: 'wrap' }}>
+            {items.map((item, index) => {
+                const isLast = index === items.length - 1;
+                return (
+                    <React.Fragment key={index}>
+                        {item.path && !isLast ? (
+                            <span
+                                onClick={() => navigate(item.path!)}
+                                style={{ color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 500, transition: 'color 0.15s' }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--primary)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                            >
+                                {item.label}
+                            </span>
+                        ) : (
+                            <span style={{ color: isLast ? 'var(--color-text-primary)' : 'var(--text-muted)', fontWeight: isLast ? 700 : 500 }}>
+                                {item.label}
+                            </span>
+                        )}
+                        {!isLast && <ChevronRight size={12} color="var(--text-muted)" />}
+                    </React.Fragment>
+                );
+            })}
+        </nav>
+    );
+};
 
 // Page Header
 export const PageHeader: React.FC<{
     title: string;
     subtitle?: string;
     actions?: React.ReactNode;
-}> = ({ title, subtitle, actions }) => (
+    breadcrumbs?: BreadcrumbItem[];
+}> = ({ title, subtitle, actions, breadcrumbs }) => (
     <div className={styles.pageHeader}>
         <div className={styles.pageTitleGroup}>
+            {breadcrumbs && <Breadcrumbs items={breadcrumbs} />}
             <h1>{title}</h1>
             {subtitle && <p className={styles.pageSubtitle}>{subtitle}</p>}
         </div>

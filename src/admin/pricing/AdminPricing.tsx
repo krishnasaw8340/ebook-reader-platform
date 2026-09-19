@@ -43,7 +43,7 @@ export const AdminPricing: React.FC = () => {
 
     // Edit chapter pricing modal
     const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
-    const [formAccessType, setFormAccessType] = useState<'FREE' | 'PARTIAL' | 'PAID'>('FREE');
+    const [formAccessType, setFormAccessType] = useState<'FREE' | 'PARTIAL' | 'PARTIAL_FREE' | 'PAID'>('FREE');
     const [formCoinCost, setFormCoinCost] = useState(1);
     const [formFreePages, setFormFreePages] = useState(1);
 

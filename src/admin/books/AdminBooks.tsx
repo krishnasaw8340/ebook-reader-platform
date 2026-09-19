@@ -47,6 +47,7 @@ export const AdminBooks: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [seriesFilter, setSeriesFilter] = useState('');
+    const [volumeFilter, setVolumeFilter] = useState('');
     const [languageFilter, setLanguageFilter] = useState('');
     const [pricingFilter, setPricingFilter] = useState('');
     const [sortBy, setSortBy] = useState<'updated_at' | 'title' | 'chapter_count'>('updated_at');
@@ -77,19 +78,21 @@ export const AdminBooks: React.FC = () => {
                     search: searchQuery,
                     status: statusFilter,
                     seriesId: seriesFilter,
-                    language: languageFilter,
+                    volumeId: volumeFilter || undefined,
+                    languageId: languageFilter,
                     pricingModel: pricingFilter,
                     sortBy,
                     sortOrder
                 }),
                 adminSeriesService.getAll(),
-                adminVolumeService.getAll()
+                adminVolumeService.getAll(seriesFilter || undefined)
             ]);
             setBooks(bList);
             setSeriesList(sList);
             setVolumesList(vList);
         } catch (err: any) {
-            setErrorMessage(err.message || 'Unable to load books catalog.');
+            const msg = err.response?.data?.message || err.message || 'Unable to load books catalog.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
         } finally {
             setLoading(false);
         }
@@ -97,7 +100,7 @@ export const AdminBooks: React.FC = () => {
 
     useEffect(() => {
         loadData();
-    }, [searchQuery, statusFilter, seriesFilter, languageFilter, pricingFilter, sortBy, sortOrder]);
+    }, [searchQuery, statusFilter, seriesFilter, volumeFilter, languageFilter, pricingFilter, sortBy, sortOrder]);
 
     const handleTogglePublish = async (book: Book) => {
         try {
@@ -105,7 +108,8 @@ export const AdminBooks: React.FC = () => {
             setSuccessMessage(`Book "${updated.title}" status changed to ${updated.status}.`);
             loadData();
         } catch (err: any) {
-            setErrorMessage(err.message || 'Failed to update publishing status.');
+            const msg = err.response?.data?.message || err.message || 'Failed to update publishing status.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
         }
     };
 
@@ -122,19 +126,20 @@ export const AdminBooks: React.FC = () => {
             setConfirmAction(null);
             loadData();
         } catch (err: any) {
-            setErrorMessage(err.message || 'Action failed.');
+            const msg = err.response?.data?.message || err.message || 'Action failed.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
         }
     };
 
     const getSeriesTitle = (seriesId: string) => {
         const s = seriesList.find((item) => item.id === seriesId);
-        return s ? s.title : 'Direct Catalog';
+        return s ? (s.title || s.name || 'Direct Catalog') : 'Direct Catalog';
     };
 
     const getVolumeTitle = (volumeId?: string | null) => {
         if (!volumeId) return 'Direct Book (No Volume)';
         const v = volumesList.find((item) => item.id === volumeId);
-        return v ? `Vol. ${v.volume_no}: ${v.title}` : 'Volume Release';
+        return v ? `Vol. ${v.volumeNumber ?? v.volume_no}: ${v.title}` : 'Volume Release';
     };
 
     // Pagination slice
@@ -146,12 +151,16 @@ export const AdminBooks: React.FC = () => {
             <PageHeader
                 title="Book Catalog Management"
                 subtitle="Primary workspace for manga books, multi-chapter releases, volume hierarchy, and publishing lifecycle."
+                breadcrumbs={[
+                    { label: 'Dashboard', path: '/admin/dashboard' },
+                    { label: 'Books' }
+                ]}
                 actions={
                     <button
                         className={styles.btnPrimary}
                         onClick={() => setChoiceModalOpen(true)}
                     >
-                        <Plus size={16} /> + Add Book
+                        <Plus size={16} /> Add Book
                     </button>
                 }
             />
@@ -177,15 +186,36 @@ export const AdminBooks: React.FC = () => {
                         value={seriesFilter}
                         onChange={(e) => {
                             setSeriesFilter(e.target.value);
+                            setVolumeFilter('');
                             setCurrentPage(1);
                         }}
                     >
                         <option value="">All Series ({seriesList.length})</option>
                         {seriesList.map((s) => (
                             <option key={s.id} value={s.id}>
-                                {s.title}
+                                {s.title || s.name}
                             </option>
                         ))}
+                    </select>
+
+                    {/* Volume Filter */}
+                    <select
+                        className={styles.selectInput}
+                        value={volumeFilter}
+                        onChange={(e) => {
+                            setVolumeFilter(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                    >
+                        <option value="">All Volumes</option>
+                        <option value="none">No Volume (Direct Books)</option>
+                        {volumesList
+                            .filter(v => !seriesFilter || v.seriesId === seriesFilter || v.series_id === seriesFilter)
+                            .map((v) => (
+                                <option key={v.id} value={v.id}>
+                                    Vol. {v.volumeNumber ?? v.volume_no}: {v.title}
+                                </option>
+                            ))}
                     </select>
 
                     {/* Status Filter */}
@@ -264,7 +294,7 @@ export const AdminBooks: React.FC = () => {
                         description={searchQuery || statusFilter || seriesFilter ? 'No books match the filter criteria.' : 'Create your first manga book using our manual wizard or package uploader.'}
                         action={
                             <button className={styles.btnPrimary} onClick={() => setChoiceModalOpen(true)}>
-                                <Plus size={14} /> + Add Book
+                                <Plus size={14} /> Add Book
                             </button>
                         }
                     />

@@ -87,7 +87,7 @@ export const AdminBookDetail: React.FC = () => {
     const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
     const [chTitle, setChTitle] = useState('');
     const [chNo, setChNo] = useState(1);
-    const [chAccessType, setChAccessType] = useState<'FREE' | 'PARTIAL' | 'PAID'>('FREE');
+    const [chAccessType, setChAccessType] = useState<'FREE' | 'PARTIAL' | 'PARTIAL_FREE' | 'PAID'>('FREE');
     const [chCost, setChCost] = useState(0);
     const [chFreePages, setChFreePages] = useState(1);
 
@@ -326,7 +326,7 @@ export const AdminBookDetail: React.FC = () => {
                 loadBookData();
             } else if ('page_no' in (deleteTarget as any)) {
                 const pg = deleteTarget as Page;
-                await adminPageService.deletePage(pg.id);
+                await adminPageService.delete(pg.id);
                 setSuccessMessage(`Page ${pg.page_no} deleted.`);
                 if (selectedChapterId) handleSelectChapter(selectedChapterId);
             }
@@ -377,6 +377,12 @@ export const AdminBookDetail: React.FC = () => {
             <PageHeader
                 title="Book Management Workspace"
                 subtitle={`Admin control panel for: ${book.title}`}
+                breadcrumbs={[
+                    { label: 'Dashboard', path: '/admin/dashboard' },
+                    { label: 'Books', path: '/admin/books' },
+                    ...(series ? [{ label: series.title || series.name || 'Series', path: `/admin/series/${series.id}` }] : []),
+                    { label: book.title }
+                ]}
                 actions={
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button className={uiStyles.btnSecondary} onClick={() => navigate('/admin/books')}>
@@ -384,9 +390,9 @@ export const AdminBookDetail: React.FC = () => {
                         </button>
                         <button
                             className={uiStyles.btnSecondary}
-                            onClick={() => navigate(`/book/${book.series_id}`)}
+                            onClick={() => navigate(`/book/${book.seriesId || book.series_id}`)}
                         >
-                            <ExternalLink size={14} /> View Reader View
+                            <ExternalLink size={14} /> Reader View
                         </button>
                         <button
                             className={uiStyles.btnPrimary}
@@ -595,7 +601,7 @@ export const AdminBookDetail: React.FC = () => {
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Configure chapter numbers, coin unlock pricing, and access permissions</p>
                         </div>
                         <button className={uiStyles.btnPrimary} onClick={openCreateChapter}>
-                            <Plus size={14} /> + New Chapter
+                            <Plus size={14} /> New Chapter
                         </button>
                     </div>
 

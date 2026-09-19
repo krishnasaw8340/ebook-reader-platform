@@ -73,7 +73,7 @@ export const AdminDashboard: React.FC = () => {
                             className={styles.btnPrimary}
                             onClick={() => setChoiceModalOpen(true)}
                         >
-                            <Plus size={14} /> + Add Book
+                            <Plus size={14} /> Add Book
                         </button>
                     </div>
                 }

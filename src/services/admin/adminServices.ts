@@ -1,4 +1,9 @@
 import { api } from '../api';
+import { seriesService } from '../seriesService';
+import { volumeService } from '../volumeService';
+import { bookService } from '../bookService';
+import { chapterService } from '../chapterService';
+import { pageService } from '../pageService';
 import type {
     Book,
     BookSeries,
@@ -288,197 +293,16 @@ export const adminDashboardService = {
 };
 
 // ==========================================
-// 2. SERIES SERVICE
+// 2. SERIES SERVICE (Centralized Backend Integration)
 // ==========================================
-export const adminSeriesService = {
-    getAll: async (search?: string): Promise<BookSeries[]> => {
-        try {
-            const res = await api.get<BookSeries[]>('/admin/series', { params: { search } });
-            return res.data;
-        } catch {
-            let list = getFromLS<BookSeries[]>(LS_SERIES, initialBookSeries);
-            if (search && search.trim()) {
-                const q = search.toLowerCase();
-                list = list.filter(s => s.title.toLowerCase().includes(q) || (s.description && s.description.toLowerCase().includes(q)));
-            }
-            return list;
-        }
-    },
-
-    getById: async (id: string): Promise<BookSeries | undefined> => {
-        try {
-            const res = await api.get<BookSeries>(`/admin/series/${id}`);
-            return res.data;
-        } catch {
-            const list = getFromLS<BookSeries[]>(LS_SERIES, initialBookSeries);
-            return list.find(s => s.id === id);
-        }
-    },
-
-    create: async (data: Omit<BookSeries, 'id' | 'created_at'>): Promise<BookSeries> => {
-        try {
-            const res = await api.post<BookSeries>('/admin/series', data);
-            return res.data;
-        } catch {
-            const list = getFromLS<BookSeries[]>(LS_SERIES, initialBookSeries);
-            const newItem: BookSeries = {
-                ...data,
-                id: `series-${Date.now()}`,
-                created_at: new Date().toISOString()
-            };
-            const updated = [newItem, ...list];
-            saveToLS(LS_SERIES, updated);
-            return newItem;
-        }
-    },
-
-    update: async (id: string, data: Partial<BookSeries>): Promise<BookSeries> => {
-        try {
-            const res = await api.put<BookSeries>(`/admin/series/${id}`, data);
-            return res.data;
-        } catch {
-            const list = getFromLS<BookSeries[]>(LS_SERIES, initialBookSeries);
-            let target: BookSeries | undefined;
-            const updated = list.map(s => {
-                if (s.id === id) {
-                    target = { ...s, ...data, updated_at: new Date().toISOString() };
-                    return target;
-                }
-                return s;
-            });
-            saveToLS(LS_SERIES, updated);
-            if (!target) throw new Error('Series not found');
-            return target;
-        }
-    },
-
-    delete: async (id: string): Promise<void> => {
-        try {
-            await api.delete(`/admin/series/${id}`);
-        } catch {
-            const list = getFromLS<BookSeries[]>(LS_SERIES, initialBookSeries);
-            saveToLS(LS_SERIES, list.filter(s => s.id !== id));
-        }
-    },
-
-    toggleStatus: async (id: string): Promise<BookSeries> => {
-        const item = await adminSeriesService.getById(id);
-        if (!item) throw new Error('Series not found');
-        const nextStatus = item.status === 'ONGOING' ? 'COMPLETED' : 'ONGOING';
-        return adminSeriesService.update(id, { status: nextStatus });
-    }
-};
+export const adminSeriesService = seriesService;
+export { seriesService };
 
 // ==========================================
 // 3. VOLUME SERVICE (DECOUPLED FROM BOOKS)
 // ==========================================
-export const adminVolumeService = {
-    getAll: async (seriesId?: string): Promise<Volume[]> => {
-        try {
-            const res = await api.get<Volume[]>('/admin/volumes', { params: { seriesId } });
-            return res.data;
-        } catch {
-            let list = getFromLS<Volume[]>(LS_VOLUMES, initialVolumes);
-            if (seriesId) {
-                list = list.filter(v => v.series_id === seriesId);
-            }
-            return list.sort((a, b) => a.volume_no - b.volume_no);
-        }
-    },
-
-    getById: async (id: string): Promise<Volume | undefined> => {
-        try {
-            const res = await api.get<Volume>(`/admin/volumes/${id}`);
-            return res.data;
-        } catch {
-            const list = getFromLS<Volume[]>(LS_VOLUMES, initialVolumes);
-            return list.find(v => v.id === id);
-        }
-    },
-
-    create: async (data: Omit<Volume, 'id' | 'created_at'>): Promise<Volume> => {
-        try {
-            const res = await api.post<Volume>('/admin/volumes', data);
-            return res.data;
-        } catch {
-            const list = getFromLS<Volume[]>(LS_VOLUMES, initialVolumes);
-            // Validate duplicate volume_no in the same series
-            const duplicate = list.some(v => v.series_id === data.series_id && v.volume_no === data.volume_no);
-            if (duplicate) {
-                throw new Error(`Volume ${data.volume_no} already exists for this series.`);
-            }
-
-            const newItem: Volume = {
-                ...data,
-                id: `vol-${Date.now()}`,
-                created_at: new Date().toISOString()
-            };
-            const updated = [...list, newItem];
-            saveToLS(LS_VOLUMES, updated);
-            return newItem;
-        }
-    },
-
-    update: async (id: string, data: Partial<Volume>): Promise<Volume> => {
-        try {
-            const res = await api.put<Volume>(`/admin/volumes/${id}`, data);
-            return res.data;
-        } catch {
-            const list = getFromLS<Volume[]>(LS_VOLUMES, initialVolumes);
-            const current = list.find(v => v.id === id);
-            if (!current) throw new Error('Volume not found');
-
-            // If updating volume_no or series_id, check for uniqueness
-            const targetSeriesId = data.series_id || current.series_id;
-            const targetVolumeNo = data.volume_no !== undefined ? data.volume_no : current.volume_no;
-
-            const duplicate = list.some(v => v.id !== id && v.series_id === targetSeriesId && v.volume_no === targetVolumeNo);
-            if (duplicate) {
-                throw new Error(`Volume ${targetVolumeNo} already exists for this series.`);
-            }
-
-            let target: Volume | undefined;
-            const updated = list.map(v => {
-                if (v.id === id) {
-                    target = { ...v, ...data, updated_at: new Date().toISOString() };
-                    return target;
-                }
-                return v;
-            });
-            saveToLS(LS_VOLUMES, updated);
-            return target!;
-        }
-    },
-
-    delete: async (id: string): Promise<void> => {
-        try {
-            await api.delete(`/admin/volumes/${id}`);
-        } catch {
-            const list = getFromLS<Volume[]>(LS_VOLUMES, initialVolumes);
-            saveToLS(LS_VOLUMES, list.filter(v => v.id !== id));
-        }
-    },
-
-    reorder: async (seriesId: string, orderedVolumeIds: string[]): Promise<Volume[]> => {
-        try {
-            const res = await api.put<Volume[]>(`/admin/series/${seriesId}/volumes/reorder`, { orderedVolumeIds });
-            return res.data;
-        } catch {
-            const list = getFromLS<Volume[]>(LS_VOLUMES, initialVolumes);
-            const updated = list.map(v => {
-                if (v.series_id === seriesId) {
-                    const idx = orderedVolumeIds.indexOf(v.id);
-                    if (idx !== -1) {
-                        return { ...v, volume_no: idx + 1, updated_at: new Date().toISOString() };
-                    }
-                }
-                return v;
-            });
-            saveToLS(LS_VOLUMES, updated);
-            return updated.filter(v => v.series_id === seriesId).sort((a, b) => a.volume_no - b.volume_no);
-        }
-    }
-};
+export const adminVolumeService = volumeService;
+export { volumeService };
 
 // ==========================================
 // 4. BOOK SERVICE (FULL CATALOG WORKSPACE)
@@ -486,354 +310,38 @@ export const adminVolumeService = {
 export interface BookFilterParams {
     seriesId?: string;
     volumeId?: string;
-    search?: string;
+    authorId?: string;
+    artistId?: string;
+    languageId?: string;
+    categoryId?: string;
+    genreId?: string;
+    tagId?: string;
     status?: string;
     language?: string;
     category?: string;
     pricingModel?: string;
-    sortBy?: 'title' | 'created_at' | 'updated_at' | 'chapter_count';
-    sortOrder?: 'asc' | 'desc';
+    isPremium?: boolean;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc' | 'ASC' | 'DESC';
     page?: number;
     limit?: number;
 }
 
-export const adminBookService = {
-    getAll: async (params?: BookFilterParams): Promise<Book[]> => {
-        try {
-            const res = await api.get<Book[]>('/admin/books', { params });
-            return res.data;
-        } catch {
-            let list = getFromLS<Book[]>(LS_BOOKS, seedBooks());
-
-            if (params?.seriesId) {
-                list = list.filter(b => b.series_id === params.seriesId);
-            }
-            if (params?.volumeId !== undefined) {
-                if (params.volumeId === 'none') {
-                    list = list.filter(b => !b.volume_id);
-                } else if (params.volumeId) {
-                    list = list.filter(b => b.volume_id === params.volumeId);
-                }
-            }
-            if (params?.status) {
-                list = list.filter(b => b.status === params.status);
-            }
-            if (params?.language) {
-                list = list.filter(b => b.language?.toLowerCase() === params.language?.toLowerCase());
-            }
-            if (params?.category) {
-                list = list.filter(b => b.category?.toLowerCase() === params.category?.toLowerCase());
-            }
-            if (params?.pricingModel) {
-                list = list.filter(b => (b.pricing_model || 'FREE') === params.pricingModel);
-            }
-            if (params?.search) {
-                const q = params.search.toLowerCase();
-                list = list.filter(b =>
-                    b.title.toLowerCase().includes(q) ||
-                    (b.summary && b.summary.toLowerCase().includes(q)) ||
-                    (b.author && b.author.toLowerCase().includes(q)) ||
-                    (b.japanese_title && b.japanese_title.toLowerCase().includes(q))
-                );
-            }
-
-            // Sorting
-            const sortBy = params?.sortBy || 'updated_at';
-            const sortOrder = params?.sortOrder || 'desc';
-            list = [...list].sort((a: any, b: any) => {
-                const valA = a[sortBy] || a.created_at || '';
-                const valB = b[sortBy] || b.created_at || '';
-                if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-                if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-                return 0;
-            });
-
-            return list;
-        }
-    },
-
-    getById: async (id: string): Promise<Book | undefined> => {
-        try {
-            const res = await api.get<Book>(`/admin/books/${id}`);
-            return res.data;
-        } catch {
-            const list = getFromLS<Book[]>(LS_BOOKS, seedBooks());
-            return list.find(b => b.id === id);
-        }
-    },
-
-    create: async (data: Omit<Book, 'id' | 'created_at'>): Promise<Book> => {
-        try {
-            const res = await api.post<Book>('/admin/books', data);
-            return res.data;
-        } catch {
-            const list = getFromLS<Book[]>(LS_BOOKS, seedBooks());
-            const newItem: Book = {
-                ...data,
-                id: `book-${Date.now()}`,
-                slug: data.slug || data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-                chapter_count: data.chapter_count || 0,
-                page_count: data.page_count || 0,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-            const updated = [newItem, ...list];
-            saveToLS(LS_BOOKS, updated);
-            return newItem;
-        }
-    },
-
-    update: async (id: string, data: Partial<Book>): Promise<Book> => {
-        try {
-            const res = await api.put<Book>(`/admin/books/${id}`, data);
-            return res.data;
-        } catch {
-            const list = getFromLS<Book[]>(LS_BOOKS, seedBooks());
-            let target: Book | undefined;
-            const updated = list.map(b => {
-                if (b.id === id) {
-                    target = { ...b, ...data, updated_at: new Date().toISOString() };
-                    return target;
-                }
-                return b;
-            });
-            saveToLS(LS_BOOKS, updated);
-            if (!target) throw new Error('Book not found');
-            return target;
-        }
-    },
-
-    delete: async (id: string): Promise<void> => {
-        try {
-            await api.delete(`/admin/books/${id}`);
-        } catch {
-            const list = getFromLS<Book[]>(LS_BOOKS, seedBooks());
-            saveToLS(LS_BOOKS, list.filter(b => b.id !== id));
-        }
-    },
-
-    togglePublish: async (id: string): Promise<Book> => {
-        const book = await adminBookService.getById(id);
-        if (!book) throw new Error('Book not found');
-        const nextStatus = (book.status === 'PUBLISHED' || book.status === 'COMPLETED' || book.status === 'ONGOING') ? 'DRAFT' : 'PUBLISHED';
-        return adminBookService.update(id, { status: nextStatus });
-    },
-
-    archive: async (id: string): Promise<Book> => {
-        return adminBookService.update(id, { status: 'ARCHIVED' });
-    }
-};
+export const adminBookService = bookService;
+export { bookService };
 
 // ==========================================
 // 5. CHAPTER SERVICE
 // ==========================================
-export const adminChapterService = {
-    getAll: async (bookId?: string): Promise<Chapter[]> => {
-        try {
-            const res = await api.get<Chapter[]>('/admin/chapters', { params: { bookId } });
-            return res.data;
-        } catch {
-            let list = getFromLS<Chapter[]>(LS_CHAPTERS, initialChapters);
-            if (bookId) {
-                list = list.filter(c => c.book_id === bookId);
-            }
-            return list.sort((a, b) => a.chapter_no - b.chapter_no);
-        }
-    },
-
-    getById: async (id: string): Promise<Chapter | undefined> => {
-        try {
-            const res = await api.get<Chapter>(`/admin/chapters/${id}`);
-            return res.data;
-        } catch {
-            const list = getFromLS<Chapter[]>(LS_CHAPTERS, initialChapters);
-            return list.find(c => c.id === id);
-        }
-    },
-
-    create: async (data: Omit<Chapter, 'id' | 'created_at'>): Promise<Chapter> => {
-        try {
-            const res = await api.post<Chapter>('/admin/chapters', data);
-            return res.data;
-        } catch {
-            const list = getFromLS<Chapter[]>(LS_CHAPTERS, initialChapters);
-            const newItem: Chapter = {
-                ...data,
-                id: `ch-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-                created_at: new Date().toISOString()
-            };
-            const updated = [...list, newItem];
-            saveToLS(LS_CHAPTERS, updated);
-            return newItem;
-        }
-    },
-
-    duplicate: async (id: string): Promise<Chapter> => {
-        const existing = await adminChapterService.getById(id);
-        if (!existing) throw new Error('Chapter not found');
-        const allChapters = await adminChapterService.getAll(existing.book_id);
-        const nextNo = allChapters.length + 1;
-
-        return adminChapterService.create({
-            book_id: existing.book_id,
-            chapter_no: nextNo,
-            title: `${existing.title} (Copy)`,
-            access_type: existing.access_type,
-            free_pages: existing.free_pages,
-            coin_cost: existing.coin_cost
-        });
-    },
-
-    update: async (id: string, data: Partial<Chapter>): Promise<Chapter> => {
-        try {
-            const res = await api.put<Chapter>(`/admin/chapters/${id}`, data);
-            return res.data;
-        } catch {
-            const list = getFromLS<Chapter[]>(LS_CHAPTERS, initialChapters);
-            let target: Chapter | undefined;
-            const updated = list.map(c => {
-                if (c.id === id) {
-                    target = { ...c, ...data };
-                    return target;
-                }
-                return c;
-            });
-            saveToLS(LS_CHAPTERS, updated);
-            if (!target) throw new Error('Chapter not found');
-            return target;
-        }
-    },
-
-    delete: async (id: string): Promise<void> => {
-        try {
-            await api.delete(`/admin/chapters/${id}`);
-        } catch {
-            const list = getFromLS<Chapter[]>(LS_CHAPTERS, initialChapters);
-            saveToLS(LS_CHAPTERS, list.filter(c => c.id !== id));
-        }
-    },
-
-    reorder: async (bookId: string, orderedChapterIds: string[]): Promise<Chapter[]> => {
-        try {
-            const res = await api.put<Chapter[]>(`/admin/books/${bookId}/chapters/reorder`, { orderedChapterIds });
-            return res.data;
-        } catch {
-            const list = getFromLS<Chapter[]>(LS_CHAPTERS, initialChapters);
-            const updated = list.map(c => {
-                if (c.book_id === bookId) {
-                    const idx = orderedChapterIds.indexOf(c.id);
-                    if (idx !== -1) {
-                        return { ...c, chapter_no: idx + 1 };
-                    }
-                }
-                return c;
-            });
-            saveToLS(LS_CHAPTERS, updated);
-            return updated.filter(c => c.book_id === bookId).sort((a, b) => a.chapter_no - b.chapter_no);
-        }
-    }
-};
+export const adminChapterService = chapterService;
+export { chapterService };
 
 // ==========================================
 // 6. PAGE SERVICE (WITH DETERMINISTIC REORDERING)
 // ==========================================
-export const adminPageService = {
-    getByChapter: async (chapterId: string): Promise<Page[]> => {
-        try {
-            const res = await api.get<Page[]>(`/admin/chapters/${chapterId}/pages`);
-            return res.data.sort((a, b) => a.page_no - b.page_no);
-        } catch {
-            const list = getFromLS<Page[]>(LS_PAGES, initialPages);
-            return list
-                .filter(p => p.chapter_id === chapterId)
-                .sort((a, b) => a.page_no - b.page_no);
-        }
-    },
-
-    uploadPages: async (chapterId: string, imageUrls: string[]): Promise<Page[]> => {
-        try {
-            const res = await api.post<Page[]>(`/admin/chapters/${chapterId}/pages`, { images: imageUrls });
-            return res.data;
-        } catch {
-            const list = getFromLS<Page[]>(LS_PAGES, initialPages);
-            const currentChapterPages = list.filter(p => p.chapter_id === chapterId);
-            let startNo = currentChapterPages.length;
-
-            const newPages: Page[] = imageUrls.map((url, idx) => ({
-                id: `page-${chapterId}-${Date.now()}-${idx + 1}`,
-                chapter_id: chapterId,
-                page_no: startNo + idx + 1,
-                image_url: url,
-                created_at: new Date().toISOString()
-            }));
-
-            const updated = [...list, ...newPages];
-            saveToLS(LS_PAGES, updated);
-            return newPages;
-        }
-    },
-
-    reorderPages: async (chapterId: string, orderedPageIds: string[]): Promise<Page[]> => {
-        try {
-            const res = await api.put<Page[]>(`/admin/chapters/${chapterId}/pages/reorder`, { orderedPageIds });
-            return res.data;
-        } catch {
-            const list = getFromLS<Page[]>(LS_PAGES, initialPages);
-            const updated = list.map(page => {
-                if (page.chapter_id === chapterId) {
-                    const newIndex = orderedPageIds.indexOf(page.id);
-                    if (newIndex !== -1) {
-                        return { ...page, page_no: newIndex + 1 };
-                    }
-                }
-                return page;
-            });
-            saveToLS(LS_PAGES, updated);
-            return updated
-                .filter(p => p.chapter_id === chapterId)
-                .sort((a, b) => a.page_no - b.page_no);
-        }
-    },
-
-    deletePage: async (pageId: string): Promise<void> => {
-        try {
-            await api.delete(`/admin/pages/${pageId}`);
-        } catch {
-            const list = getFromLS<Page[]>(LS_PAGES, initialPages);
-            const target = list.find(p => p.id === pageId);
-            if (!target) return;
-            const remaining = list.filter(p => p.id !== pageId);
-            let currentNo = 1;
-            const reindexed = remaining.map(p => {
-                if (p.chapter_id === target.chapter_id) {
-                    return { ...p, page_no: currentNo++ };
-                }
-                return p;
-            });
-            saveToLS(LS_PAGES, reindexed);
-        }
-    },
-
-    replacePageImage: async (pageId: string, newImageUrl: string): Promise<Page> => {
-        try {
-            const res = await api.put<Page>(`/admin/pages/${pageId}`, { image_url: newImageUrl });
-            return res.data;
-        } catch {
-            const list = getFromLS<Page[]>(LS_PAGES, initialPages);
-            let target: Page | undefined;
-            const updated = list.map(p => {
-                if (p.id === pageId) {
-                    target = { ...p, image_url: newImageUrl };
-                    return target;
-                }
-                return p;
-            });
-            saveToLS(LS_PAGES, updated);
-            if (!target) throw new Error('Page not found');
-            return target;
-        }
-    }
-};
+export const adminPageService = pageService;
+export { pageService };
 
 // ==========================================
 // 7. COMPLETE BOOK PACKAGE UPLOAD SERVICE

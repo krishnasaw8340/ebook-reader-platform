@@ -17,7 +17,7 @@ import {
     adminSeriesService,
     adminBookService
 } from '../../services/admin/adminServices';
-import type { Volume, BookSeries, Book } from '../../types';
+import type { Volume, BookSeries, Book, VolumeStatus } from '../../types';
 import {
     PageHeader,
     SearchBar,
@@ -38,6 +38,7 @@ export const AdminVolumes: React.FC = () => {
     const [books, setBooks] = useState<Book[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedSeriesId, setSelectedSeriesId] = useState<string>('');
+    const [searchQuery, setSearchQuery] = useState('');
 
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -49,7 +50,7 @@ export const AdminVolumes: React.FC = () => {
     const [formVolumeNo, setFormVolumeNo] = useState(1);
     const [formTitle, setFormTitle] = useState('');
     const [formDesc, setFormDesc] = useState('');
-    const [formStatus, setFormStatus] = useState<'ONGOING' | 'COMPLETED' | 'DRAFT' | 'ARCHIVED'>('ONGOING');
+    const [formStatus, setFormStatus] = useState<VolumeStatus>('DRAFT');
     const [formReleaseDate, setFormReleaseDate] = useState(new Date().toISOString().split('T')[0]);
 
     // Delete / Archive dialog
@@ -63,14 +64,18 @@ export const AdminVolumes: React.FC = () => {
         try {
             const [sList, vList, bList] = await Promise.all([
                 adminSeriesService.getAll(),
-                adminVolumeService.getAll(selectedSeriesId || undefined),
+                adminVolumeService.getAll({
+                    seriesId: selectedSeriesId || undefined,
+                    search: searchQuery || undefined,
+                }),
                 adminBookService.getAll()
             ]);
             setSeriesList(sList);
             setVolumes(vList);
             setBooks(bList);
         } catch (err: any) {
-            setErrorMessage(err.message || 'Unable to load volumes.');
+            const msg = err.response?.data?.message || err.message || 'Unable to load volumes.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
         } finally {
             setLoading(false);
         }
@@ -78,17 +83,17 @@ export const AdminVolumes: React.FC = () => {
 
     useEffect(() => {
         loadData();
-    }, [selectedSeriesId]);
+    }, [selectedSeriesId, searchQuery]);
 
     const openCreateModal = () => {
         setEditingVolume(null);
         const targetSeriesId = selectedSeriesId || seriesList[0]?.id || '';
         setFormSeriesId(targetSeriesId);
-        const seriesVolCount = volumes.filter(v => v.series_id === targetSeriesId).length;
+        const seriesVolCount = volumes.filter(v => (v.seriesId === targetSeriesId || v.series_id === targetSeriesId)).length;
         setFormVolumeNo(seriesVolCount + 1);
         setFormTitle(`Volume ${seriesVolCount + 1}`);
         setFormDesc('');
-        setFormStatus('ONGOING');
+        setFormStatus('DRAFT');
         setFormReleaseDate(new Date().toISOString().split('T')[0]);
         setModalOpen(true);
     };
@@ -99,7 +104,7 @@ export const AdminVolumes: React.FC = () => {
         setFormVolumeNo(volume.volume_no);
         setFormTitle(volume.title);
         setFormDesc(volume.description || '');
-        setFormStatus(volume.status || 'ONGOING');
+        setFormStatus(volume.status || 'DRAFT');
         setFormReleaseDate(volume.release_date || new Date().toISOString().split('T')[0]);
         setModalOpen(true);
     };
@@ -124,35 +129,36 @@ export const AdminVolumes: React.FC = () => {
         try {
             if (editingVolume) {
                 await adminVolumeService.update(editingVolume.id, {
-                    series_id: formSeriesId,
-                    volume_no: Number(formVolumeNo),
+                    seriesId: formSeriesId,
+                    volumeNumber: Number(formVolumeNo),
                     title: formTitle,
                     description: formDesc,
                     status: formStatus,
-                    release_date: formReleaseDate
+                    releaseDate: formReleaseDate
                 });
                 setSuccessMessage(`Volume "${formTitle}" updated.`);
             } else {
                 await adminVolumeService.create({
-                    series_id: formSeriesId,
-                    volume_no: Number(formVolumeNo),
+                    seriesId: formSeriesId,
+                    volumeNumber: Number(formVolumeNo),
                     title: formTitle,
                     description: formDesc,
                     status: formStatus,
-                    release_date: formReleaseDate
+                    releaseDate: formReleaseDate
                 });
                 setSuccessMessage(`Volume "${formTitle}" created.`);
             }
             setModalOpen(false);
             loadData();
         } catch (err: any) {
-            setErrorMessage(err.message || 'Failed to save volume.');
+            const msg = err.response?.data?.message || err.message || 'Failed to save volume.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
         }
     };
 
     // Reorder Volume Up / Down
     const handleReorder = async (vol: Volume, direction: 'up' | 'down') => {
-        const seriesVolumes = volumes.filter(v => v.series_id === vol.series_id).sort((a, b) => a.volume_no - b.volume_no);
+        const seriesVolumes = volumes.filter(v => (v.seriesId === vol.series_id || v.series_id === vol.series_id)).sort((a, b) => a.volume_no - b.volume_no);
         const currentIndex = seriesVolumes.findIndex(v => v.id === vol.id);
         if (currentIndex === -1) return;
         if (direction === 'up' && currentIndex === 0) return;
@@ -165,11 +171,12 @@ export const AdminVolumes: React.FC = () => {
 
         const orderedIds = copy.map(v => v.id);
         try {
-            await adminVolumeService.reorder(vol.series_id, orderedIds);
+            await adminVolumeService.update(vol.id, { sortOrder: targetIndex + 1 });
             setSuccessMessage('Volume sequence reordered.');
             loadData();
         } catch (err: any) {
-            setErrorMessage(err.message || 'Failed to reorder volume.');
+            const msg = err.response?.data?.message || err.message || 'Failed to reorder volume.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
         }
     };
 
@@ -186,7 +193,8 @@ export const AdminVolumes: React.FC = () => {
             setConfirmAction(null);
             loadData();
         } catch (err: any) {
-            setErrorMessage(err.message || 'Action failed.');
+            const msg = err.response?.data?.message || err.message || 'Action failed.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
         }
     };
 
@@ -195,9 +203,13 @@ export const AdminVolumes: React.FC = () => {
             <PageHeader
                 title="Volume Management"
                 subtitle="Organize series into canonical volumes, manage volume numbering, and view book compilation counts."
+                breadcrumbs={[
+                    { label: 'Dashboard', path: '/admin/dashboard' },
+                    { label: 'Volumes' }
+                ]}
                 actions={
                     <button className={styles.btnPrimary} onClick={openCreateModal}>
-                        <Plus size={16} /> + New Volume
+                        <Plus size={16} /> New Volume
                     </button>
                 }
             />
@@ -206,6 +218,12 @@ export const AdminVolumes: React.FC = () => {
             {errorMessage && <ErrorBanner message={errorMessage} />}
 
             <div className={styles.filterBar}>
+                <SearchBar
+                    value={searchQuery}
+                    onChange={(val) => setSearchQuery(val)}
+                    placeholder="Search volumes by title or synopsis..."
+                />
+
                 <div className={styles.filterGroup}>
                     <label style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Filter by Franchise:</label>
                     <select
@@ -251,14 +269,14 @@ export const AdminVolumes: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {volumes.map((vol, idx) => {
-                                    const parentSeries = seriesList.find((s) => s.id === vol.series_id);
-                                    const booksInVol = books.filter((b) => b.volume_id === vol.id);
+                                {volumes.map((vol) => {
+                                    const parentSeries = seriesList.find((s) => s.id === (vol.seriesId || vol.series_id));
+                                    const booksInVol = books.filter((b) => (b.volumeId === vol.id || b.volume_id === vol.id));
 
                                     return (
                                         <tr key={vol.id}>
                                             <td style={{ fontWeight: 800, color: 'var(--primary)' }}>
-                                                Vol. {vol.volume_no}
+                                                Vol. {vol.volumeNumber ?? vol.volume_no}
                                             </td>
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -270,12 +288,18 @@ export const AdminVolumes: React.FC = () => {
                                                 )}
                                             </td>
                                             <td>
-                                                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
-                                                    {parentSeries?.title || 'Unknown Series'}
+                                                <span
+                                                    style={{ fontWeight: 600, color: 'var(--text-secondary)', cursor: parentSeries ? 'pointer' : 'default' }}
+                                                    onClick={() => parentSeries && navigate(`/admin/series/${parentSeries.id}`)}
+                                                >
+                                                    {parentSeries?.title || parentSeries?.name || 'Unknown Series'}
                                                 </span>
                                             </td>
                                             <td>
-                                                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                                                <span
+                                                    style={{ fontWeight: 600, color: booksInVol.length > 0 ? 'var(--primary)' : 'var(--color-text-primary)', cursor: booksInVol.length > 0 ? 'pointer' : 'default' }}
+                                                    onClick={() => booksInVol.length > 0 && navigate(`/admin/books?seriesId=${vol.seriesId || vol.series_id}&volumeId=${vol.id}`)}
+                                                >
                                                     {booksInVol.length} Book(s)
                                                 </span>
                                             </td>
@@ -283,7 +307,7 @@ export const AdminVolumes: React.FC = () => {
                                                 <StatusBadge status={vol.status} />
                                             </td>
                                             <td style={{ fontSize: '12px' }}>
-                                                {vol.release_date || new Date(vol.created_at).toLocaleDateString()}
+                                                {vol.releaseDate || vol.release_date || new Date(vol.createdAt || vol.created_at).toLocaleDateString()}
                                             </td>
                                             <td style={{ textAlign: 'right' }}>
                                                 <div style={{ display: 'inline-flex', gap: '4px' }}>
@@ -388,9 +412,8 @@ export const AdminVolumes: React.FC = () => {
                                 value={formStatus}
                                 onChange={(e) => setFormStatus(e.target.value as any)}
                             >
-                                <option value="ONGOING">ONGOING</option>
-                                <option value="COMPLETED">COMPLETED</option>
                                 <option value="DRAFT">DRAFT</option>
+                                <option value="PUBLISHED">PUBLISHED</option>
                                 <option value="ARCHIVED">ARCHIVED</option>
                             </select>
                         </div>

@@ -436,6 +436,11 @@ export const BookWizard: React.FC = () => {
             <PageHeader
                 title="Create Book — Guided Manual Workflow"
                 subtitle="Build a complete manga release with full editorial control over volume grouping, DRM pages, and pricing tiers."
+                breadcrumbs={[
+                    { label: 'Dashboard', path: '/admin/dashboard' },
+                    { label: 'Books', path: '/admin/books' },
+                    { label: 'New Book (Wizard)' }
+                ]}
                 actions={
                     <button className={uiStyles.btnSecondary} onClick={() => navigate('/admin/books')}>
                         <ArrowLeft size={16} /> Exit to Books
@@ -548,13 +553,23 @@ export const BookWizard: React.FC = () => {
                                     })}
                             </div>
 
+                            {seriesList.length === 0 && (
+                                <div style={{ textAlign: 'center', padding: '24px 16px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)', marginTop: '12px' }}>
+                                    <FolderKanban size={28} color="var(--text-muted)" style={{ margin: '0 auto 8px' }} />
+                                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>No existing series found</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                        Every book belongs to a parent manga franchise. Create your first series below to begin.
+                                    </div>
+                                </div>
+                            )}
+
                             <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                                 <button
                                     type="button"
                                     className={uiStyles.btnSecondary}
                                     onClick={() => setIsCreatingSeries(true)}
                                 >
-                                    <Plus size={14} /> + Create New Series
+                                    <Plus size={14} /> Create New Series
                                 </button>
                             </div>
                         </div>
@@ -670,7 +685,7 @@ export const BookWizard: React.FC = () => {
                             }}
                         >
                             <Plus size={24} color={volumeChoice === 'new' ? 'var(--primary)' : 'var(--text-muted)'} style={{ margin: '0 auto 8px' }} />
-                            <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '14px' }}>[ + Create Volume ]</div>
+                            <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '14px' }}>Create New Volume</div>
                             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
                                 Create new volume compilation
                             </div>
@@ -1039,7 +1054,7 @@ export const BookWizard: React.FC = () => {
                                 </p>
                             </div>
                             <button className={uiStyles.btnPrimary} onClick={handleAddChapter}>
-                                <Plus size={14} /> + Add Chapter
+                                <Plus size={14} /> Add Chapter
                             </button>
                         </div>
                     </div>
