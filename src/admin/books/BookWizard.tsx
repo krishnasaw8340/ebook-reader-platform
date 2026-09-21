@@ -482,7 +482,7 @@ export const BookWizard: React.FC = () => {
                                     if (step.number < currentStep) setCurrentStep(step.number);
                                 }}
                             >
-                                {isCompleted ? <Check size={12} /> : <span>{step.number}.</span>}
+                                {isCompleted ? <Check size={12} /> : <span className={styles.stepPillDot}>{step.number}</span>}
                                 <span>{step.title}</span>
                             </button>
                         );

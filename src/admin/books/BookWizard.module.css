@@ -6,8 +6,8 @@
 
 /* Stepper Header */
 .stepperHeader {
-    background: var(--card);
-    border: 1px solid var(--glass-border);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     padding: 20px 24px;
     margin-bottom: 24px;
@@ -23,14 +23,14 @@
 .stepTitleBig {
     font-size: 16px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text-primary);
 }
 
 .stepCounter {
     font-size: 12px;
     font-weight: 700;
-    color: var(--primary);
-    background: rgba(230, 57, 70, 0.15);
+    color: var(--color-brand-primary);
+    background: var(--color-brand-primary-subtle);
     padding: 4px 10px;
     border-radius: 20px;
 }
@@ -38,7 +38,7 @@
 .stepperProgressTrack {
     width: 100%;
     height: 6px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--color-border-subtle);
     border-radius: 3px;
     overflow: hidden;
     margin-bottom: 16px;
@@ -46,7 +46,7 @@
 
 .stepperProgressBar {
     height: 100%;
-    background: linear-gradient(90deg, var(--primary) 0%, #ff6b6b 100%);
+    background: linear-gradient(90deg, var(--color-brand-primary) 0%, #ff6b6b 100%);
     transition: width 0.3s ease;
 }
 
@@ -57,6 +57,7 @@
     padding-bottom: 4px;
 }
 
+/* ─── Step Pill (inactive default) ───────────────────────────────────────── */
 .stepPill {
     display: flex;
     align-items: center;
@@ -65,34 +66,72 @@
     border-radius: 6px;
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-muted);
-    background: rgba(255, 255, 255, 0.04);
+    /* Use text-muted so it reads in both dark (#666) and light (#6B7280) */
+    color: var(--color-text-muted);
+    background: var(--color-interaction-hover);
     border: 1px solid transparent;
     cursor: pointer;
     white-space: nowrap;
-    transition: var(--transition-fast);
+    transition: var(--transition-fast, all 0.15s ease);
+    /* Ensure all child text inherits the pill's color */
+    -webkit-text-fill-color: currentColor;
 }
 
+.stepPill * {
+    color: inherit;
+}
+
+/* Hover — visible in BOTH dark and light mode */
 .stepPill:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-text-primary);
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-hover);
 }
 
+/* ─── Step number dot badge (inactive pills) ─────────────────────────────── */
+.stepPillDot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    /* Neutral surface that shows in both modes */
+    background: var(--color-border);
+    color: var(--color-text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: var(--transition-fast, all 0.15s ease);
+}
+
+.stepPill:hover .stepPillDot {
+    background: var(--color-border-hover);
+    color: var(--color-text-primary);
+}
+
+/* ─── Active step ────────────────────────────────────────────────────────── */
 .stepPillActive {
-    background: rgba(230, 57, 70, 0.15);
+    background: var(--color-brand-primary-subtle);
     border-color: rgba(230, 57, 70, 0.4);
-    color: #ffffff;
+    color: var(--color-brand-primary);
 }
 
+.stepPillActive .stepPillDot {
+    background: var(--color-brand-primary);
+    color: #ffffff; /* Always white — sits on crimson red dot */
+}
+
+/* ─── Completed step ─────────────────────────────────────────────────────── */
 .stepPillCompleted {
-    color: #10b981;
-    background: rgba(16, 185, 129, 0.1);
+    color: var(--color-status-success);
+    background: var(--color-status-success-subtle);
 }
 
-/* Step Card */
+/* ─── Step Card ──────────────────────────────────────────────────────────── */
 .stepCard {
-    background: var(--card);
-    border: 1px solid var(--glass-border);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     padding: 28px;
     margin-bottom: 24px;
@@ -100,23 +139,23 @@
 
 .stepCardHeader {
     margin-bottom: 22px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--color-border-subtle);
     padding-bottom: 14px;
 }
 
 .stepCardTitle {
     font-size: 18px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text-primary);
     margin-bottom: 4px;
 }
 
 .stepCardSubtitle {
     font-size: 13px;
-    color: var(--text-secondary);
+    color: var(--color-text-secondary);
 }
 
-/* Chip Selectors */
+/* ─── Chip Selectors ─────────────────────────────────────────────────────── */
 .chipsContainer {
     display: flex;
     flex-wrap: wrap;
@@ -132,17 +171,22 @@
     border-radius: 6px;
     font-size: 12px;
     font-weight: 600;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #ffffff;
+    background: var(--color-surface-hover);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
     cursor: pointer;
-    transition: var(--transition-fast);
+    transition: var(--transition-fast, all 0.15s ease);
+}
+
+.chip:hover {
+    background: var(--color-surface-active);
+    border-color: var(--color-border-hover);
 }
 
 .chipSelected {
-    background: rgba(230, 57, 70, 0.2);
-    border-color: var(--primary);
-    color: #ffffff;
+    background: var(--color-brand-primary-subtle);
+    border-color: var(--color-brand-primary);
+    color: var(--color-brand-primary);
 }
 
 .chipRemoveBtn {
@@ -155,7 +199,7 @@
     padding: 0;
 }
 
-/* Media Previews Row */
+/* ─── Media Previews Row ─────────────────────────────────────────────────── */
 .mediaRow {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -163,7 +207,7 @@
     margin-top: 14px;
 }
 
-/* Wizard Footer Controls */
+/* ─── Wizard Footer Controls ─────────────────────────────────────────────── */
 .wizardFooter {
     display: flex;
     justify-content: space-between;
