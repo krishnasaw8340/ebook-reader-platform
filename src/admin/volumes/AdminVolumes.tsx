@@ -14,10 +14,9 @@ import {
 } from 'lucide-react';
 import {
     adminVolumeService,
-    adminSeriesService,
-    adminBookService
+    adminSeriesService
 } from '../../services/admin/adminServices';
-import type { Volume, BookSeries, Book, VolumeStatus } from '../../types';
+import type { Volume, BookSeries, VolumeStatus } from '../../types';
 import {
     PageHeader,
     SearchBar,
@@ -35,7 +34,6 @@ export const AdminVolumes: React.FC = () => {
     const navigate = useNavigate();
     const [volumes, setVolumes] = useState<Volume[]>([]);
     const [seriesList, setSeriesList] = useState<BookSeries[]>([]);
-    const [books, setBooks] = useState<Book[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedSeriesId, setSelectedSeriesId] = useState<string>('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -59,20 +57,25 @@ export const AdminVolumes: React.FC = () => {
         volume: Volume;
     } | null>(null);
 
-    const loadData = async () => {
+    // Load series list once on mount (used for filter dropdown + modal form)
+    const loadSeries = async () => {
+        try {
+            const sList = await adminSeriesService.getAll();
+            setSeriesList(sList);
+        } catch {
+            // Non-critical for dropdowns
+        }
+    };
+
+    // Load volumes reactively when series filter or search changes
+    const loadVolumes = async () => {
         setLoading(true);
         try {
-            const [sList, vList, bList] = await Promise.all([
-                adminSeriesService.getAll(),
-                adminVolumeService.getAll({
-                    seriesId: selectedSeriesId || undefined,
-                    search: searchQuery || undefined,
-                }),
-                adminBookService.getAll()
-            ]);
-            setSeriesList(sList);
+            const vList = await adminVolumeService.getAll({
+                seriesId: selectedSeriesId || undefined,
+                search: searchQuery || undefined,
+            });
             setVolumes(vList);
-            setBooks(bList);
         } catch (err: any) {
             const msg = err.response?.data?.message || err.message || 'Unable to load volumes.';
             setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
@@ -81,8 +84,17 @@ export const AdminVolumes: React.FC = () => {
         }
     };
 
+    // Alias for post-mutation refresh (volumes only)
+    const loadData = loadVolumes;
+
+    // Fetch series once on mount
     useEffect(() => {
-        loadData();
+        loadSeries();
+    }, []);
+
+    // Fetch volumes when filter or search changes
+    useEffect(() => {
+        loadVolumes();
     }, [selectedSeriesId, searchQuery]);
 
     const openCreateModal = () => {
@@ -271,7 +283,7 @@ export const AdminVolumes: React.FC = () => {
                             <tbody>
                                 {volumes.map((vol) => {
                                     const parentSeries = seriesList.find((s) => s.id === (vol.seriesId || vol.series_id));
-                                    const booksInVol = books.filter((b) => (b.volumeId === vol.id || b.volume_id === vol.id));
+                                    const booksInVol = (vol.books ?? []).filter((b) => (b.volumeId === vol.id || b.volume_id === vol.id));
 
                                     return (
                                         <tr key={vol.id}>

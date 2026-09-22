@@ -15,8 +15,7 @@ import {
 } from 'lucide-react';
 import {
     adminChapterService,
-    adminBookService,
-    adminPageService
+    adminBookService
 } from '../../services/admin/adminServices';
 import type { Chapter, Book, ChapterPricingModel } from '../../types';
 import {
@@ -62,27 +61,31 @@ export const AdminChapters: React.FC = () => {
     // Delete
     const [deleteTarget, setDeleteTarget] = useState<Chapter | null>(null);
 
-    const loadData = async () => {
+    // Load books list once on mount (used for filter dropdown + modal form)
+    const loadBooks = async () => {
+        try {
+            const bList = await adminBookService.getAll();
+            setBooks(bList);
+        } catch {
+            // Non-critical for dropdowns
+        }
+    };
+
+    // Load chapters reactively when book filter or search changes
+    const loadChapters = async () => {
         setLoading(true);
         try {
-            const [bList, cList] = await Promise.all([
-                adminBookService.getAll(),
-                adminChapterService.getAll({
-                    bookId: selectedBookId || undefined,
-                    search: searchQuery || undefined,
-                })
-            ]);
-            setBooks(bList);
+            const cList = await adminChapterService.getAll({
+                bookId: selectedBookId || undefined,
+                search: searchQuery || undefined,
+            });
             setChapters(cList);
 
-            // Fetch page counts for all chapters
+            // Build page count map from the chapters' own pageCount field (no extra API calls)
             const pCounts: Record<string, number> = {};
-            await Promise.all(
-                cList.map(async (c) => {
-                    const pages = await adminPageService.getByChapter(c.id);
-                    pCounts[c.id] = pages.length;
-                })
-            );
+            cList.forEach((c) => {
+                pCounts[c.id] = c.pageCount ?? c.page_count ?? 0;
+            });
             setPagesMap(pCounts);
         } catch (err: any) {
             const msg = err.response?.data?.message || err.message || 'Unable to load chapters.';
@@ -92,8 +95,17 @@ export const AdminChapters: React.FC = () => {
         }
     };
 
+    // Alias for post-mutation refresh (chapters only)
+    const loadData = loadChapters;
+
+    // Fetch books once on mount
     useEffect(() => {
-        loadData();
+        loadBooks();
+    }, []);
+
+    // Fetch chapters when filter/search changes
+    useEffect(() => {
+        loadChapters();
     }, [selectedBookId, searchQuery]);
 
     // Keep URL search query in sync when selected book changes

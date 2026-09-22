@@ -19,8 +19,7 @@ import {
 import {
     adminBookService,
     adminSeriesService,
-    adminVolumeService,
-    adminChapterService
+    adminVolumeService
 } from '../../services/admin/adminServices';
 import type { Book, BookSeries, Volume } from '../../types';
 import {
@@ -70,26 +69,35 @@ export const AdminBooks: React.FC = () => {
         book: Book;
     } | null>(null);
 
-    const loadData = async () => {
-        setLoading(true);
+    // Load dropdown data (series + volumes) once on mount only
+    const loadDropdowns = async () => {
         try {
-            const [bList, sList, vList] = await Promise.all([
-                adminBookService.getAll({
-                    search: searchQuery,
-                    status: statusFilter,
-                    seriesId: seriesFilter,
-                    volumeId: volumeFilter || undefined,
-                    languageId: languageFilter,
-                    pricingModel: pricingFilter,
-                    sortBy,
-                    sortOrder
-                }),
+            const [sList, vList] = await Promise.all([
                 adminSeriesService.getAll(),
-                adminVolumeService.getAll(seriesFilter || undefined)
+                adminVolumeService.getAll()
             ]);
-            setBooks(bList);
             setSeriesList(sList);
             setVolumesList(vList);
+        } catch {
+            // Non-critical: dropdowns may be empty but page still works
+        }
+    };
+
+    // Load books list reactively when filters change
+    const loadBooks = async () => {
+        setLoading(true);
+        try {
+            const bList = await adminBookService.getAll({
+                search: searchQuery,
+                status: statusFilter,
+                seriesId: seriesFilter,
+                volumeId: volumeFilter || undefined,
+                languageId: languageFilter,
+                pricingModel: pricingFilter,
+                sortBy,
+                sortOrder
+            });
+            setBooks(bList);
         } catch (err: any) {
             const msg = err.response?.data?.message || err.message || 'Unable to load books catalog.';
             setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
@@ -98,9 +106,18 @@ export const AdminBooks: React.FC = () => {
         }
     };
 
+    // Fetch dropdown data once when the page mounts
     useEffect(() => {
-        loadData();
+        loadDropdowns();
+    }, []);
+
+    // Fetch books whenever filters/sort change
+    useEffect(() => {
+        loadBooks();
     }, [searchQuery, statusFilter, seriesFilter, volumeFilter, languageFilter, pricingFilter, sortBy, sortOrder]);
+
+    // Alias for post-mutation refresh (books only)
+    const loadData = loadBooks;
 
     const handleTogglePublish = async (book: Book) => {
         try {
