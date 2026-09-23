@@ -30,7 +30,7 @@ export interface AuthResponse {
         roles?: string[];
     };
     accessToken: string;
-    refreshToken?: string;
+
 }
 
 export interface ForgotPasswordPayload {

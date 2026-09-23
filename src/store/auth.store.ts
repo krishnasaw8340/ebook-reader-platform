@@ -101,7 +101,7 @@ export const useAuthStore = create<AuthState>()(
                     const state = get();
                     if (!state.isAuthenticated || !state.user) return false;
                     const roles = state.user.roles || [];
-                    return roles.some((r) => r?.toUpperCase() === 'ADMIN');
+                    return roles.some((r) => r?.toUpperCase() === 'ADMIN' || r?.toUpperCase() === 'SUPER_ADMIN');
                 },
 
                 initAuth: async () => {
@@ -151,7 +151,7 @@ export const useAuthStore = create<AuthState>()(
                         } catch (refreshErr: any) {
                             // If refresh fails with 401 (unauthorized / cookie expired / revoked), clear session
                             const isUnauthorized = refreshErr?.response?.status === 401;
-                            if (isUnauthorized || !get().accessToken) {
+                            if (isUnauthorized) {
                                 get().clearAuth();
                             } else {
                                 // If it's a network error or offline, retain local state
@@ -269,7 +269,6 @@ export const useAuthStore = create<AuthState>()(
                 name: 'kuroyomi_auth_storage',
                 partialize: (state) => ({
                     user: state.user,
-                    accessToken: state.accessToken,
                     isAuthenticated: state.isAuthenticated,
                 }),
                 onRehydrateStorage: () => (state) => {

@@ -54,7 +54,7 @@ export const initialVolumes: Volume[] = [
         title: 'Volume 1: Reality Cracks',
         description: 'First official compilation collecting Chapters 1 through 10.',
         cover_image: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400',
-        status: 'COMPLETED',
+        status: 'PUBLISHED',
         release_date: '2026-07-10',
         created_at: '2026-07-10T00:00:00Z'
     },
