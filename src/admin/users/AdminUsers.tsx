@@ -137,7 +137,7 @@ export const AdminUsers: React.FC = () => {
                             </thead>
                             <tbody>
                                 {users.map((u) => {
-                                    const isAdmin = u.roles?.includes('ADMIN');
+                                    const isAdmin = u.roles?.some((r: string) => r?.toUpperCase() === 'ADMIN' || r?.toUpperCase() === 'SUPER_ADMIN');
 
                                     return (
                                         <tr key={u.id}>

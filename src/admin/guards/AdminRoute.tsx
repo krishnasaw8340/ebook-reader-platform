@@ -13,7 +13,7 @@ export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const isLoading = useAuthStore((s) => s.isLoading);
     const user = useAuthStore((s) => s.user);
-    const isAdmin = user?.roles?.some((r) => r?.toUpperCase() === 'ADMIN') ?? false;
+    const isAdmin = user?.roles?.some((r) => r?.toUpperCase() === 'ADMIN' || r?.toUpperCase() === 'SUPER_ADMIN') ?? false;
 
     if (isLoading) {
         return (

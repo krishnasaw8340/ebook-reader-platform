@@ -65,7 +65,7 @@ export const initialVolumes: Volume[] = [
         title: 'Volume 2: Corporate Arena',
         description: 'Collecting the tournament arc and underground matches.',
         cover_image: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400',
-        status: 'ONGOING',
+        status: 'PUBLISHED',
         release_date: '2026-07-18',
         created_at: '2026-07-18T00:00:00Z'
     },
@@ -76,7 +76,7 @@ export const initialVolumes: Volume[] = [
         title: 'Volume 1: Interface Protocol',
         description: 'Introduction to Neo-Tokyo underground netrunners.',
         cover_image: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&width=400',
-        status: 'ONGOING',
+        status: 'PUBLISHED',
         release_date: '2026-07-01',
         created_at: '2026-07-01T00:00:00Z'
     }

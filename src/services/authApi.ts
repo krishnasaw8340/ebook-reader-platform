@@ -95,16 +95,16 @@ export const authApi = {
 
     getMe: async () => {
         try {
-            const response = await api.get<JwtUser>('/auth/me');
+            const response = await api.get<JwtUser>('/users/me');
             return response.data;
         } catch (err: any) {
-            // Fallback gracefully if endpoint is under /user/me or /users/me
+            // Fallback gracefully to /auth/me or /user/me if /users/me is not found
             if (err.response?.status === 404) {
                 try {
-                    const fallbackRes = await api.get<JwtUser>('/user/me');
+                    const fallbackRes = await api.get<JwtUser>('/auth/me');
                     return fallbackRes.data;
                 } catch {
-                    const fallbackRes2 = await api.get<JwtUser>('/users/me');
+                    const fallbackRes2 = await api.get<JwtUser>('/user/me');
                     return fallbackRes2.data;
                 }
             }

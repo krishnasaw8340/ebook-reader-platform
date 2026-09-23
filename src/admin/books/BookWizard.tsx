@@ -367,7 +367,7 @@ export const BookWizard: React.FC = () => {
                     volume_no: Number(newVolumeNo),
                     title: newVolumeTitle,
                     description: newVolumeDesc,
-                    status: 'ONGOING'
+                    status: 'PUBLISHED'
                 });
                 finalVolumeId = createdVol.id;
             }

@@ -35,7 +35,7 @@ export const Admin: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Security Role Check
-  const isAdmin = user?.roles?.includes('ADMIN');
+  const isAdmin = user?.roles?.some((r) => r?.toUpperCase() === 'ADMIN' || r?.toUpperCase() === 'SUPER_ADMIN');
 
   if (!isAdmin) {
     return (

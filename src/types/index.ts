@@ -101,7 +101,7 @@ export interface PaginatedSeriesResponse {
 }
 
 // Volume types & DTOs
-export type VolumeStatus = 'DRAFT' | 'ONGOING' | 'PUBLISHED' | 'ARCHIVED';
+export type VolumeStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 
 export interface Volume {
   id: string; // UUID PK

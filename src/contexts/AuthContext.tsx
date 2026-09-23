@@ -48,7 +48,7 @@ export const useAuth = () => {
     const resetPassword = useAuthStore((s) => s.resetPassword);
     const logout = useAuthStore((s) => s.logout);
     const logoutAll = useAuthStore((s) => s.logoutAll);
-    const isAdmin = user?.roles?.some((r) => r?.toUpperCase() === 'ADMIN') ?? false;
+    const isAdmin = user?.roles?.some((r) => r?.toUpperCase() === 'ADMIN' || r?.toUpperCase() === 'SUPER_ADMIN') ?? false;
 
     return {
         user,
