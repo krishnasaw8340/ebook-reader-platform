@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bookmark, Coins } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Bookmark } from 'lucide-react';
 import type { BookSeries } from '../../types';
 import { useUser } from '../../contexts/UserContext';
 import styles from './BookCard.module.css';
@@ -9,9 +8,10 @@ import styles from './BookCard.module.css';
 interface BookCardProps {
   series: BookSeries;
   progressPercent?: number;
+  compact?: boolean;
 }
 
-export const BookCard: React.FC<BookCardProps> = ({ series, progressPercent }) => {
+export const BookCard: React.FC<BookCardProps> = ({ series, progressPercent, compact }) => {
   const navigate = useNavigate();
   const { books, userLibrary, toggleBookmark } = useUser();
 
@@ -27,14 +27,16 @@ export const BookCard: React.FC<BookCardProps> = ({ series, progressPercent }) =
     toggleBookmark(series.id);
   };
 
+  const statusColor = series.status === 'ONGOING' ? 'var(--color-status-success)' 
+    : series.status === 'COMPLETED' ? 'var(--color-status-info)' 
+    : 'var(--color-text-muted)';
+
   return (
-    <motion.div 
-      className={styles.card}
-      whileHover={{ y: -8 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+    <div 
+      className={`${styles.card} ${compact ? styles.compact : ''}`}
       onClick={() => navigate(`/book/${series.id}`)}
     >
-      {/* Cover Image Wrapper */}
+      {/* Cover */}
       <div className={styles.coverWrapper}>
         <img 
           src={series.cover_image || ''} 
@@ -43,51 +45,41 @@ export const BookCard: React.FC<BookCardProps> = ({ series, progressPercent }) =
           loading="lazy" 
         />
         
-        {/* Overlay Gradients */}
-        <div className={styles.overlay} />
+        {/* Bookmark button — visible on hover */}
+        <button 
+          className={`${styles.bookmarkBtn} ${isBookmarked ? styles.bookmarked : ''}`} 
+          onClick={handleBookmarkClick}
+          aria-label={isBookmarked ? 'Remove from library' : 'Add to library'}
+        >
+          <Bookmark size={14} fill={isBookmarked ? "currentColor" : "none"} />
+        </button>
 
-        {/* Dynamic Coins badge */}
+        {/* Premium indicator */}
         {isPremium && (
-          <div className={styles.premiumBadge}>
-            <Coins size={11} className={styles.coinIcon} />
-            <span>Coins</span>
-          </div>
+          <span className={styles.premiumTag}>Premium</span>
         )}
 
-        {/* Action icons */}
-        <div className={styles.actionsOverlay}>
-          <button 
-            className={`${styles.actionBtn} ${isBookmarked ? styles.bookmarked : ''}`} 
-            onClick={handleBookmarkClick}
-            aria-label="Bookmark Book"
-          >
-            <Bookmark size={16} fill={isBookmarked ? "var(--primary)" : "none"} />
-          </button>
-        </div>
-
-        {/* Status overlay at bottom */}
-        <div className={styles.statsOverlay}>
-          <div className={styles.stat}>
-            <span className={styles.statusBadgeText}>{series.status}</span>
-          </div>
-        </div>
-
-        {/* Progress bar overlay if active */}
+        {/* Progress bar */}
         {progressPercent !== undefined && (
-          <div className={styles.progressBarWrapper}>
+          <div className={styles.progressWrapper}>
             <div className={styles.progressBar} style={{ width: `${progressPercent}%` }} />
-            <span className={styles.progressPercent}>{progressPercent}% read</span>
           </div>
         )}
       </div>
 
-      {/* Info details */}
+      {/* Info */}
       <div className={styles.info}>
         <h4 className={styles.title}>{series.title}</h4>
         <div className={styles.meta}>
-          <span className={styles.author}>{series.description?.slice(0, 50)}...</span>
+          <span className={styles.status}>
+            <span className={styles.statusDot} style={{ backgroundColor: statusColor }} />
+            {series.status}
+          </span>
+          {progressPercent !== undefined && (
+            <span className={styles.progress}>{progressPercent}%</span>
+          )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };

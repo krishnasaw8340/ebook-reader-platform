@@ -16,8 +16,7 @@ import {
     adminSeriesService,
     adminVolumeService,
     adminBookService,
-    adminChapterService,
-    adminPageService
+    adminChapterService
 } from '../../services/admin/adminServices';
 import type { BookSeries, Volume, Book, Chapter } from '../../types';
 import {
@@ -95,6 +94,11 @@ export const AdminSeriesDetail: React.FC = () => {
             <PageHeader
                 title={`Franchise: ${series.title}`}
                 subtitle="Franchise breakdown showing official volumes and direct standalone releases."
+                breadcrumbs={[
+                    { label: 'Admin', path: '/admin/dashboard' },
+                    { label: 'Series', path: '/admin/series' },
+                    { label: series.title }
+                ]}
                 actions={
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button className={uiStyles.btnSecondary} onClick={() => navigate('/admin/series')}>

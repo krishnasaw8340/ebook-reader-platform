@@ -25,7 +25,6 @@ import { AdminSeries } from './admin/series/AdminSeries';
 import { AdminSeriesDetail } from './admin/series/AdminSeriesDetail';
 import { AdminVolumes } from './admin/volumes/AdminVolumes';
 import { AdminChapters } from './admin/chapters/AdminChapters';
-import { AdminPages } from './admin/pages/AdminPages';
 import { AdminUploads } from './admin/uploads/AdminUploads';
 import { AdminUsers } from './admin/users/AdminUsers';
 import { AdminPricing } from './admin/pricing/AdminPricing';
@@ -82,8 +81,8 @@ const AppContent: React.FC = () => {
             <Route path="volumes/:id" element={<AdminVolumes />} />
             <Route path="chapters" element={<AdminChapters />} />
             <Route path="chapters/:id" element={<AdminChapters />} />
-            <Route path="chapters/:id/pages" element={<AdminPages />} />
-            <Route path="pages" element={<AdminPages />} />
+            <Route path="chapters/:id/pages" element={<Navigate to="/admin/chapters" replace />} />
+            <Route path="pages" element={<Navigate to="/admin/chapters" replace />} />
             <Route path="uploads" element={<AdminUploads />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="pricing" element={<AdminPricing />} />

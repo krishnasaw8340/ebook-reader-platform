@@ -45,13 +45,37 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  max-width: 70%;
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-reader-text, #fff);
   cursor: pointer;
-  max-width: 60%;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.backBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .titleInfo {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+}
+
+.readerBreadcrumbs {
+  margin-bottom: 2px !important;
+  font-size: 11px !important;
+  padding: 0 !important;
 }
 
 .chapterNum {

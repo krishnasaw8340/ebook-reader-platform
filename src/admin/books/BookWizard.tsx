@@ -9,10 +9,9 @@ import {
     X,
     FolderKanban,
     Layers,
-    FileImage,
+    FileText,
     UploadCloud,
     Trash2,
-    Eye,
     ChevronUp,
     ChevronDown,
     Copy,
@@ -22,10 +21,9 @@ import {
     adminSeriesService,
     adminVolumeService,
     adminBookService,
-    adminChapterService,
-    adminPageService
+    adminChapterService
 } from '../../services/admin/adminServices';
-import type { BookSeries, Volume } from '../../types';
+import type { BookSeries, Volume, PricingModel } from '../../types';
 import {
     PageHeader,
     FileUploadDropzone,
@@ -42,7 +40,7 @@ const STEPS = [
     { number: 3, title: 'Book Info' },
     { number: 4, title: 'Pricing' },
     { number: 5, title: 'Chapters' },
-    { number: 6, title: 'Pages' },
+    { number: 6, title: 'Chapter PDFs' },
     { number: 7, title: 'Review & Publish' }
 ];
 
@@ -78,25 +76,24 @@ export const BookWizard: React.FC = () => {
 
     // STEP 1 — SERIES STATE
     const [selectedSeriesId, setSelectedSeriesId] = useState<string>('');
-    const [seriesSearch, setSeriesSearch] = useState('');
     const [isCreatingSeries, setIsCreatingSeries] = useState(false);
     const [newSeriesTitle, setNewSeriesTitle] = useState('');
     const [newSeriesDesc, setNewSeriesDesc] = useState('');
-    const [newSeriesCover, setNewSeriesCover] = useState('');
+    const [newSeriesCover, setNewSeriesCover] = useState('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&width=800');
 
-    // STEP 2 — VOLUME STATE (OPTIONAL)
+    // STEP 2 — VOLUME STATE
     const [volumeChoice, setVolumeChoice] = useState<'none' | 'existing' | 'new'>('none');
     const [selectedVolumeId, setSelectedVolumeId] = useState<string>('');
     const [newVolumeNo, setNewVolumeNo] = useState<number>(1);
     const [newVolumeTitle, setNewVolumeTitle] = useState('');
     const [newVolumeDesc, setNewVolumeDesc] = useState('');
 
-    // STEP 3 — BOOK INFORMATION STATE
-    const [bookTitle, setBookTitle] = useState('');
-    const [japaneseTitle, setJapaneseTitle] = useState('');
-    const [slug, setSlug] = useState('');
-    const [description, setDescription] = useState('');
+    // STEP 3 — BOOK INFO STATE
+    const [bookTitle, setBookTitle] = useState('Shatterfirst - Arc 3: Corporate Arena');
+    const [japaneseTitle, setJapaneseTitle] = useState('シャッターファースト 第3巻');
+    const [slug, setSlug] = useState('shatterfirst-arc-3-corporate-arena');
     const [language, setLanguage] = useState('English');
+    const [description, setDescription] = useState('The stakes rise as underground gladiators face against mechanized mega-corporations.');
     const [author, setAuthor] = useState('Tatsuki Fujimoto');
     const [artist, setArtist] = useState('Yusuke Murata');
     const [category, setCategory] = useState('Shonen');
@@ -108,23 +105,23 @@ export const BookWizard: React.FC = () => {
     const [releaseDate, setReleaseDate] = useState(new Date().toISOString().split('T')[0]);
 
     // STEP 4 — PRICING STATE
-    const [pricingModel, setPricingModel] = useState<'FREE' | 'PER_PAGE' | 'PER_CHAPTER' | 'PER_BOOK' | 'SUBSCRIPTION'>('PER_CHAPTER');
+    const [pricingModel, setPricingModel] = useState<PricingModel>('PER_CHAPTER');
     const [coinPrice, setCoinPrice] = useState<number>(0);
-    const [defaultCoinsPerPage, setDefaultCoinsPerPage] = useState<number>(0);
+    const [defaultChapterCoinCost, setDefaultChapterCoinCost] = useState<number>(2);
     const [defaultFreeChapters, setDefaultFreeChapters] = useState<number>(2);
-    const [defaultFreePages, setDefaultFreePages] = useState<number>(5);
     const [isPremium, setIsPremium] = useState<boolean>(true);
 
-    // STEP 5 — CHAPTERS STATE
+    // STEP 5 & 6 — CHAPTERS STATE
     interface WizardChapter {
         tempId: string;
         chapterNo: number;
         title: string;
-        accessType: 'FREE' | 'PARTIAL' | 'PAID';
-        freePages: number;
+        accessType: 'FREE' | 'PAID';
         coinCost: number;
         published: boolean;
-        pages: string[]; // Mock page URLs for this chapter
+        pdfFileName: string;
+        pdfPageCount: number;
+        pdfFileSize: number;
     }
     const [chapters, setChapters] = useState<WizardChapter[]>([
         {
@@ -132,34 +129,39 @@ export const BookWizard: React.FC = () => {
             chapterNo: 1,
             title: 'Chapter 1: The Beginning',
             accessType: 'FREE',
-            freePages: 20,
             coinCost: 0,
             published: true,
-            pages: [
-                'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&width=400',
-                'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&width=400',
-                'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&width=400'
-            ]
+            pdfFileName: 'chapter-001.pdf',
+            pdfPageCount: 32,
+            pdfFileSize: 18500000
         },
         {
             tempId: 'temp-c2',
             chapterNo: 2,
             title: 'Chapter 2: Counter Attack',
-            accessType: 'PARTIAL',
-            freePages: 5,
+            accessType: 'FREE',
+            coinCost: 0,
+            published: true,
+            pdfFileName: 'chapter-002.pdf',
+            pdfPageCount: 28,
+            pdfFileSize: 16200000
+        },
+        {
+            tempId: 'temp-c3',
+            chapterNo: 3,
+            title: 'Chapter 3: Resonance',
+            accessType: 'PAID',
             coinCost: 2,
             published: true,
-            pages: [
-                'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&width=400',
-                'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&width=400'
-            ]
+            pdfFileName: 'chapter-003.pdf',
+            pdfPageCount: 35,
+            pdfFileSize: 21000000
         }
     ]);
 
-    // Active chapter for Step 6 (Pages)
+    // Active chapter for Step 6 (PDFs)
     const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
-    const [pagePreviewUrl, setPagePreviewUrl] = useState<string | null>(null);
-    const fileBatchInputRef = useRef<HTMLInputElement>(null);
+    const filePdfInputRef = useRef<HTMLInputElement>(null);
 
     // Load initial series & volumes
     useEffect(() => {
@@ -181,76 +183,60 @@ export const BookWizard: React.FC = () => {
         loadInitial();
     }, []);
 
-    // Filter volumes when series changes
+    // Filter volumes for currently selected series
     const seriesVolumes = volumesList.filter(v => v.series_id === selectedSeriesId);
+    const selectedSeriesObj = seriesList.find(s => s.id === selectedSeriesId);
+    const selectedVolumeObj = seriesVolumes.find(v => v.id === selectedVolumeId);
 
-    // Auto slug sync
-    const handleTitleChange = (val: string) => {
-        setBookTitle(val);
-        const autoSlug = val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-        setSlug(autoSlug);
-    };
-
-    // Inline Series Creation
+    // Create New Series Inline Handler
     const handleCreateSeriesInline = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newSeriesTitle.trim()) return;
         try {
             const created = await adminSeriesService.create({
-                title: newSeriesTitle,
+                name: newSeriesTitle,
                 description: newSeriesDesc,
-                cover_image: newSeriesCover || 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400',
+                cover_image: newSeriesCover,
                 status: 'ONGOING'
             });
             setSeriesList([created, ...seriesList]);
             setSelectedSeriesId(created.id);
             setIsCreatingSeries(false);
-            setSuccessMessage(`Series "${created.title}" created and selected.`);
+            setSuccessMessage(`Franchise "${created.title}" registered successfully.`);
         } catch (err: any) {
-            setErrorMessage(err.message || 'Failed to create series.');
+            setErrorMessage(err.message || 'Failed to create series inline.');
         }
     };
 
-    // Step Validation before progressing
-    const validateCurrentStep = (): boolean => {
-        setErrorMessage(null);
-
-        if (currentStep === 1) {
-            if (!selectedSeriesId) {
-                setErrorMessage('Please select an existing series or create a new series.');
-                return false;
-            }
-        } else if (currentStep === 2) {
-            if (volumeChoice === 'new') {
-                if (!newVolumeTitle.trim()) {
-                    setErrorMessage('Please enter a volume title or choose "No Volume".');
-                    return false;
-                }
-            }
-        } else if (currentStep === 3) {
-            if (!bookTitle.trim()) {
-                setErrorMessage('Book title is required.');
-                return false;
-            }
-        } else if (currentStep === 5) {
-            if (chapters.length === 0) {
-                setErrorMessage('At least one chapter is recommended before publishing.');
-            }
-        }
-        return true;
-    };
-
+    // Navigation Guards
     const handleNext = () => {
-        if (validateCurrentStep()) {
-            setCurrentStep(prev => Math.min(STEPS.length, prev + 1));
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        setErrorMessage(null);
+        if (currentStep === 1 && !selectedSeriesId) {
+            setErrorMessage('Please select or create a series to continue.');
+            return;
         }
+        if (currentStep === 2 && volumeChoice === 'existing' && !selectedVolumeId) {
+            setErrorMessage('Please choose an existing volume or switch to [No Volume].');
+            return;
+        }
+        if (currentStep === 2 && volumeChoice === 'new' && !newVolumeTitle.trim()) {
+            setErrorMessage('Please provide a volume title.');
+            return;
+        }
+        if (currentStep === 3 && !bookTitle.trim()) {
+            setErrorMessage('Book title is required.');
+            return;
+        }
+        if (currentStep === 5 && chapters.length === 0) {
+            setErrorMessage('At least one chapter is required.');
+            return;
+        }
+        setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
     };
 
     const handleBack = () => {
         setErrorMessage(null);
-        setCurrentStep(prev => Math.max(1, prev - 1));
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setCurrentStep(prev => Math.max(prev - 1, 1));
     };
 
     // Chapter Management Helpers
@@ -259,12 +245,13 @@ export const BookWizard: React.FC = () => {
         const newCh: WizardChapter = {
             tempId: `temp-c${Date.now()}`,
             chapterNo: nextNo,
-            title: `Chapter ${nextNo}: `,
-            accessType: pricingModel === 'FREE' ? 'FREE' : 'PAID',
-            freePages: defaultFreePages,
-            coinCost: 1,
+            title: `Chapter ${nextNo}: New Chapter`,
+            accessType: nextNo <= defaultFreeChapters ? 'FREE' : 'PAID',
+            coinCost: nextNo <= defaultFreeChapters ? 0 : defaultChapterCoinCost,
             published: true,
-            pages: []
+            pdfFileName: `chapter-${String(nextNo).padStart(3, '0')}.pdf`,
+            pdfPageCount: 30,
+            pdfFileSize: 18000000
         };
         setChapters([...chapters, newCh]);
     };
@@ -276,7 +263,7 @@ export const BookWizard: React.FC = () => {
             tempId: `temp-c${Date.now()}`,
             chapterNo: nextNo,
             title: `${ch.title} (Copy)`,
-            pages: [...ch.pages]
+            pdfFileName: `chapter-${String(nextNo).padStart(3, '0')}.pdf`
         };
         setChapters([...chapters, dup]);
     };
@@ -301,70 +288,42 @@ export const BookWizard: React.FC = () => {
         setChapters(reordered);
     };
 
-    // Pages Management Helpers
     const currentChapter = chapters[activeChapterIndex];
 
-    const handleBatchPageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePdfFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files || files.length === 0 || !currentChapter) return;
-        const newUrls: string[] = [];
-        for (let i = 0; i < files.length; i++) {
-            newUrls.push(URL.createObjectURL(files[i]));
-        }
+        const file = files[0];
         const updatedChapters = chapters.map((c, idx) => {
             if (idx === activeChapterIndex) {
-                return { ...c, pages: [...c.pages, ...newUrls] };
+                return {
+                    ...c,
+                    pdfFileName: file.name,
+                    pdfFileSize: file.size,
+                    pdfPageCount: c.pdfPageCount || 35
+                };
             }
             return c;
         });
         setChapters(updatedChapters);
-        if (fileBatchInputRef.current) fileBatchInputRef.current.value = '';
+        if (filePdfInputRef.current) filePdfInputRef.current.value = '';
     };
 
-    const handleMovePage = (pageIndex: number, direction: 'left' | 'right') => {
-        if (!currentChapter) return;
-        if (direction === 'left' && pageIndex === 0) return;
-        if (direction === 'right' && pageIndex === currentChapter.pages.length - 1) return;
-        const pagesCopy = [...currentChapter.pages];
-        const targetIndex = direction === 'left' ? pageIndex - 1 : pageIndex + 1;
-        const [moved] = pagesCopy.splice(pageIndex, 1);
-        pagesCopy.splice(targetIndex, 0, moved);
-
-        const updatedChapters = chapters.map((c, idx) => {
-            if (idx === activeChapterIndex) {
-                return { ...c, pages: pagesCopy };
-            }
-            return c;
-        });
-        setChapters(updatedChapters);
-    };
-
-    const handleDeletePage = (pageIndex: number) => {
-        if (!currentChapter) return;
-        const pagesCopy = currentChapter.pages.filter((_, i) => i !== pageIndex);
-        const updatedChapters = chapters.map((c, idx) => {
-            if (idx === activeChapterIndex) {
-                return { ...c, pages: pagesCopy };
-            }
-            return c;
-        });
-        setChapters(updatedChapters);
-    };
-
-    // STEP 7 — FINAL SUBMIT
-    const handleFinalSubmit = async (targetStatus: 'DRAFT' | 'PUBLISHED') => {
+    // Final Submission Handler
+    const handleSubmit = async (targetStatus: 'PUBLISHED' | 'DRAFT') => {
         setSubmitting(true);
         setErrorMessage(null);
 
         try {
-            // 1. If user selected to create a new volume inline
+            // 1. Create Volume if user picked "new"
             let finalVolumeId: string | null = null;
-            if (volumeChoice === 'existing' && selectedVolumeId) {
+            if (volumeChoice === 'existing') {
                 finalVolumeId = selectedVolumeId;
-            } else if (volumeChoice === 'new' && newVolumeTitle.trim()) {
+            } else if (volumeChoice === 'new') {
                 const createdVol = await adminVolumeService.create({
                     series_id: selectedSeriesId,
-                    volume_no: Number(newVolumeNo),
+                    volume_no: newVolumeNo,
+                    volumeNumber: newVolumeNo,
                     title: newVolumeTitle,
                     description: newVolumeDesc,
                     status: 'PUBLISHED'
@@ -372,10 +331,7 @@ export const BookWizard: React.FC = () => {
                 finalVolumeId = createdVol.id;
             }
 
-            // 2. Calculate totals
-            const totalPageCount = chapters.reduce((sum, c) => sum + c.pages.length, 0);
-
-            // 3. Create Book
+            // 2. Create Book
             const newBook = await adminBookService.create({
                 series_id: selectedSeriesId,
                 volume_id: finalVolumeId,
@@ -395,32 +351,38 @@ export const BookWizard: React.FC = () => {
                 release_date: releaseDate,
                 pricing_model: pricingModel,
                 coin_price: coinPrice,
-                default_coins_per_page: defaultCoinsPerPage,
+                default_chapter_coin_cost: defaultChapterCoinCost,
                 default_free_chapters: defaultFreeChapters,
-                default_free_pages: defaultFreePages,
                 is_premium: isPremium,
                 status: targetStatus,
-                chapter_count: chapters.length,
-                page_count: totalPageCount
+                chapter_count: chapters.length
             });
 
-            // 4. Create Chapters and their Pages
+            // 3. Create Chapters with PDF Content Metadata
             for (const ch of chapters) {
-                const createdChapter = await adminChapterService.create({
+                await adminChapterService.create({
                     book_id: newBook.id,
+                    bookId: newBook.id,
                     chapter_no: ch.chapterNo,
+                    chapterNumber: ch.chapterNo,
                     title: ch.title,
+                    pricingModel: ch.accessType,
                     access_type: ch.accessType,
-                    free_pages: ch.freePages,
-                    coin_cost: ch.coinCost
+                    coinCost: ch.accessType === 'FREE' ? 0 : ch.coinCost,
+                    coin_cost: ch.accessType === 'FREE' ? 0 : ch.coinCost,
+                    pdfFileName: ch.pdfFileName,
+                    pdf_file_name: ch.pdfFileName,
+                    pdfPageCount: ch.pdfPageCount,
+                    pdf_page_count: ch.pdfPageCount,
+                    pdfFileSize: ch.pdfFileSize,
+                    pdf_file_size: ch.pdfFileSize,
+                    contentStatus: 'READY',
+                    content_status: 'READY',
+                    published: ch.published
                 });
-
-                if (ch.pages.length > 0) {
-                    await adminPageService.uploadPages(createdChapter.id, ch.pages);
-                }
             }
 
-            // 5. Navigate to central book workspace
+            // 4. Navigate to central book workspace
             navigate(`/admin/books/${newBook.id}`);
         } catch (err: any) {
             setErrorMessage(err.message || 'Failed to finalize book creation.');
@@ -428,66 +390,42 @@ export const BookWizard: React.FC = () => {
         }
     };
 
-    const selectedSeriesObj = seriesList.find(s => s.id === selectedSeriesId);
-    const selectedVolumeObj = volumesList.find(v => v.id === selectedVolumeId);
-
     return (
-        <div className={styles.wizardContainer}>
+        <div>
             <PageHeader
-                title="Create Book — Guided Manual Workflow"
-                subtitle="Build a complete manga release with full editorial control over volume grouping, DRM pages, and pricing tiers."
+                title="Create Manga Book"
+                subtitle="7-step wizard to create book metadata, monetization defaults, chapter structures, and PDF assets."
                 breadcrumbs={[
-                    { label: 'Dashboard', path: '/admin/dashboard' },
-                    { label: 'Books', path: '/admin/books' },
-                    { label: 'New Book (Wizard)' }
+                    { label: 'Admin', path: '/admin' },
+                    { label: 'Catalog', path: '/admin/series' },
+                    { label: 'Create Book' }
                 ]}
-                actions={
-                    <button className={uiStyles.btnSecondary} onClick={() => navigate('/admin/books')}>
-                        <ArrowLeft size={16} /> Exit to Books
-                    </button>
-                }
             />
 
             {errorMessage && <ErrorBanner message={errorMessage} />}
             {successMessage && <SuccessBanner message={successMessage} />}
 
-            {/* Stepper Progress Indicator */}
-            <div className={styles.stepperHeader}>
-                <div className={styles.stepperMeta}>
-                    <span className={styles.stepTitleBig}>
-                        Step {currentStep} of 7: {STEPS[currentStep - 1].title}
-                    </span>
-                    <span className={styles.stepCounter}>
-                        {Math.round((currentStep / STEPS.length) * 100)}% Completed
-                    </span>
-                </div>
+            {/* Stepper Progress Bar */}
+            <div className={styles.stepperContainer}>
+                {STEPS.map((s) => {
+                    const isPassed = s.number < currentStep;
+                    const isCurrent = s.number === currentStep;
 
-                <div className={styles.stepperProgressTrack}>
-                    <div
-                        className={styles.stepperProgressBar}
-                        style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
-                    />
-                </div>
-
-                <div className={styles.stepsList}>
-                    {STEPS.map((step) => {
-                        const isCompleted = step.number < currentStep;
-                        const isActive = step.number === currentStep;
-
-                        return (
-                            <button
-                                key={step.number}
-                                className={`${styles.stepPill} ${isActive ? styles.stepPillActive : ''} ${isCompleted ? styles.stepPillCompleted : ''}`}
-                                onClick={() => {
-                                    if (step.number < currentStep) setCurrentStep(step.number);
-                                }}
-                            >
-                                {isCompleted ? <Check size={12} /> : <span className={styles.stepPillDot}>{step.number}</span>}
-                                <span>{step.title}</span>
-                            </button>
-                        );
-                    })}
-                </div>
+                    return (
+                        <div
+                            key={s.number}
+                            className={`${styles.stepNode} ${isPassed ? styles.stepNodeCompleted : ''} ${isCurrent ? styles.stepNodeActive : ''}`}
+                            onClick={() => {
+                                if (s.number < currentStep) setCurrentStep(s.number);
+                            }}
+                        >
+                            <div className={styles.stepCircle}>
+                                {isPassed ? <Check size={14} strokeWidth={3} /> : s.number}
+                            </div>
+                            <span className={styles.stepTitle}>{s.title}</span>
+                        </div>
+                    );
+                })}
             </div>
 
             {/* ============================================================ */}
@@ -496,91 +434,52 @@ export const BookWizard: React.FC = () => {
             {currentStep === 1 && (
                 <div className={styles.stepCard}>
                     <div className={styles.stepCardHeader}>
-                        <h2 className={styles.stepCardTitle}>Step 1 — Series Selection</h2>
+                        <h2 className={styles.stepCardTitle}>Step 1 — Franchise / Series Assignment *</h2>
                         <p className={styles.stepCardSubtitle}>
-                            Select the parent manga franchise. You can search existing series or create a brand-new series title.
+                            Every book belongs to a parent Series franchise. Select an existing franchise or create one inline.
                         </p>
                     </div>
 
                     {!isCreatingSeries ? (
-                        <div>
+                        <>
                             <div className={uiStyles.formGroup}>
-                                <label className={uiStyles.formLabel}>Search Existing Series</label>
-                                <input
-                                    type="text"
-                                    className={uiStyles.formInput}
-                                    placeholder="Search by series title..."
-                                    value={seriesSearch}
-                                    onChange={(e) => setSeriesSearch(e.target.value)}
-                                />
+                                <label className={uiStyles.formLabel}>Select Existing Series Franchise *</label>
+                                <select
+                                    className={uiStyles.formSelect}
+                                    value={selectedSeriesId}
+                                    onChange={(e) => setSelectedSeriesId(e.target.value)}
+                                >
+                                    <option value="" disabled>-- Choose a parent series --</option>
+                                    {seriesList.map((s) => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.title} ({s.status})
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px', marginTop: '14px' }}>
-                                {seriesList
-                                    .filter(s => s.title.toLowerCase().includes(seriesSearch.toLowerCase()))
-                                    .map((s) => {
-                                        const isSelected = s.id === selectedSeriesId;
-                                        return (
-                                            <div
-                                                key={s.id}
-                                                onClick={() => setSelectedSeriesId(s.id)}
-                                                style={{
-                                                    background: isSelected ? 'rgba(230, 57, 70, 0.15)' : 'rgba(255,255,255,0.03)',
-                                                    border: isSelected ? '1px solid var(--primary)' : '1px solid var(--glass-border)',
-                                                    borderRadius: '8px',
-                                                    padding: '12px',
-                                                    display: 'flex',
-                                                    gap: '12px',
-                                                    alignItems: 'center',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                <img
-                                                    src={s.cover_image || ''}
-                                                    alt={s.title}
-                                                    style={{ width: '40px', height: '56px', objectFit: 'cover', borderRadius: '4px' }}
-                                                />
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                        {s.title}
-                                                    </div>
-                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Status: {s.status}</div>
-                                                </div>
-                                                {isSelected && <CheckCircle2 size={16} color="var(--primary)" />}
-                                            </div>
-                                        );
-                                    })}
-                            </div>
-
-                            {seriesList.length === 0 && (
-                                <div style={{ textAlign: 'center', padding: '24px 16px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)', marginTop: '12px' }}>
-                                    <FolderKanban size={28} color="var(--text-muted)" style={{ margin: '0 auto 8px' }} />
-                                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>No existing series found</div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                        Every book belongs to a parent manga franchise. Create your first series below to begin.
-                                    </div>
-                                </div>
-                            )}
-
-                            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                            <div style={{ marginTop: '16px' }}>
                                 <button
                                     type="button"
                                     className={uiStyles.btnSecondary}
                                     onClick={() => setIsCreatingSeries(true)}
                                 >
-                                    <Plus size={14} /> Create New Series
+                                    <Plus size={14} /> Register New Series Franchise
                                 </button>
                             </div>
-                        </div>
+                        </>
                     ) : (
-                        <form onSubmit={handleCreateSeriesInline}>
+                        <form onSubmit={handleCreateSeriesInline} style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                            <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '12px' }}>
+                                Quick Register New Series
+                            </h4>
+
                             <div className={uiStyles.formGroup}>
-                                <label className={uiStyles.formLabel}>New Series Title *</label>
+                                <label className={uiStyles.formLabel}>Franchise Title *</label>
                                 <input
                                     type="text"
                                     className={uiStyles.formInput}
-                                    placeholder="e.g. Solo Levelling"
+                                    placeholder="e.g. Solo Leveling: Ragnarok"
                                     value={newSeriesTitle}
                                     onChange={(e) => setNewSeriesTitle(e.target.value)}
                                     required
@@ -588,18 +487,17 @@ export const BookWizard: React.FC = () => {
                             </div>
 
                             <div className={uiStyles.formGroup}>
-                                <label className={uiStyles.formLabel}>Synopsis / Story Overview</label>
+                                <label className={uiStyles.formLabel}>Synopsis / Description</label>
                                 <textarea
                                     className={uiStyles.formTextarea}
-                                    rows={3}
-                                    placeholder="Official premise of the overarching franchise..."
+                                    rows={2}
                                     value={newSeriesDesc}
                                     onChange={(e) => setNewSeriesDesc(e.target.value)}
                                 />
                             </div>
 
                             <FileUploadDropzone
-                                label="Series Banner / Poster Artwork"
+                                label="Series Banner Artwork"
                                 currentUrl={newSeriesCover}
                                 onFileSelected={(url) => setNewSeriesCover(url)}
                             />
@@ -634,7 +532,6 @@ export const BookWizard: React.FC = () => {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '20px' }}>
-                        {/* Option A: No Volume */}
                         <div
                             onClick={() => setVolumeChoice('none')}
                             style={{
@@ -653,7 +550,6 @@ export const BookWizard: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Option B: Select Existing Volume */}
                         <div
                             onClick={() => setVolumeChoice('existing')}
                             style={{
@@ -672,7 +568,6 @@ export const BookWizard: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Option C: Create Volume */}
                         <div
                             onClick={() => setVolumeChoice('new')}
                             style={{
@@ -701,52 +596,54 @@ export const BookWizard: React.FC = () => {
                                     value={selectedVolumeId}
                                     onChange={(e) => setSelectedVolumeId(e.target.value)}
                                 >
-                                    <option value="">-- Choose Volume --</option>
+                                    <option value="" disabled>-- Select a volume --</option>
                                     {seriesVolumes.map(v => (
                                         <option key={v.id} value={v.id}>
-                                            Vol. {v.volume_no}: {v.title}
+                                            Vol. {v.volumeNumber ?? (v as any).volume_number}: {v.title}
                                         </option>
                                     ))}
                                 </select>
                             ) : (
-                                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                                    No volumes currently exist for this series. You can select "No Volume" or "+ Create Volume".
-                                </p>
+                                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                                    No volumes currently exist for this franchise. Choose [No Volume] or create one.
+                                </div>
                             )}
                         </div>
                     )}
 
                     {volumeChoice === 'new' && (
-                        <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
-                            <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '12px' }}>New Volume Details</h4>
+                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--glass-border)', marginTop: '16px' }}>
                             <div className={uiStyles.formGrid}>
                                 <div className={uiStyles.formGroup}>
-                                    <label className={uiStyles.formLabel}>Volume Number *</label>
+                                    <label className={uiStyles.formLabel}>Volume Sequence Number *</label>
                                     <input
                                         type="number"
                                         min={1}
                                         className={uiStyles.formInput}
                                         value={newVolumeNo}
                                         onChange={(e) => setNewVolumeNo(parseInt(e.target.value) || 1)}
+                                        required
                                     />
                                 </div>
+
                                 <div className={uiStyles.formGroup}>
                                     <label className={uiStyles.formLabel}>Volume Title *</label>
                                     <input
                                         type="text"
                                         className={uiStyles.formInput}
-                                        placeholder="e.g. Volume 1: Awakening"
+                                        placeholder="e.g. Volume 1: Corporate Arena"
                                         value={newVolumeTitle}
                                         onChange={(e) => setNewVolumeTitle(e.target.value)}
+                                        required
                                     />
                                 </div>
                             </div>
+
                             <div className={uiStyles.formGroup}>
-                                <label className={uiStyles.formLabel}>Volume Description</label>
-                                <input
-                                    type="text"
-                                    className={uiStyles.formInput}
-                                    placeholder="Brief plot notes for this compilation..."
+                                <label className={uiStyles.formLabel}>Volume Description (Optional)</label>
+                                <textarea
+                                    className={uiStyles.formTextarea}
+                                    rows={2}
                                     value={newVolumeDesc}
                                     onChange={(e) => setNewVolumeDesc(e.target.value)}
                                 />
@@ -757,26 +654,25 @@ export const BookWizard: React.FC = () => {
             )}
 
             {/* ============================================================ */}
-            {/* STEP 3: BOOK INFORMATION */}
+            {/* STEP 3: BOOK INFO */}
             {/* ============================================================ */}
             {currentStep === 3 && (
                 <div className={styles.stepCard}>
                     <div className={styles.stepCardHeader}>
-                        <h2 className={styles.stepCardTitle}>Step 3 — Book Information & Metadata</h2>
+                        <h2 className={styles.stepCardTitle}>Step 3 — Book Metadata & Artwork</h2>
                         <p className={styles.stepCardSubtitle}>
-                            Enter comprehensive book metadata, creators, multi-select genre chips, and media artworks.
+                            Display title, author, demographic categories, synopsis, and cover assets.
                         </p>
                     </div>
 
                     <div className={uiStyles.formGrid}>
                         <div className={uiStyles.formGroup}>
-                            <label className={uiStyles.formLabel}>Book Title (English / Display) *</label>
+                            <label className={uiStyles.formLabel}>Book Title (English / Main Display) *</label>
                             <input
                                 type="text"
                                 className={uiStyles.formInput}
-                                placeholder="e.g. Shatterfirst Vol. 1 - English Digital Edition"
                                 value={bookTitle}
-                                onChange={(e) => handleTitleChange(e.target.value)}
+                                onChange={(e) => setBookTitle(e.target.value)}
                                 required
                             />
                         </div>
@@ -876,7 +772,6 @@ export const BookWizard: React.FC = () => {
                         />
                     </div>
 
-                    {/* Removable Genre Chips */}
                     <div className={uiStyles.formGroup}>
                         <label className={uiStyles.formLabel}>Genres (Click to toggle)</label>
                         <div className={styles.chipsContainer}>
@@ -899,7 +794,6 @@ export const BookWizard: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Removable Tag Chips */}
                     <div className={uiStyles.formGroup}>
                         <label className={uiStyles.formLabel}>Content Tags</label>
                         <div className={styles.chipsContainer}>
@@ -922,7 +816,6 @@ export const BookWizard: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Previews: Cover / Banner / Thumbnail */}
                     <div className={styles.mediaRow}>
                         <FileUploadDropzone
                             label="Cover Image (Portrait)"
@@ -960,17 +853,13 @@ export const BookWizard: React.FC = () => {
                         <select
                             className={uiStyles.formSelect}
                             value={pricingModel}
-                            onChange={(e) => setPricingModel(e.target.value as any)}
+                            onChange={(e) => setPricingModel(e.target.value as PricingModel)}
                         >
                             <option value="FREE">FREE (All chapters unlocked by default)</option>
                             <option value="PER_CHAPTER">PER_CHAPTER (Chapters unlock via individual coin cost)</option>
-                            <option value="PER_PAGE">PER_PAGE (Micro-metered per page read)</option>
                             <option value="PER_BOOK">PER_BOOK (Single flat coin unlock for entire volume)</option>
                             <option value="SUBSCRIPTION">SUBSCRIPTION (KuroYomi Pass membership required)</option>
                         </select>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                            💡 Book pricing represents default pricing; chapter-level pricing may override it later.
-                        </p>
                     </div>
 
                     <div className={uiStyles.formGrid}>
@@ -987,18 +876,17 @@ export const BookWizard: React.FC = () => {
                             </div>
                         )}
 
-                        {pricingModel === 'PER_PAGE' && (
-                            <div className={uiStyles.formGroup}>
-                                <label className={uiStyles.formLabel}>Default Coins Per Page</label>
-                                <input
-                                    type="number"
-                                    min={0}
-                                    className={uiStyles.formInput}
-                                    value={defaultCoinsPerPage}
-                                    onChange={(e) => setDefaultCoinsPerPage(parseInt(e.target.value) || 0)}
-                                />
-                            </div>
-                        )}
+                        <div className={uiStyles.formGroup}>
+                            <label className={uiStyles.formLabel}>Default Chapter Unlock Cost (Coins)</label>
+                            <input
+                                type="number"
+                                min={0}
+                                className={uiStyles.formInput}
+                                value={defaultChapterCoinCost}
+                                onChange={(e) => setDefaultChapterCoinCost(parseInt(e.target.value) || 0)}
+                            />
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Coins required to unlock a paid chapter</p>
+                        </div>
 
                         <div className={uiStyles.formGroup}>
                             <label className={uiStyles.formLabel}>Default Free Chapters Count</label>
@@ -1010,18 +898,6 @@ export const BookWizard: React.FC = () => {
                                 onChange={(e) => setDefaultFreeChapters(parseInt(e.target.value) || 0)}
                             />
                             <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Initial chapters available without coins</p>
-                        </div>
-
-                        <div className={uiStyles.formGroup}>
-                            <label className={uiStyles.formLabel}>Default Free Pages per Chapter</label>
-                            <input
-                                type="number"
-                                min={0}
-                                className={uiStyles.formInput}
-                                value={defaultFreePages}
-                                onChange={(e) => setDefaultFreePages(parseInt(e.target.value) || 0)}
-                            />
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Teaser pages shown in partial preview mode</p>
                         </div>
                     </div>
 
@@ -1048,26 +924,26 @@ export const BookWizard: React.FC = () => {
                     <div className={styles.stepCardHeader}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                             <div>
-                                <h2 className={styles.stepCardTitle}>Step 5 — Chapter Management</h2>
+                                <h2 className={styles.stepCardTitle}>Step 5 — Chapter Management & Pricing Rules</h2>
                                 <p className={styles.stepCardSubtitle}>
-                                    Define chapters, configure pricing overrides (FREE / PARTIAL_FREE / PAID), and adjust sequence.
+                                    Chapters are the monetization and reading unit. Specify title, pricing model, and coin costs.
                                 </p>
                             </div>
-                            <button className={uiStyles.btnPrimary} onClick={handleAddChapter}>
+                            <button type="button" className={uiStyles.btnPrimary} onClick={handleAddChapter}>
                                 <Plus size={14} /> Add Chapter
                             </button>
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {chapters.map((ch, idx) => (
                             <div
                                 key={ch.tempId}
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.03)',
+                                    background: 'rgba(255,255,255,0.02)',
                                     border: '1px solid var(--glass-border)',
                                     borderRadius: '8px',
-                                    padding: '14px 16px',
+                                    padding: '14px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
@@ -1095,40 +971,22 @@ export const BookWizard: React.FC = () => {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                                     <select
                                         className={uiStyles.formSelect}
-                                        style={{ width: '130px' }}
+                                        style={{ width: '110px' }}
                                         value={ch.accessType}
                                         onChange={(e) => {
                                             const updated = [...chapters];
-                                            updated[idx].accessType = e.target.value as any;
-                                            if (e.target.value === 'FREE') updated[idx].coinCost = 0;
-                                            else if (updated[idx].coinCost === 0) updated[idx].coinCost = 1;
+                                            const val = e.target.value as 'FREE' | 'PAID';
+                                            updated[idx].accessType = val;
+                                            if (val === 'FREE') updated[idx].coinCost = 0;
+                                            else if (updated[idx].coinCost === 0) updated[idx].coinCost = defaultChapterCoinCost || 2;
                                             setChapters(updated);
                                         }}
                                     >
                                         <option value="FREE">FREE</option>
-                                        <option value="PARTIAL">PARTIAL FREE</option>
                                         <option value="PAID">PAID</option>
                                     </select>
 
-                                    {ch.accessType === 'PARTIAL' && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Free pgs:</span>
-                                            <input
-                                                type="number"
-                                                min={1}
-                                                className={uiStyles.formInput}
-                                                style={{ width: '60px', padding: '6px' }}
-                                                value={ch.freePages}
-                                                onChange={(e) => {
-                                                    const updated = [...chapters];
-                                                    updated[idx].freePages = parseInt(e.target.value) || 0;
-                                                    setChapters(updated);
-                                                }}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {ch.accessType !== 'FREE' && (
+                                    {ch.accessType === 'PAID' && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Coins:</span>
                                             <input
@@ -1145,10 +1003,6 @@ export const BookWizard: React.FC = () => {
                                             />
                                         </div>
                                     )}
-
-                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '60px' }}>
-                                        {ch.pages.length} pages
-                                    </span>
 
                                     <div style={{ display: 'flex', gap: '4px' }}>
                                         <button
@@ -1195,36 +1049,34 @@ export const BookWizard: React.FC = () => {
             )}
 
             {/* ============================================================ */}
-            {/* STEP 6: PAGES */}
+            {/* STEP 6: CHAPTER PDFS */}
             {/* ============================================================ */}
             {currentStep === 6 && (
                 <div className={styles.stepCard}>
                     <div className={styles.stepCardHeader}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                             <div>
-                                <h2 className={styles.stepCardTitle}>Step 6 — Page Management</h2>
+                                <h2 className={styles.stepCardTitle}>Step 6 — Chapter PDF Assets</h2>
                                 <p className={styles.stepCardSubtitle}>
-                                    Deterministic page ordering. Upload manga scans individually or in bulk.
+                                    One PDF corresponds to one chapter. The PDF is stored in object storage and rendered continuously by the reader.
                                 </p>
                             </div>
-
                             <button
                                 type="button"
                                 className={uiStyles.btnPrimary}
-                                onClick={() => fileBatchInputRef.current?.click()}
+                                onClick={() => filePdfInputRef.current?.click()}
                             >
-                                <UploadCloud size={14} /> Batch Upload Pages
+                                <UploadCloud size={14} /> Attach PDF to Current Chapter
                             </button>
                         </div>
                     </div>
 
                     <input
                         type="file"
-                        ref={fileBatchInputRef}
-                        multiple
-                        accept="image/*"
+                        ref={filePdfInputRef}
+                        accept="application/pdf"
                         style={{ display: 'none' }}
-                        onChange={handleBatchPageUpload}
+                        onChange={handlePdfFileSelect}
                     />
 
                     {/* Chapter Tabs */}
@@ -1236,96 +1088,69 @@ export const BookWizard: React.FC = () => {
                                 onClick={() => setActiveChapterIndex(idx)}
                                 className={`${styles.stepPill} ${idx === activeChapterIndex ? styles.stepPillActive : ''}`}
                             >
-                                <span>Ch. {ch.chapterNo} ({ch.pages.length} pgs)</span>
+                                <span>Ch. {ch.chapterNo} ({ch.pdfPageCount || 0} pgs)</span>
                             </button>
                         ))}
                     </div>
 
-                    {/* Pages Grid */}
-                    {currentChapter && currentChapter.pages.length > 0 ? (
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                            gap: '12px'
-                        }}>
-                            {currentChapter.pages.map((url, pageIdx) => (
-                                <div
-                                    key={pageIdx}
-                                    style={{
-                                        background: 'rgba(255,255,255,0.03)',
-                                        border: '1px solid var(--glass-border)',
-                                        borderRadius: '6px',
-                                        padding: '8px',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '6px'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '10px', fontWeight: 800, background: 'var(--primary)', color: '#fff', padding: '1px 5px', borderRadius: '3px' }}>
-                                            PG {pageIdx + 1}
-                                        </span>
-                                        <div style={{ display: 'flex', gap: '2px' }}>
-                                            <button
-                                                type="button"
-                                                className={uiStyles.btnIcon}
-                                                style={{ width: '22px', height: '22px' }}
-                                                onClick={() => setPagePreviewUrl(url)}
-                                            >
-                                                <Eye size={10} />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className={uiStyles.btnIcon}
-                                                style={{ width: '22px', height: '22px', color: '#ef4444' }}
-                                                onClick={() => handleDeletePage(pageIdx)}
-                                            >
-                                                <Trash2 size={10} />
-                                            </button>
-                                        </div>
-                                    </div>
+                    {currentChapter && (
+                        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                                <FileText size={20} color="#38bdf8" />
+                                <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                                    Ch. {currentChapter.chapterNo}: {currentChapter.title}
+                                </h3>
+                            </div>
 
-                                    <div style={{ height: '140px', background: '#0e0e11', borderRadius: '4px', overflow: 'hidden' }}>
-                                        <img src={url} alt={`Page ${pageIdx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    </div>
-
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '4px' }}>
-                                        <button
-                                            type="button"
-                                            className={uiStyles.btnSecondary}
-                                            style={{ flex: 1, padding: '2px 4px', fontSize: '10px', height: '24px' }}
-                                            disabled={pageIdx === 0}
-                                            onClick={() => handleMovePage(pageIdx, 'left')}
-                                        >
-                                            ◀ Left
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className={uiStyles.btnSecondary}
-                                            style={{ flex: 1, padding: '2px 4px', fontSize: '10px', height: '24px' }}
-                                            disabled={pageIdx === currentChapter.pages.length - 1}
-                                            onClick={() => handleMovePage(pageIdx, 'right')}
-                                        >
-                                            Right ▶
-                                        </button>
-                                    </div>
+                            <div className={uiStyles.formGrid}>
+                                <div className={uiStyles.formGroup}>
+                                    <label className={uiStyles.formLabel}>PDF File Name *</label>
+                                    <input
+                                        type="text"
+                                        className={uiStyles.formInput}
+                                        value={currentChapter.pdfFileName}
+                                        onChange={(e) => {
+                                            const updated = [...chapters];
+                                            updated[activeChapterIndex].pdfFileName = e.target.value;
+                                            setChapters(updated);
+                                        }}
+                                        placeholder="e.g. chapter-001.pdf"
+                                    />
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div style={{ textAlign: 'center', padding: '40px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                            <FileImage size={36} color="var(--text-muted)" style={{ margin: '0 auto 8px' }} />
-                            <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)' }}>No pages uploaded for Chapter {currentChapter?.chapterNo}</h4>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>
-                                Add individual scans or upload high-resolution manga pages in bulk.
-                            </p>
-                            <button
-                                type="button"
-                                className={uiStyles.btnPrimary}
-                                onClick={() => fileBatchInputRef.current?.click()}
-                            >
-                                <UploadCloud size={14} /> Upload Scans
-                            </button>
+
+                                <div className={uiStyles.formGroup}>
+                                    <label className={uiStyles.formLabel}>Total PDF Pages *</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        className={uiStyles.formInput}
+                                        value={currentChapter.pdfPageCount}
+                                        onChange={(e) => {
+                                            const updated = [...chapters];
+                                            updated[activeChapterIndex].pdfPageCount = parseInt(e.target.value) || 1;
+                                            setChapters(updated);
+                                        }}
+                                    />
+                                </div>
+
+                                <div className={uiStyles.formGroup}>
+                                    <label className={uiStyles.formLabel}>File Size (Bytes)</label>
+                                    <input
+                                        type="number"
+                                        min={1024}
+                                        className={uiStyles.formInput}
+                                        value={currentChapter.pdfFileSize}
+                                        onChange={(e) => {
+                                            const updated = [...chapters];
+                                            updated[activeChapterIndex].pdfFileSize = parseInt(e.target.value) || 1024;
+                                            setChapters(updated);
+                                        }}
+                                    />
+                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                        Approx. {(currentChapter.pdfFileSize / (1024 * 1024)).toFixed(1)} MB
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -1382,8 +1207,8 @@ export const BookWizard: React.FC = () => {
                                     <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{chapters.length}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>Total Pages:</span>
-                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{chapters.reduce((sum, c) => sum + c.pages.length, 0)}</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>Total PDF Pages:</span>
+                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{chapters.reduce((sum, c) => sum + (c.pdfPageCount || 0), 0)}</span>
                                 </div>
                             </div>
                         </div>
@@ -1409,9 +1234,9 @@ export const BookWizard: React.FC = () => {
                                     <CheckCircle2 size={16} />
                                     <span>{chapters.length} chapters configured</span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: chapters.reduce((sum, c) => sum + c.pages.length, 0) > 0 ? '#10b981' : '#f59e0b' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: chapters.every(c => c.pdfFileName) ? '#10b981' : '#f59e0b' }}>
                                     <CheckCircle2 size={16} />
-                                    <span>Page sequences locked to deterministic order</span>
+                                    <span>Chapter PDF assets configured</span>
                                 </div>
                             </div>
                         </div>
@@ -1430,48 +1255,37 @@ export const BookWizard: React.FC = () => {
                     <ArrowLeft size={16} /> Previous Step
                 </button>
 
-                {currentStep < 7 ? (
-                    <button
-                        type="button"
-                        className={uiStyles.btnPrimary}
-                        onClick={handleNext}
-                    >
-                        Next Step <ArrowRight size={16} />
-                    </button>
-                ) : (
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <button
-                            type="button"
-                            className={uiStyles.btnSecondary}
-                            onClick={() => handleFinalSubmit('DRAFT')}
-                            disabled={submitting}
-                        >
-                            <Save size={16} /> Save as Draft
-                        </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    {currentStep < 7 ? (
                         <button
                             type="button"
                             className={uiStyles.btnPrimary}
-                            onClick={() => handleFinalSubmit('PUBLISHED')}
-                            disabled={submitting}
+                            onClick={handleNext}
                         >
-                            <CheckCircle2 size={16} /> {submitting ? 'Publishing...' : 'Publish Book to Catalog'}
+                            Next Step <ArrowRight size={16} />
                         </button>
-                    </div>
-                )}
+                    ) : (
+                        <>
+                            <button
+                                type="button"
+                                className={uiStyles.btnSecondary}
+                                onClick={() => handleSubmit('DRAFT')}
+                                disabled={submitting}
+                            >
+                                <Save size={14} /> Save as Draft
+                            </button>
+                            <button
+                                type="button"
+                                className={uiStyles.btnPrimary}
+                                onClick={() => handleSubmit('PUBLISHED')}
+                                disabled={submitting}
+                            >
+                                {submitting ? 'Publishing...' : 'Publish Manga Book'}
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
-
-            {/* Page Preview Modal */}
-            <Modal
-                isOpen={!!pagePreviewUrl}
-                onClose={() => setPagePreviewUrl(null)}
-                title="Page Preview"
-            >
-                {pagePreviewUrl && (
-                    <div style={{ textAlign: 'center', background: '#000', padding: '12px', borderRadius: '8px' }}>
-                        <img src={pagePreviewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }} />
-                    </div>
-                )}
-            </Modal>
         </div>
     );
 };

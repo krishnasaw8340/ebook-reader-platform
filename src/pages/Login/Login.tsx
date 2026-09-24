@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, LogIn, ChevronRight, User as UserIcon, Shield, KeyRound, CheckCircle2, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
+import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import styles from './Login.module.css';
 
 type AuthMode = 'LOGIN' | 'REGISTER' | 'VERIFY_EMAIL' | 'FORGOT_PASSWORD' | 'RESET_PASSWORD';
@@ -142,6 +143,14 @@ export const Login: React.FC = () => {
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         transition={{ type: 'spring', damping: 20 }}
                     >
+                        <Breadcrumbs 
+                            items={[
+                                { label: 'Home', path: '/' },
+                                { label: mode === 'REGISTER' ? 'Register' : mode === 'LOGIN' ? 'Sign In' : mode === 'FORGOT_PASSWORD' ? 'Forgot Password' : mode === 'RESET_PASSWORD' ? 'Reset' : 'Verify' }
+                            ]} 
+                            className={styles.loginBreadcrumbs}
+                        />
+
                         {/* Header branding */}
                         <div className={styles.brand}>
                             <div className={styles.brandIcon}>黒</div>

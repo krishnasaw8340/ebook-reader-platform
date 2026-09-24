@@ -6,7 +6,7 @@ export const GlobalFooter: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <footer className={styles.footer}>
+    <footer className={styles.globalFooter}>
       <div className={styles.footerContainer}>
         <div className={styles.footerGrid}>
           <div className={styles.footerBrandCol}>

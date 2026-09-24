@@ -6,26 +6,34 @@ import type {
     QueryChapterParams,
     PaginatedChapterResponse,
     ChapterPricingModel,
+    ChapterPdfUploadInitPayload,
+    ChapterPdfUploadInitResponse,
+    ChapterPdfUploadCompletePayload,
 } from '../types';
 import { initialChapters } from './mockData';
 
 const LS_CHAPTERS = 'ky_chapters';
 
 /**
- * Normalizes backend Chapter entity into frontend Chapter
+ * Normalizes backend Chapter entity into frontend Chapter with Chapter PDF metadata
  */
 export const mapChapterFromApi = (item: any): Chapter => {
     const bookId = item.bookId || item.book_id || '';
     const chapterNumber = Number(item.chapterNumber ?? item.chapter_no ?? 1);
     const title = item.title || `Chapter ${chapterNumber}`;
     const sortOrder = Number(item.sortOrder ?? item.sort_order ?? (chapterNumber * 10));
-    const pricingModel = (item.pricingModel || item.pricing_model || item.access_type || 'FREE') as ChapterPricingModel;
-    const freePageCount = Number(item.freePageCount ?? item.free_pages ?? 0);
+    const pricingModel = (item.pricingModel || item.pricing_model || item.access_type || 'FREE') === 'PAID' ? 'PAID' : 'FREE';
     const coinCost = Number(item.coinCost ?? item.coin_cost ?? 0);
-    const pageCount = Number(item.pageCount ?? item.page_count ?? 0);
     const published = item.published !== undefined ? Boolean(item.published) : true;
     const createdAt = item.createdAt || item.created_at || new Date().toISOString();
     const updatedAt = item.updatedAt || item.updated_at;
+
+    const pdfStorageKey = item.pdfStorageKey || item.pdf_storage_key || null;
+    const pdfFileName = item.pdfFileName || item.pdf_file_name || null;
+    const pdfFileSize = item.pdfFileSize ?? item.pdf_file_size ?? null;
+    const pdfPageCount = item.pdfPageCount ?? item.pdf_page_count ?? null;
+    const pdfChecksum = item.pdfChecksum || item.pdf_checksum || null;
+    const contentStatus = item.contentStatus || item.content_status || (pdfStorageKey ? 'READY' : 'PENDING');
 
     return {
         id: item.id,
@@ -39,66 +47,66 @@ export const mapChapterFromApi = (item: any): Chapter => {
         access_type: pricingModel,
         pricing_model: pricingModel,
         pricingModel: pricingModel,
-        free_pages: freePageCount,
-        freePageCount: freePageCount,
         coin_cost: coinCost,
         coinCost: coinCost,
-        page_count: pageCount,
-        pageCount: pageCount,
+        pdf_storage_key: pdfStorageKey,
+        pdfStorageKey: pdfStorageKey,
+        pdf_file_name: pdfFileName,
+        pdfFileName: pdfFileName,
+        pdf_file_size: pdfFileSize,
+        pdfFileSize: pdfFileSize,
+        pdf_page_count: pdfPageCount,
+        pdfPageCount: pdfPageCount,
+        pdf_checksum: pdfChecksum,
+        pdfChecksum: pdfChecksum,
+        content_status: contentStatus,
+        contentStatus: contentStatus,
         published: published,
-        publishedAt: item.publishedAt || null,
+        publishedAt: item.publishedAt || item.published_at || null,
         created_at: createdAt,
         updated_at: updatedAt,
         createdAt: createdAt,
         updatedAt: updatedAt,
         book: item.book,
-        pages: item.pages
     };
 };
 
 const getFallbackChapters = (bookId?: string, search?: string): Chapter[] => {
     try {
-        const saved = localStorage.getItem(LS_CHAPTERS);
-        let list: Chapter[] = saved ? JSON.parse(saved) : initialChapters;
+        const raw = localStorage.getItem(LS_CHAPTERS);
+        let list: Chapter[] = raw ? JSON.parse(raw) : initialChapters;
+
         if (bookId) {
-            list = list.filter((c) => c.bookId === bookId || c.book_id === bookId);
+            list = list.filter((c) => c.book_id === bookId || c.bookId === bookId);
         }
-        if (search && search.trim()) {
-            const q = search.toLowerCase().trim();
-            list = list.filter((c) => c.title && c.title.toLowerCase().includes(q));
+
+        if (search) {
+            const q = search.toLowerCase();
+            list = list.filter((c) => c.title.toLowerCase().includes(q));
         }
-        return list.map(mapChapterFromApi).sort((a, b) => (a.sortOrder || a.chapterNumber || 0) - (b.sortOrder || b.chapterNumber || 0));
+
+        return list.sort((a, b) => (a.sortOrder ?? a.sort_order ?? 0) - (b.sortOrder ?? b.sort_order ?? 0));
     } catch {
-        return initialChapters.map(mapChapterFromApi);
+        return initialChapters;
     }
 };
 
-const saveFallbackChapters = (list: Chapter[]) => {
+const saveFallbackChapters = (chapters: Chapter[]) => {
     try {
-        localStorage.setItem(LS_CHAPTERS, JSON.stringify(list));
+        localStorage.setItem(LS_CHAPTERS, JSON.stringify(chapters));
     } catch {
-        // Ignore quota
+        // Ignored
     }
 };
 
-/**
- * Chapter API Service
- * - GET    /chapters
- * - GET    /chapters/:id
- * - POST   /chapters (Admin)
- * - PATCH  /chapters/:id (Admin)
- * - DELETE /chapters/:id (Admin)
- */
 export const chapterService = {
     /**
-     * GET /chapters
-     * Lists chapters with optional book filtering and search
+     * GET /chapters with filters
      */
-    getAll: async (params?: QueryChapterParams | string): Promise<Chapter[]> => {
-        const query: QueryChapterParams = typeof params === 'string' ? { bookId: params } : params || {};
-
+    getAll: async (params?: QueryChapterParams): Promise<Chapter[]> => {
+        const query = params || {};
         try {
-            const res = await api.get<PaginatedChapterResponse | Chapter[]>('/chapters', {
+            const res = await api.get<any>('/chapters', {
                 params: {
                     bookId: query.bookId || undefined,
                     pricingModel: query.pricingModel || undefined,
@@ -202,7 +210,7 @@ export const chapterService = {
         const chapterNumber = Number(data.chapterNumber ?? data.chapter_no ?? 1);
         const title = data.title ? data.title.trim() : `Chapter ${chapterNumber}`;
         const sortOrder = Number(data.sortOrder ?? data.sort_order ?? (chapterNumber * 10));
-        const pricingModel = (data.pricingModel || data.pricing_model || data.access_type || 'FREE') as ChapterPricingModel;
+        const pricingModel = (data.pricingModel || data.pricing_model || data.access_type || 'FREE') === 'PAID' ? 'PAID' : 'FREE';
 
         const payload: CreateChapterPayload = {
             bookId,
@@ -210,9 +218,13 @@ export const chapterService = {
             title,
             sortOrder,
             pricingModel,
-            freePageCount: pricingModel === 'PARTIAL_FREE' || pricingModel === 'PARTIAL' ? Number(data.freePageCount ?? data.free_pages ?? 1) : 0,
             coinCost: pricingModel === 'PAID' ? Number(data.coinCost ?? data.coin_cost ?? 1) : 0,
-            pageCount: Number(data.pageCount ?? data.page_count ?? 0),
+            pdfStorageKey: data.pdfStorageKey || data.pdf_storage_key,
+            pdfFileName: data.pdfFileName || data.pdf_file_name,
+            pdfFileSize: data.pdfFileSize ?? data.pdf_file_size,
+            pdfPageCount: data.pdfPageCount ?? data.pdf_page_count,
+            pdfChecksum: data.pdfChecksum || data.pdf_checksum,
+            contentStatus: data.contentStatus || data.content_status || 'PENDING',
             published: data.published !== undefined ? Boolean(data.published) : true,
             publishedAt: data.publishedAt
         };
@@ -241,20 +253,21 @@ export const chapterService = {
 
         const pricingModel = data.pricingModel || data.pricing_model || data.access_type;
         if (pricingModel !== undefined) {
-            payload.pricingModel = pricingModel as ChapterPricingModel;
-            if (pricingModel === 'FREE') {
+            payload.pricingModel = pricingModel === 'PAID' ? 'PAID' : 'FREE';
+            if (payload.pricingModel === 'FREE') {
                 payload.coinCost = 0;
-                payload.freePageCount = 0;
-            } else if (pricingModel === 'PARTIAL_FREE' || pricingModel === 'PARTIAL') {
-                payload.freePageCount = Number(data.freePageCount ?? data.free_pages ?? 1);
-            } else if (pricingModel === 'PAID') {
+            } else if (payload.pricingModel === 'PAID') {
                 payload.coinCost = Number(data.coinCost ?? data.coin_cost ?? 1);
             }
         }
 
         if (data.coinCost !== undefined || data.coin_cost !== undefined) payload.coinCost = Number(data.coinCost ?? data.coin_cost);
-        if (data.freePageCount !== undefined || data.free_pages !== undefined) payload.freePageCount = Number(data.freePageCount ?? data.free_pages);
-        if (data.pageCount !== undefined || data.page_count !== undefined) payload.pageCount = Number(data.pageCount ?? data.page_count);
+        if (data.pdfStorageKey !== undefined) payload.pdfStorageKey = data.pdfStorageKey;
+        if (data.pdfFileName !== undefined) payload.pdfFileName = data.pdfFileName;
+        if (data.pdfFileSize !== undefined) payload.pdfFileSize = data.pdfFileSize;
+        if (data.pdfPageCount !== undefined) payload.pdfPageCount = data.pdfPageCount;
+        if (data.pdfChecksum !== undefined) payload.pdfChecksum = data.pdfChecksum;
+        if (data.contentStatus !== undefined) payload.contentStatus = data.contentStatus;
         if (data.published !== undefined) payload.published = Boolean(data.published);
         if (data.publishedAt !== undefined) payload.publishedAt = data.publishedAt;
 
@@ -266,6 +279,48 @@ export const chapterService = {
         saveFallbackChapters(currentList.map((c) => (c.id === id ? updated : c)));
 
         return updated;
+    },
+
+    /**
+     * POST /admin/chapters/:chapterId/content/upload-init
+     */
+    uploadInit: async (chapterId: string, data: ChapterPdfUploadInitPayload): Promise<ChapterPdfUploadInitResponse> => {
+        try {
+            const res = await api.post<ChapterPdfUploadInitResponse>(`/admin/chapters/${encodeURIComponent(chapterId)}/content/upload-init`, data);
+            return res.data;
+        } catch {
+            // Mock fallback response for offline / dev
+            const storageKey = `books/book/chapters/${chapterId}/chapter.pdf`;
+            return {
+                chapterId,
+                storageKey,
+                uploadUrl: `https://storage.kuroyomi.local/upload/${encodeURIComponent(storageKey)}?mock=1`,
+                expiresInSeconds: 3600,
+            };
+        }
+    },
+
+    /**
+     * POST /admin/chapters/:chapterId/content/complete
+     */
+    uploadComplete: async (chapterId: string, data: ChapterPdfUploadCompletePayload): Promise<Chapter> => {
+        try {
+            const res = await api.post<any>(`/admin/chapters/${encodeURIComponent(chapterId)}/content/complete`, data);
+            const updated = mapChapterFromApi(res.data);
+            const currentList = getFallbackChapters();
+            saveFallbackChapters(currentList.map((c) => (c.id === chapterId ? updated : c)));
+            return updated;
+        } catch {
+            // Mock fallback
+            const updated = await chapterService.update(chapterId, {
+                pdfFileName: data.fileName,
+                pdfFileSize: data.fileSize,
+                pdfPageCount: data.pageCount || 24,
+                pdfChecksum: data.checksum,
+                contentStatus: 'READY',
+            });
+            return updated;
+        }
     },
 
     /**

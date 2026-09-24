@@ -3,13 +3,11 @@ import { seriesService } from '../seriesService';
 import { volumeService } from '../volumeService';
 import { bookService } from '../bookService';
 import { chapterService } from '../chapterService';
-import { pageService } from '../pageService';
 import type {
     Book,
     BookSeries,
     Volume,
     Chapter,
-    Page,
     User,
     CoinPackage,
     UploadJob,
@@ -18,7 +16,6 @@ import {
     initialBookSeries,
     initialBooks,
     initialChapters,
-    initialPages,
     initialUsers,
     initialCoinPackages
 } from '../mockData';
@@ -28,7 +25,6 @@ const LS_SERIES = 'ky_book_series';
 const LS_VOLUMES = 'ky_volumes';
 const LS_BOOKS = 'ky_books';
 const LS_CHAPTERS = 'ky_chapters';
-const LS_PAGES = 'ky_pages';
 const LS_USERS = 'ky_admin_users';
 const LS_PACKAGES = 'ky_coin_packages';
 const LS_UPLOADS = 'ky_upload_jobs';
@@ -97,7 +93,7 @@ export const initialUploadJobs: UploadJob[] = [
         progress: 100,
         stage: 'Completed',
         chapters_detected: 10,
-        pages_detected: 210,
+        pdf_pages_detected: 210,
         started_at: '2026-09-18T14:20:00Z',
         completed_at: '2026-09-18T14:24:30Z',
         warnings: ['Chapter 14 has low DPI image on page 12 (upscaled automatically)']
@@ -114,7 +110,7 @@ export const initialUploadJobs: UploadJob[] = [
         progress: 45,
         stage: 'Validating',
         chapters_detected: 4,
-        pages_detected: 82,
+        pdf_pages_detected: 82,
         error: 'Archive extraction failed: CRC checksum mismatch on chapter_003/page_018.jpg',
         started_at: '2026-09-19T10:15:00Z',
         completed_at: null,
@@ -131,9 +127,9 @@ export const initialUploadJobs: UploadJob[] = [
         book_title: 'Ghost In The Machine — Side Stories',
         status: 'PROCESSING',
         progress: 72,
-        stage: 'Generating pages',
+        stage: 'Processing',
         chapters_detected: 3,
-        pages_detected: 64,
+        pdf_pages_detected: 64,
         started_at: '2026-09-19T20:50:00Z',
         completed_at: null,
         warnings: []
@@ -229,7 +225,6 @@ export const adminDashboardService = {
             const volumes = getFromLS<Volume[]>(LS_VOLUMES, initialVolumes);
             const books = getFromLS<Book[]>(LS_BOOKS, seedBooks());
             const chapters = getFromLS<Chapter[]>(LS_CHAPTERS, initialChapters);
-            const pages = getFromLS<Page[]>(LS_PAGES, initialPages);
             const uploads = getFromLS<UploadJob[]>(LS_UPLOADS, initialUploadJobs);
 
             const publishedBooks = books.filter(b => b.status === 'PUBLISHED' || b.status === 'COMPLETED' || b.status === 'ONGOING').length;
@@ -279,7 +274,7 @@ export const adminDashboardService = {
                 totalVolumes: volumes.length,
                 totalBooks: books.length,
                 totalChapters: chapters.length,
-                totalPages: pages.length,
+                totalPages: chapters.reduce((acc, c) => acc + (c.pdf_page_count || 0), 0),
                 publishedBooks,
                 draftBooks,
                 processingUploads,
@@ -337,11 +332,7 @@ export { bookService };
 export const adminChapterService = chapterService;
 export { chapterService };
 
-// ==========================================
-// 6. PAGE SERVICE (WITH DETERMINISTIC REORDERING)
-// ==========================================
-export const adminPageService = pageService;
-export { pageService };
+// Page service removed for V1 (Chapter-PDF architecture)
 
 // ==========================================
 // 7. COMPLETE BOOK PACKAGE UPLOAD SERVICE
@@ -395,7 +386,7 @@ export const adminUploadService = {
                 progress: 15,
                 stage: 'Uploading',
                 chapters_detected: 0,
-                pages_detected: 0,
+                pdf_pages_detected: 0,
                 started_at: new Date().toISOString(),
                 warnings: [],
                 detected_structure: {
@@ -403,9 +394,9 @@ export const adminUploadService = {
                     volume_title: payload.volumeTitle || null,
                     book_title: payload.bookTitle,
                     chapters: [
-                        { chapter_no: 1, title: 'Chapter 01: The Inception', pages_count: 24, file_names: ['001.jpg', '002.jpg'] },
-                        { chapter_no: 2, title: 'Chapter 02: Neon Shadows', pages_count: 22, file_names: ['001.jpg', '002.jpg'] },
-                        { chapter_no: 3, title: 'Chapter 03: Resonance', pages_count: 28, file_names: ['001.jpg', '002.jpg'] }
+                        { chapter_no: 1, title: 'Chapter 01: The Inception', pdf_page_count: 24, file_name: 'chapter-001.pdf' },
+                        { chapter_no: 2, title: 'Chapter 02: Neon Shadows', pdf_page_count: 22, file_name: 'chapter-002.pdf' },
+                        { chapter_no: 3, title: 'Chapter 03: Resonance', pdf_page_count: 28, file_name: 'chapter-003.pdf' }
                     ]
                 }
             };
@@ -453,7 +444,7 @@ export const adminUploadService = {
             coin_price: 0,
             status: 'PUBLISHED',
             chapter_count: job.chapters_detected || 3,
-            page_count: job.pages_detected || 74,
+            
             pricing_model: 'FREE'
         });
 

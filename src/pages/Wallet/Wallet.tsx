@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Coins, Plus, ShieldCheck, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useUser } from '../../contexts/UserContext';
+import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import styles from './Wallet.module.css';
 
 export const Wallet: React.FC = () => {
@@ -22,9 +23,10 @@ export const Wallet: React.FC = () => {
   return (
     <div className={styles.wallet}>
       <div className="main-container">
+        <Breadcrumbs items={[{ label: 'Home', path: '/' }, { label: 'Coins & Wallet' }]} />
         
         {/* Balance Box */}
-        <div className={`${styles.balanceBox} glass`}>
+        <div className={styles.balanceBox}>
           <Coins size={36} className={styles.coinIcon} />
           <div className={styles.balanceInfo}>
             <span className={styles.balanceLabel}>Current Reading Balance</span>
@@ -45,7 +47,7 @@ export const Wallet: React.FC = () => {
         <div className={styles.purchaseBlock}>
           {successCoins ? (
             <motion.div 
-              className={`${styles.successCard} glass`}
+              className={styles.successCard}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
             >

@@ -34,7 +34,7 @@ const STAGES = [
     'Processing',
     'Extracting',
     'Validating',
-    'Generating pages',
+    'Generating PDF preview',
     'Completed'
 ];
 
@@ -155,7 +155,7 @@ export const AdminUploads: React.FC = () => {
             'Processing',
             'Extracting',
             'Validating',
-            'Generating pages',
+            'Generating PDF preview',
             'Completed'
         ];
 
@@ -170,7 +170,7 @@ export const AdminUploads: React.FC = () => {
                 progress,
                 status: isDone ? 'COMPLETED' : 'PROCESSING',
                 chapters_detected: 12,
-                pages_detected: 248,
+                pdf_pages_detected: 248,
                 warnings: [
                     'Chapter 7 contains duplicate scan: 014_rev.jpg (auto-filtered)',
                     'Chapter 10 is missing page 15 placeholder (sequence continuous)'
@@ -225,6 +225,10 @@ export const AdminUploads: React.FC = () => {
             <PageHeader
                 title="Complete Book Upload & Ingestion Monitor"
                 subtitle="Upload complete multi-chapter ZIP archives, track automated extraction & DRM processing, and inspect detected catalog structures."
+                breadcrumbs={[
+                    { label: 'Admin', path: '/admin/dashboard' },
+                    { label: 'Uploads & Ingestion' }
+                ]}
                 actions={
                     <button
                         className={uiStyles.btnPrimary}
@@ -337,7 +341,7 @@ export const AdminUploads: React.FC = () => {
                                         </td>
                                         <td>
                                             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                                                {job.chapters_detected} Ch • {job.pages_detected} Pgs
+                                                {job.chapters_detected} Ch • {job.pdf_pages_detected || 0} PDF Pgs
                                             </span>
                                             {job.warnings && job.warnings.length > 0 && (
                                                 <div style={{ fontSize: '10px', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
@@ -615,7 +619,7 @@ export const AdminUploads: React.FC = () => {
                             </div>
                             <div className={styles.detectedItem}>
                                 <div className={styles.detectedLabel}>Pages Detected</div>
-                                <div className={styles.detectedVal}>{activeJob.pages_detected} DRM Pages</div>
+                                <div className={styles.detectedVal}>{activeJob.pdf_pages_detected || 0} PDF Pages</div>
                             </div>
                             <div className={styles.detectedItem}>
                                 <div className={styles.detectedLabel}>Ingestion Status</div>
@@ -648,7 +652,7 @@ export const AdminUploads: React.FC = () => {
                                         <span style={{ fontWeight: 800, color: 'var(--primary)' }}>#{ch.chapter_no}</span>
                                         <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{ch.title}</span>
                                     </div>
-                                    <span style={{ color: 'var(--text-muted)' }}>{ch.pages_count} pages detected</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>{ch.pdf_page_count || 24} PDF pages</span>
                                 </div>
                             )) || (
                                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '12px' }}>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bookmark, Compass } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { BookCard } from '../../components/common/BookCard';
+import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import styles from './Library.module.css';
 
 export const Library: React.FC = () => {
@@ -25,6 +26,7 @@ export const Library: React.FC = () => {
   return (
     <div className={styles.library}>
       <div className="main-container">
+        <Breadcrumbs items={[{ label: 'Home', path: '/' }, { label: 'My Library' }]} />
         <h2>My Library</h2>
         <p className={styles.subtitle}>Track your bookmarks, reading history, and unlocked chapter volumes.</p>
 
@@ -39,7 +41,7 @@ export const Library: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className={`${styles.emptyCard} glass`}>
+          <div className={styles.emptyCard}>
             <Bookmark size={40} className={styles.emptyIcon} />
             <h4>Your Library is Empty</h4>
             <p>You haven't bookmarked any manga yet. Start browsing to compile your private library updates.</p>

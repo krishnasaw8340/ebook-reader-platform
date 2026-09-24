@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Coins, Bell, Plus, User, Bookmark, Sparkles, LogOut, Shield, ArrowLeft, X, Flame } from 'lucide-react';
+import { Search, Coins, Plus, User, Bookmark, Sparkles, LogOut, Shield, ArrowLeft, X, Flame } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { ThemeToggle } from '../common/ThemeToggle';
@@ -51,20 +51,21 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
     setSearchQuery('');
     setSearchResults([]);
     setShowSearchDropdown(false);
+    setMobileSearchOpen(false);
     navigate(`/book/${seriesId}`);
   };
 
   const popularSeries = bookSeries.slice(0, 3);
   const topRecentSeries = [...bookSeries].reverse().slice(0, 3);
 
-  const activeClass = (path: string) => location.pathname === path ? styles.activeLink : '';
+  const isActive = (path: string) => location.pathname === path;
 
   const renderSuggestions = () => (
     <div className={styles.suggestionsContainer}>
       <div className={styles.suggestionSection}>
         <div className={styles.suggestionHeader}>
-          <Flame size={12} className={styles.suggestionIconFlame} fill="currentColor" />
-          <span>Trending Series</span>
+          <Flame size={11} className={styles.suggestionIconFlame} fill="currentColor" />
+          <span>Trending</span>
         </div>
         <div className={styles.suggestionList}>
           {popularSeries.map(b => (
@@ -72,7 +73,7 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
               <img src={b.cover_image || ''} alt={b.title} className={styles.suggestionCover} />
               <div className={styles.suggestionInfo}>
                 <div className={styles.suggestionTitle}>{b.title}</div>
-                <div className={styles.suggestionMeta}>{b.status} • Catalog</div>
+                <div className={styles.suggestionMeta}>{b.status}</div>
               </div>
             </div>
           ))}
@@ -81,8 +82,8 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
       
       <div className={styles.suggestionSection}>
         <div className={styles.suggestionHeader}>
-          <Sparkles size={12} className={styles.suggestionIconSparkles} fill="currentColor" />
-          <span>Recently Added</span>
+          <Sparkles size={11} className={styles.suggestionIconSparkles} fill="currentColor" />
+          <span>Recent</span>
         </div>
         <div className={styles.suggestionList}>
           {topRecentSeries.map(b => (
@@ -90,7 +91,7 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
               <img src={b.cover_image || ''} alt={b.title} className={styles.suggestionCover} />
               <div className={styles.suggestionInfo}>
                 <div className={styles.suggestionTitle}>{b.title}</div>
-                <div className={styles.suggestionMeta}>{b.status} • New</div>
+                <div className={styles.suggestionMeta}>{b.status}</div>
               </div>
             </div>
           ))}
@@ -100,7 +101,7 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
   );
 
   return (
-    <header className={`${styles.header} glass`}>
+    <header className={styles.header}>
       <div className={styles.headerContainer}>
         {mobileSearchOpen ? (
           <div className={styles.mobileSearchContainer}>
@@ -111,12 +112,13 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
                 setSearchQuery('');
                 setSearchResults([]);
               }}
+              aria-label="Close search"
             >
               <ArrowLeft size={20} />
             </button>
             <input 
               type="text" 
-              placeholder="Search series title..." 
+              placeholder="Search manga, series, creators..." 
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               className={styles.mobileSearchInput}
@@ -129,12 +131,13 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
                   setSearchQuery('');
                   setSearchResults([]);
                 }}
+                aria-label="Clear search"
               >
                 <X size={16} />
               </button>
             )}
             
-            <div className={`${styles.searchDropdown} ${styles.mobileSearchDropdown} glass`}>
+            <div className={`${styles.searchDropdown} ${styles.mobileSearchDropdown}`}>
               {searchQuery ? (
                 searchResults.length > 0 ? (
                   searchResults.map(b => (
@@ -165,28 +168,27 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
             {/* Desktop Nav */}
             <nav className={styles.desktopNav}>
               <ul>
-                <li className={activeClass('/')} onClick={() => navigate('/')}>Home</li>
-                <li className={activeClass('/browse')} onClick={() => navigate('/browse')}>Browse</li>
-                <li className={activeClass('/library')} onClick={() => navigate('/library')}>Library</li>
-                <li className={activeClass('/wallet')} onClick={() => navigate('/wallet')}>Wallet</li>
+                <li className={isActive('/') ? styles.activeLink : ''} onClick={() => navigate('/')}>Home</li>
+                <li className={isActive('/browse') ? styles.activeLink : ''} onClick={() => navigate('/browse')}>Browse</li>
+                <li className={isActive('/library') ? styles.activeLink : ''} onClick={() => navigate('/library')}>Library</li>
               </ul>
             </nav>
 
-            {/* Search & Profile Section */}
+            {/* Search & Actions */}
             <div className={styles.actions}>
-              {/* Search bar */}
+              {/* Desktop Search */}
               <div className={styles.searchWrapper} ref={searchRef}>
-                <Search className={styles.searchIcon} size={18} />
+                <Search className={styles.searchIcon} size={15} />
                 <input 
                   type="text" 
-                  placeholder="Search series title..." 
+                  placeholder="Search manga..." 
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                   onFocus={() => setShowSearchDropdown(true)}
                   className={styles.searchInput}
                 />
                 {showSearchDropdown && (
-                  <div className={`${styles.searchDropdown} glass`}>
+                  <div className={styles.searchDropdown}>
                     {searchQuery ? (
                       searchResults.length > 0 ? (
                         searchResults.map(b => (
@@ -212,27 +214,22 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
               <button 
                 className={`${styles.navBtn} ${styles.mobileSearchBtn}`} 
                 onClick={() => setMobileSearchOpen(true)}
+                aria-label="Open search"
               >
-                <Search size={20} />
+                <Search size={18} />
               </button>
 
-              {/* Wallet Trigger */}
+              {/* Wallet */}
               <div className={`${styles.walletPill} ${styles.desktopOnlyAction}`} onClick={() => navigate('/wallet')}>
-                <Coins className={styles.coinIcon} size={16} />
+                <Coins className={styles.coinIcon} size={14} />
                 <span>{wallet?.balance || 0}</span>
-                <span className={styles.walletAdd}><Plus size={10} /></span>
+                <span className={styles.walletAdd}><Plus size={9} /></span>
               </div>
 
-              {/* Notifications badge */}
-              <div className={styles.navBtn} onClick={() => navigate('/profile')}>
-                <Bell size={20} />
-                <div className={styles.notifBadge}></div>
-              </div>
-
-              {/* Theme Toggle Button */}
+              {/* Theme Toggle */}
               <ThemeToggle variant="menu" />
 
-              {/* Profile Dropdown */}
+              {/* Profile */}
               <div className={`${styles.profileWrapper} ${styles.desktopOnlyAction}`} ref={dropdownRef}>
                 <img 
                   src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&width=100&auto=format&fit=crop" 
@@ -241,43 +238,39 @@ export const TopNavbar: React.FC<{ onSearchTrigger?: () => void }> = ({ onSearch
                   onClick={() => setProfileOpen(!profileOpen)}
                 />
                 {profileOpen && (
-                  <div className={`${styles.profileDropdown} glass`}>
+                  <div className={styles.profileDropdown}>
                     <div className={styles.profileDropdownHeader}>
                       <div className={styles.profileName}>{user ? user.email.split('@')[0] : 'Guest User'}</div>
                       <div className={styles.profileEmail}>{user ? user.email : 'Sign in to access your library'}</div>
                     </div>
                     <div className={styles.profileMenu}>
                       <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/library'); }}>
-                        <Bookmark size={15} /> My Library ({userLibrary.length})
+                        <Bookmark size={14} /> My Library ({userLibrary.length})
                       </div>
                       <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/profile'); }}>
-                        <User size={15} /> Account Settings
+                        <User size={14} /> Account Settings
                       </div>
                       <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/wallet'); }}>
-                        <Coins size={15} /> My Coins ({wallet?.balance || 0})
-                      </div>
-                      <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/library?tab=history'); }}>
-                        <Sparkles size={15} /> Reading History
+                        <Coins size={14} /> My Coins ({wallet?.balance || 0})
                       </div>
                       {isAdmin && (
-                        <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/admin'); }} style={{ color: '#ff6b6b', fontWeight: 700 }}>
-                          <Shield size={15} style={{ color: '#e50914' }} /> Admin Portal
-                          <span style={{ marginLeft: 'auto', fontSize: '9px', background: '#e50914', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>ADMIN</span>
+                        <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/admin'); }} style={{ color: 'var(--color-brand-primary)', fontWeight: 600 }}>
+                          <Shield size={14} /> Admin Portal
                         </div>
                       )}
                       
-                      <div style={{ padding: '8px 12px', borderTop: '1px solid var(--color-border-subtle)', borderBottom: '1px solid var(--color-border-subtle)', margin: '4px 0' }}>
-                        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '6px', fontWeight: 600 }}>APPEARANCE</div>
+                      <div style={{ padding: '8px 4px 4px 4px', borderTop: '1px solid var(--color-border-subtle)', margin: '4px 0' }}>
+                        <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: '6px', paddingLeft: '4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Appearance</div>
                         <ThemeToggle variant="segmented" />
                       </div>
 
                       {isAuthenticated ? (
                         <div className={`${styles.profileItem} ${styles.signOut}`} onClick={async () => { setProfileOpen(false); await logout(); navigate('/login'); }}>
-                          <LogOut size={15} /> Sign Out
+                          <LogOut size={14} /> Sign Out
                         </div>
                       ) : (
                         <div className={styles.profileItem} onClick={() => { setProfileOpen(false); navigate('/login'); }}>
-                          <LogOut size={15} /> Sign In / Register
+                          <LogOut size={14} /> Sign In / Register
                         </div>
                       )}
                     </div>

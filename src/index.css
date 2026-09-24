@@ -15,7 +15,9 @@ body {
   font-family: var(--font-body);
   overflow-x: hidden;
   line-height: 1.5;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
@@ -23,6 +25,18 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+/* Typography scale — calm, modern hierarchy */
+h1 { font-size: 24px; }
+h2 { font-size: 18px; }
+h3 { font-size: 16px; }
+h4 { font-size: 14px; font-weight: 600; }
+
+@media (min-width: 768px) {
+  h1 { font-size: 28px; }
+  h2 { font-size: 20px; }
 }
 
 a {
@@ -49,14 +63,14 @@ option {
   color: var(--color-text-primary);
 }
 
-/* Scrollbars */
+/* Scrollbars — thin, unobtrusive */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-primary);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -65,15 +79,7 @@ option {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-brand-primary);
-}
-
-/* Glassmorphism helpers */
-.glass {
-  background: var(--color-glass-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--color-glass-border);
+  background: var(--color-text-muted);
 }
 
 /* Shimmer Animation Skeletons */
@@ -92,28 +98,15 @@ option {
   animation: shimmer 1.5s infinite linear;
 }
 
-/* Text Highlights */
-.text-gradient {
-  background: linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-text-secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.text-primary-gradient {
-  background: linear-gradient(135deg, var(--color-brand-primary) 0%, var(--color-brand-primary-active) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
 /* Common Layout Components */
 .main-container {
-  max-width: 1400px;
+  max-width: var(--layout-max-width);
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 20px;
   width: 100%;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .main-container {
     padding: 0 16px;
   }
@@ -128,7 +121,7 @@ option {
 /* Range Inputs */
 input[type="range"] {
   -webkit-appearance: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-border);
   height: 4px;
   border-radius: 2px;
   outline: none;
@@ -141,7 +134,6 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--primary);
   cursor: pointer;
-  box-shadow: 0 0 8px var(--primary);
 }
 
 /* Hide scrollbars for sliders and shelves */
@@ -152,3 +144,16 @@ input[type="range"]::-webkit-slider-thumb {
 .no-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
 }
+
+/* Status dot indicators */
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.status-dot--ongoing { background-color: var(--color-status-success); }
+.status-dot--completed { background-color: var(--color-status-info); }
+.status-dot--hiatus { background-color: var(--color-status-warning); }
+.status-dot--draft { background-color: var(--color-text-muted); }

@@ -374,7 +374,7 @@ export const AdminBooks: React.FC = () => {
                                                 {b.chapter_count || 0} Ch.
                                             </div>
                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                                {b.page_count || 0} pages
+                                                PDF Content
                                             </div>
                                         </td>
                                         <td>

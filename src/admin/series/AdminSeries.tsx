@@ -157,6 +157,10 @@ export const AdminSeries: React.FC = () => {
             <PageHeader
                 title="Manga Series Catalog"
                 subtitle="Manage franchise titles, overarching descriptions, and serialization statuses."
+                breadcrumbs={[
+                    { label: 'Admin', path: '/admin/dashboard' },
+                    { label: 'Series' }
+                ]}
                 actions={
                     <button className={styles.btnPrimary} onClick={openCreateModal}>
                         <Plus size={16} /> New Series

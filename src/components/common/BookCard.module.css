@@ -1,3 +1,6 @@
+/* ============================================================ */
+/* BOOK CARD — Clean, lightweight, content-first                 */
+/* ============================================================ */
 .card {
   width: 100%;
   display: flex;
@@ -6,14 +9,14 @@
   user-select: none;
 }
 
+/* Cover */
 .coverWrapper {
   position: relative;
   width: 100%;
-  aspect-ratio: 2/3;
-  border-radius: var(--border-radius);
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--color-border);
-  box-shadow: var(--color-shadow-sm);
   background-color: var(--color-surface);
 }
 
@@ -21,174 +24,101 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.4s ease;
+  transition: transform 0.3s ease;
 }
 
 .card:hover .cover {
-  transform: scale(1.04);
+  transform: scale(1.02);
 }
 
-.overlay {
+/* Bookmark button — top-right, hidden until hover */
+.bookmarkBtn {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0) 100%);
-  opacity: 0.9;
-  transition: var(--transition-smooth);
-}
-
-.card:hover .overlay {
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.3) 50%, rgba(0, 0, 0, 0.1) 100%);
-}
-
-.premiumBadge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 215, 0, 0.25);
-  padding: 3px 8px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-family: var(--font-heading);
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--coin);
-  z-index: 5;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
-
-.coinIcon {
-  color: var(--coin);
-}
-
-.actionsOverlay {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  opacity: 0;
-  transform: translateX(-10px);
-  transition: var(--transition-smooth);
-  z-index: 5;
-}
-
-.card:hover .actionsOverlay {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.actionBtn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: rgba(13, 13, 13, 0.75);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background-color: rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-primary);
-  transition: var(--transition-fast);
-}
-
-.actionBtn:hover {
-  background-color: var(--primary);
-  border-color: var(--primary);
   color: #ffffff;
-  transform: scale(1.1);
+  border: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  z-index: 2;
 }
 
-.liked {
-  color: var(--primary);
+.card:hover .bookmarkBtn {
+  opacity: 1;
 }
 
 .bookmarked {
-  color: var(--primary);
+  opacity: 1 !important;
+  color: var(--color-brand-primary);
+  background-color: rgba(0, 0, 0, 0.65);
 }
 
-.statsOverlay {
-  position: absolute;
-  bottom: 12px;
-  left: 12px;
-  right: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 600;
+.bookmarkBtn:hover {
+  background-color: var(--color-brand-primary);
   color: #ffffff;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-  z-index: 5;
 }
 
-.stat {
-  display: flex;
-  align-items: center;
-  gap: 3px;
+/* Premium tag — small, top-left */
+.premiumTag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background-color: var(--color-brand-coin-subtle);
+  color: var(--coin);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  z-index: 2;
 }
 
-.progressBarWrapper {
+/* Progress bar — bottom of cover */
+.progressWrapper {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 22px;
-  background-color: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 6;
+  height: 3px;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 2;
 }
 
 .progressBar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  background-color: var(--primary);
-  box-shadow: var(--shadow-glow);
+  height: 100%;
+  background-color: var(--color-brand-primary);
+  transition: width 0.3s ease;
 }
 
-.progressPercent {
-  font-family: var(--font-heading);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: #ffffff;
-  position: relative;
-  z-index: 1;
-}
-
+/* Info section */
 .info {
-  margin-top: 10px;
-  padding: 0 4px;
+  margin-top: 8px;
+  padding: 0 2px;
 }
 
 .title {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1.3;
   margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--text-primary);
-  transition: var(--transition-fast);
+  color: var(--color-text-primary);
+  transition: color var(--transition-fast);
 }
 
 .card:hover .title {
-  color: var(--primary);
+  color: var(--color-brand-primary);
 }
 
 .meta {
@@ -198,46 +128,66 @@
   font-size: 11px;
 }
 
-.author {
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 110px;
+.status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  text-transform: capitalize;
+  font-size: 11px;
 }
 
-.genre {
-  color: var(--primary);
-  font-weight: 700;
-  background-color: rgba(230, 57, 70, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 9px;
-  text-transform: uppercase;
+.statusDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-/* Skeletons */
+.progress {
+  font-weight: 600;
+  color: var(--color-brand-primary);
+  font-size: 11px;
+}
+
+/* Compact variant for shelves */
+.compact .coverWrapper {
+  border-radius: var(--radius-sm);
+}
+
+.compact .title {
+  font-size: 12px;
+}
+
+.compact .info {
+  margin-top: 6px;
+}
+
+/* ============================================================ */
+/* SKELETON CARDS                                                */
+/* ============================================================ */
 .skeletonCard {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .skeletonCover {
   width: 100%;
   aspect-ratio: 2/3;
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-md);
 }
 
 .skeletonTitle {
   width: 75%;
-  height: 14px;
-  border-radius: 4px;
+  height: 13px;
+  border-radius: 3px;
 }
 
 .skeletonText {
   width: 45%;
   height: 10px;
-  border-radius: 4px;
+  border-radius: 3px;
 }

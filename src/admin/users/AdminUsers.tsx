@@ -78,6 +78,10 @@ export const AdminUsers: React.FC = () => {
             <PageHeader
                 title="User & Role Management"
                 subtitle="Inspect platform accounts, review verified emails, monitor account statuses, and audit security roles."
+                breadcrumbs={[
+                    { label: 'Admin', path: '/admin/dashboard' },
+                    { label: 'Users & Roles' }
+                ]}
             />
 
             {successMessage && <SuccessBanner message={successMessage} />}

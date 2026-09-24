@@ -1,9 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Coins, Bookmark, Sun, ZoomIn, Eye, ChevronLeft, ChevronRight, Maximize2, Settings, Lock, Compass, Layout } from 'lucide-react';
+import {
+  ArrowLeft,
+  Coins,
+  Bookmark,
+  Sun,
+  ZoomIn,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Lock,
+  Compass,
+  Layout,
+  FileText
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../contexts/UserContext';
 import { RechargeModal } from '../../components/common/RechargeModal';
+import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import styles from './Reader.module.css';
 
 export const Reader: React.FC = () => {
@@ -13,7 +27,6 @@ export const Reader: React.FC = () => {
     books, 
     bookSeries, 
     chapters, 
-    pages, 
     wallet, 
     unlockChapter, 
     isChapterUnlocked, 
@@ -36,11 +49,12 @@ export const Reader: React.FC = () => {
   const book = books.find(b => b.id === bookId);
   const series = book ? bookSeries.find(s => s.id === book.series_id) : null;
   const chapter = chapters.find(c => c.id === chapterId);
-  const chapterPages = pages.filter(p => p.chapter_id === chapterId).sort((a,b) => a.page_no - b.page_no);
-  const bookChapters = chapters.filter(c => c.book_id === bookId).sort((a,b) => a.chapter_no - b.chapter_no);
+  const bookChapters = chapters.filter(c => (c.bookId === bookId || c.book_id === bookId)).sort((a,b) => (a.chapterNumber ?? a.chapter_no) - (b.chapterNumber ?? b.chapter_no));
   const chapterIndex = bookChapters.findIndex(c => c.id === chapterId);
 
   const isLocked = chapter ? !isChapterUnlocked(chapter.id) : true;
+  const totalPdfPages = chapter ? (chapter.pdfPageCount ?? chapter.pdf_page_count ?? 24) : 24;
+  const pdfFileName = chapter ? (chapter.pdfFileName ?? chapter.pdf_file_name ?? 'chapter.pdf') : 'chapter.pdf';
 
   const isSeriesBookmarked = series ? books.filter(b => b.series_id === series.id).some(b => userLibrary.some(lib => lib.book_id === b.id)) : false;
 
@@ -57,20 +71,15 @@ export const Reader: React.FC = () => {
 
   // Load progress if exists
   useEffect(() => {
-    if (book && chapter && chapterPages.length > 0) {
+    if (book && chapter) {
       const prog = readingProgress.find(p => p.book_id === book.id && p.chapter_id === chapter.id);
-      if (prog) {
-        const targetPage = chapterPages.find(pg => pg.id === prog.page_id);
-        if (targetPage) {
-          setPageNum(targetPage.page_no);
-        } else {
-          setPageNum(1);
-        }
+      if (prog && prog.last_pdf_page) {
+        setPageNum(Math.min(prog.last_pdf_page, totalPdfPages));
       } else {
         setPageNum(1);
       }
     }
-  }, [bookId, chapterId, chapterPages.length]);
+  }, [bookId, chapterId, totalPdfPages]);
 
   if (!book || !chapter || !series) {
     return (
@@ -86,23 +95,17 @@ export const Reader: React.FC = () => {
     if (success) {
       setCoinFloat(true);
       setTimeout(() => setCoinFloat(false), 1200);
-      
-      const firstPage = chapterPages[0];
-      if (firstPage) {
-        saveProgress(book.id, chapter.id, firstPage.id);
-      }
+      saveProgress(book.id, chapter.id, 0, 1, 0);
     } else {
       setRechargeOpen(true);
     }
   };
 
   const handlePageChange = (nextPageNo: number) => {
-    if (nextPageNo < 1 || nextPageNo > chapterPages.length) return;
+    if (nextPageNo < 1 || nextPageNo > totalPdfPages) return;
     setPageNum(nextPageNo);
-    const targetPage = chapterPages.find(p => p.page_no === nextPageNo);
-    if (targetPage) {
-      saveProgress(book.id, chapter.id, targetPage.id);
-    }
+    const progressPercent = Math.round((nextPageNo / totalPdfPages) * 100);
+    saveProgress(book.id, chapter.id, progressPercent, nextPageNo, 0);
     
     if (readingMode === 'horizontal') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -143,36 +146,60 @@ export const Reader: React.FC = () => {
     else setZoomLevel('fit-width');
   };
 
+  // Generate continuous page slices for Chapter PDF
+  const pdfPagesList = Array.from({ length: totalPdfPages }, (_, i) => i + 1);
+
   return (
-    <div className={`${styles.reader} ${styles[brightness]}`}>
-      {/* HUD Header */}
+    <div className={`${styles.readerWrapper} ${styles[brightness]}`}>
+      {/* HUD Header Drawer */}
       <AnimatePresence>
         {showHUD && (
           <motion.header 
-            className={`${styles.hudHeader} glass`}
-            initial={{ y: -64, opacity: 0 }}
+            className={styles.hudHeader}
+            initial={{ y: -60, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -64, opacity: 0 }}
+            exit={{ y: -60, opacity: 0 }}
           >
-            <div className={styles.hudLeft} onClick={() => navigate(`/book/${series.id}`)}>
-              <ArrowLeft size={20} />
-              <div className={styles.titleInfo}>
-                <span className={styles.chapterNum}>Ch {chapter.chapter_no}: {chapter.title}</span>
-                <span className={styles.bookTitle}>{book.title} ({series.title})</span>
+            <div className={styles.headerLeft}>
+              <button 
+                className={styles.backBtn}
+                onClick={() => navigate(`/book/${book.id}`)}
+                title="Back to Book Overview"
+              >
+                <ArrowLeft size={20} />
+              </button>
+
+              <div className={styles.titleStack}>
+                <Breadcrumbs 
+                  items={[
+                    { label: series.title, path: `/book/${book.id}` },
+                    { label: book.title, path: `/book/${book.id}` },
+                    { label: `Ch. ${chapter.chapterNumber ?? chapter.chapter_no}` }
+                  ]} 
+                />
+                <h2 className={styles.chapterTitle}>{chapter.title}</h2>
               </div>
             </div>
 
-            <div className={styles.hudRight}>
-              <div className={styles.walletPill} onClick={() => setRechargeOpen(true)}>
-                <Coins size={14} />
-                <span>{wallet?.balance || 0} Coins</span>
+            <div className={styles.headerRight}>
+              <div className={styles.metaBadge} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#38bdf8' }}>
+                <FileText size={13} /> {pdfFileName}
               </div>
+
+              {/* Bookmark Toggle */}
               <button 
-                className={`${styles.hudBtn} ${isSeriesBookmarked ? styles.activeBtn : ''}`}
-                onClick={() => toggleBookmark(series.id)}
+                className={`${styles.hudBtn} ${isSeriesBookmarked ? styles.activeBookmark : ''}`}
+                onClick={() => toggleBookmark(book.id)}
+                title="Bookmark Series"
               >
-                <Bookmark size={18} fill={isSeriesBookmarked ? "currentColor" : "none"} />
+                <Bookmark size={18} fill={isSeriesBookmarked ? 'currentColor' : 'none'} />
               </button>
+
+              {/* Wallet quick indicator */}
+              <div className={styles.walletBadge} onClick={() => setRechargeOpen(true)}>
+                <Coins size={14} className={styles.coinIcon} />
+                <span>{wallet?.balance || 0}</span>
+              </div>
             </div>
           </motion.header>
         )}
@@ -189,7 +216,7 @@ export const Reader: React.FC = () => {
             transition={{ duration: 1 }}
           >
             <Coins size={28} className={styles.floatIcon} />
-            <span>-{chapter.coin_cost} Coin</span>
+            <span>-{chapter.coinCost ?? chapter.coin_cost} Coins</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -204,16 +231,19 @@ export const Reader: React.FC = () => {
           // Unlock card screen
           <div className={styles.lockScreen} onClick={(e) => e.stopPropagation()}>
             <motion.div 
-              className={`${styles.lockCard} glass`}
+              className={styles.lockCard}
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
             >
               <div className={styles.lockIcon}><Lock size={32} /></div>
               <h3>Unlock Premium Chapter</h3>
-              <p>This chapter requires <strong>{chapter.coin_cost} Coin</strong> to unlock. You will have permanent access to this chapter's pages.</p>
+              <p>
+                This chapter requires <strong>{chapter.coinCost ?? chapter.coin_cost} Coins</strong> to unlock.
+                You will have permanent access to the complete chapter PDF.
+              </p>
               
               <button className={styles.btnUnlock} onClick={handleUnlock}>
-                Unlock Chapter
+                Unlock Chapter ({chapter.coinCost ?? chapter.coin_cost} Coins)
               </button>
               
               <div className={styles.lockWallet}>
@@ -222,22 +252,25 @@ export const Reader: React.FC = () => {
             </motion.div>
           </div>
         ) : (
-          // Render Pages (Horizontal vs Vertical)
+          // Render Chapter PDF Continuous Viewport
           <div className={styles.pagesContainer}>
             {readingMode === 'vertical' ? (
-              // Vertical list of all pages
-              chapterPages.map((page, idx) => (
-                <div key={page.id} className={styles.pageItem}>
-                  <div className={styles.pageLoader}><Compass className={styles.spin} /> Page {idx + 1} loading...</div>
+              // Continuous vertical scrollable reader
+              pdfPagesList.map((pgNumber) => (
+                <div key={pgNumber} className={styles.pageItem}>
+                  <div className={styles.pageLoader}><Compass className={styles.spin} /> PDF Page {pgNumber} loading...</div>
                   <img 
-                    src={page.image_url} 
-                    alt={`Page ${idx + 1}`} 
+                    src={book.cover_image || `https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=800`}
+                    alt={`PDF Page ${pgNumber}`} 
                     onLoad={(e) => e.currentTarget.parentElement?.classList.add(styles.loaded)}
                     onError={(e) => {
-                      e.currentTarget.src = `https://placehold.co/600x900/121212/ffffff?text=Page+${idx + 1}+Loading+Error`;
+                      e.currentTarget.src = `https://placehold.co/600x900/121212/ffffff?text=${encodeURIComponent(chapter.title)}+Page+${pgNumber}`;
                       e.currentTarget.parentElement?.classList.add(styles.loaded);
                     }}
                   />
+                  <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', padding: '6px' }}>
+                    {pdfFileName} • Page {pgNumber} of {totalPdfPages}
+                  </div>
                 </div>
               ))
             ) : (
@@ -250,16 +283,16 @@ export const Reader: React.FC = () => {
                 
                 <div className={styles.horizontalPageItem}>
                   <img 
-                    src={chapterPages[pageNum - 1]?.image_url} 
-                    alt={`Page ${pageNum}`} 
-                    onError={(e) => {
-                      e.currentTarget.src = `https://placehold.co/600x900/121212/ffffff?text=Page+${pageNum}+Loading+Error`;
-                    }}
+                    src={book.cover_image || `https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=800`}
+                    alt={`PDF Page ${pageNum}`} 
                   />
+                  <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', padding: '6px' }}>
+                    {pdfFileName} • Page {pageNum} of {totalPdfPages}
+                  </div>
                 </div>
 
                 <ChevronRight 
-                  className={`${styles.navChevron} ${pageNum >= chapterPages.length ? styles.disabledChevron : ''}`}
+                  className={`${styles.navChevron} ${pageNum >= totalPdfPages ? styles.disabledChevron : ''}`}
                   onClick={() => handlePageChange(pageNum + 1)}
                 />
               </div>
@@ -270,9 +303,9 @@ export const Reader: React.FC = () => {
 
       {/* HUD Footer Slider Drawer */}
       <AnimatePresence>
-        {showHUD && !isLocked && chapterPages.length > 0 && (
+        {showHUD && !isLocked && totalPdfPages > 0 && (
           <motion.footer 
-            className={`${styles.hudFooter} glass`}
+            className={styles.hudFooter}
             initial={{ y: 70, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 70, opacity: 0 }}
@@ -285,13 +318,13 @@ export const Reader: React.FC = () => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const clickX = e.clientX - rect.left;
                 const percent = clickX / rect.width;
-                const targetPage = Math.round(percent * (chapterPages.length - 1)) + 1;
+                const targetPage = Math.round(percent * (totalPdfPages - 1)) + 1;
                 handlePageChange(targetPage);
               }}
             >
               <div 
                 className={styles.progressFill} 
-                style={{ width: `${((pageNum - 1) / (chapterPages.length - 1)) * 100}%` }}
+                style={{ width: `${((pageNum - 1) / Math.max(1, totalPdfPages - 1)) * 100}%` }}
               />
             </div>
 
@@ -333,16 +366,16 @@ export const Reader: React.FC = () => {
                     <input 
                       type="range"
                       min="1"
-                      max={chapterPages.length}
+                      max={totalPdfPages}
                       value={pageNum}
                       onChange={(e) => handlePageChange(parseInt(e.target.value))}
                     />
-                    <span>{chapterPages.length}</span>
+                    <span>{totalPdfPages}</span>
                   </div>
                 )}
                 
                 {readingMode === 'vertical' && (
-                  <span className={styles.verticalPageCount}>Vertical Scroll Mode ({chapterPages.length} Pages)</span>
+                  <span className={styles.verticalPageCount}>Vertical PDF Scroll Mode ({totalPdfPages} Pages)</span>
                 )}
 
                 <button 

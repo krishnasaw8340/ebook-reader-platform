@@ -59,23 +59,27 @@
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  /* Border Radii */
+  /* Border Radii — tightened for compact, modern feel */
   --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
-  --radius-2xl: 28px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
   --radius-full: 9999px;
 
-  /* Layout dimensions */
-  --layout-nav-height: 72px;
-  --layout-mobile-nav-height: 64px;
-  --layout-sidebar-width: 260px;
-  --layout-max-width: 1400px;
+  /* Layout dimensions — compact header */
+  --layout-nav-height: 56px;
+  --layout-mobile-nav-height: 56px;
+  --layout-sidebar-width: 240px;
+  --layout-max-width: 1280px;
+
+  /* Content spacing */
+  --space-section: 32px;
+  --space-section-sm: 20px;
 
   /* Transitions & Animation Easing */
   --ease-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-spring: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-smooth: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }

@@ -61,6 +61,10 @@ export const AdminDashboard: React.FC = () => {
             <PageHeader
                 title="Admin Publishing Dashboard"
                 subtitle="High-level catalog hierarchy, ingestion queue health, and digital manga publications."
+                breadcrumbs={[
+                    { label: 'Admin' },
+                    { label: 'Dashboard' }
+                ]}
                 actions={
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         <button

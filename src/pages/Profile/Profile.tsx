@@ -17,6 +17,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useAuthStore } from '../../store/auth.store';
 import { userService } from '../../services/userService';
 import { Modal, SuccessBanner, ErrorBanner } from '../../admin/components/AdminUI';
+import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import adminStyles from '../../admin/components/AdminUI.module.css';
 import styles from './Profile.module.css';
 
@@ -163,8 +164,9 @@ export const Profile: React.FC = () => {
     return (
         <div className={styles.profile}>
             <div className="main-container">
+                <Breadcrumbs items={[{ label: 'Home', path: '/' }, { label: 'Account & Profile' }]} />
                 {/* User Card */}
-                <div className={`${styles.userCard} glass`}>
+                <div className={styles.userCard}>
                     <img
                         src={avatarUrl}
                         alt="Avatar"

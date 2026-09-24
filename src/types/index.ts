@@ -63,6 +63,7 @@ export interface BookSeries {
   createdAt?: string;
   updatedAt?: string;
   volumes?: Volume[];
+  books?: Book[];
 }
 
 export interface CreateSeriesPayload {
@@ -175,7 +176,7 @@ export interface PaginatedVolumeResponse {
 
 // Book types & DTOs
 export type BookStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'ARCHIVED' | 'READY' | 'ONGOING' | 'COMPLETED' | 'PROCESSING';
-export type PricingModel = 'FREE' | 'PER_PAGE' | 'PER_CHAPTER' | 'PER_BOOK' | 'SUBSCRIPTION';
+export type PricingModel = 'FREE' | 'PER_CHAPTER' | 'PER_BOOK' | 'SUBSCRIPTION';
 
 export interface Book {
   id: string; // UUID PK
@@ -216,20 +217,16 @@ export interface Book {
   pricingModel?: PricingModel;
   coin_price: number; // Int Price (for PER_BOOK or default fallback)
   coinPrice?: number;
-  default_coins_per_page?: number;
-  defaultCoinPerPage?: number;
+  default_chapter_coin_cost?: number;
+  defaultChapterCoinCost?: number;
   default_free_chapters?: number;
   defaultFreeChapters?: number;
-  default_free_pages?: number;
-  defaultFreePages?: number;
   is_premium?: boolean;
   isPremium?: boolean;
 
   status: BookStatus;
   chapter_count?: number;
   totalChapters?: number;
-  page_count?: number;
-  totalPages?: number;
   averageRating?: number;
   totalViews?: number;
   created_at: string; // DateTime Created
@@ -238,6 +235,7 @@ export interface Book {
   updatedAt?: string;
   series?: BookSeries;
   volume?: Volume;
+  chapters?: Chapter[];
 }
 
 export interface CreateBookPayload {
@@ -255,9 +253,8 @@ export interface CreateBookPayload {
   tagIds?: string[];
   status?: BookStatus;
   pricingModel?: PricingModel;
-  defaultCoinPerPage?: number;
+  defaultChapterCoinCost?: number;
   defaultFreeChapters?: number;
-  defaultFreePages?: number;
   isPremium?: boolean;
   releaseDate?: string;
   publishedAt?: string;
@@ -278,9 +275,8 @@ export interface UpdateBookPayload {
   tagIds?: string[];
   status?: BookStatus;
   pricingModel?: PricingModel;
-  defaultCoinPerPage?: number;
+  defaultChapterCoinCost?: number;
   defaultFreeChapters?: number;
-  defaultFreePages?: number;
   isPremium?: boolean;
   releaseDate?: string;
   publishedAt?: string;
@@ -328,9 +324,9 @@ export interface UploadJob {
   book_title?: string;
   status: 'UPLOADED' | 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'PUBLISHED';
   progress: number;
-  stage?: 'Uploading' | 'Processing' | 'Extracting' | 'Validating' | 'Generating pages' | 'Completed' | 'Failed';
+  stage?: 'Uploading' | 'Processing' | 'Extracting' | 'Validating' | 'Generating PDF preview' | 'Completed' | 'Failed';
   chapters_detected: number;
-  pages_detected: number;
+  pdf_pages_detected?: number;
   warnings?: string[];
   error?: string | null;
   detected_structure?: {
@@ -340,8 +336,8 @@ export interface UploadJob {
     chapters: Array<{
       chapter_no: number;
       title: string;
-      pages_count: number;
-      file_names: string[];
+      pdf_page_count?: number;
+      file_name?: string;
     }>;
   };
   started_at: string;
@@ -349,7 +345,8 @@ export interface UploadJob {
 }
 
 // Chapter types & DTOs
-export type ChapterPricingModel = 'FREE' | 'PARTIAL' | 'PARTIAL_FREE' | 'PAID';
+export type ChapterPricingModel = 'FREE' | 'PAID';
+export type ChapterContentStatus = 'PENDING' | 'READY' | 'FAILED';
 
 export interface Chapter {
   id: string; // UUID PK
@@ -360,15 +357,26 @@ export interface Chapter {
   title: string; // String Title
   sort_order?: number;
   sortOrder?: number;
-  access_type: ChapterPricingModel; // Enum FREE/PARTIAL/PAID
+  access_type: ChapterPricingModel; // Enum FREE/PAID
   pricing_model?: ChapterPricingModel;
   pricingModel?: ChapterPricingModel;
-  free_pages: number; // Int Free
-  freePageCount?: number;
   coin_cost: number; // Int Cost
   coinCost?: number;
-  page_count?: number;
-  pageCount?: number;
+  
+  // PDF Content Metadata
+  pdf_storage_key?: string | null;
+  pdfStorageKey?: string | null;
+  pdf_file_name?: string | null;
+  pdfFileName?: string | null;
+  pdf_file_size?: number | null;
+  pdfFileSize?: number | null;
+  pdf_page_count?: number | null;
+  pdfPageCount?: number | null;
+  pdf_checksum?: string | null;
+  pdfChecksum?: string | null;
+  content_status?: ChapterContentStatus;
+  contentStatus?: ChapterContentStatus;
+
   published?: boolean;
   publishedAt?: string | null;
   created_at: string; // DateTime Created
@@ -376,7 +384,6 @@ export interface Chapter {
   createdAt?: string;
   updatedAt?: string;
   book?: Book;
-  pages?: Page[];
 }
 
 export interface CreateChapterPayload {
@@ -385,9 +392,13 @@ export interface CreateChapterPayload {
   title?: string;
   sortOrder?: number;
   pricingModel?: ChapterPricingModel;
-  freePageCount?: number;
   coinCost?: number;
-  pageCount?: number;
+  pdfStorageKey?: string;
+  pdfFileName?: string;
+  pdfFileSize?: number;
+  pdfPageCount?: number;
+  pdfChecksum?: string;
+  contentStatus?: ChapterContentStatus;
   published?: boolean;
   publishedAt?: string;
 }
@@ -398,11 +409,35 @@ export interface UpdateChapterPayload {
   title?: string;
   sortOrder?: number;
   pricingModel?: ChapterPricingModel;
-  freePageCount?: number;
   coinCost?: number;
-  pageCount?: number;
+  pdfStorageKey?: string;
+  pdfFileName?: string;
+  pdfFileSize?: number;
+  pdfPageCount?: number;
+  pdfChecksum?: string;
+  contentStatus?: ChapterContentStatus;
   published?: boolean;
   publishedAt?: string;
+}
+
+export interface ChapterPdfUploadInitPayload {
+  fileName: string;
+  fileSize: number;
+  mimeType?: string;
+}
+
+export interface ChapterPdfUploadInitResponse {
+  chapterId: string;
+  storageKey: string;
+  uploadUrl: string;
+  expiresInSeconds: number;
+}
+
+export interface ChapterPdfUploadCompletePayload {
+  fileName: string;
+  fileSize: number;
+  pageCount?: number;
+  checksum?: string;
 }
 
 export interface QueryChapterParams {
@@ -428,26 +463,15 @@ export interface PaginatedChapterResponse {
   };
 }
 
-// Page types & DTOs
-export interface Page {
+// Chapter Unlock entity (Entitlement)
+export interface ChapterUnlock {
   id: string; // UUID PK
+  user_id: string; // UUID FK
   chapter_id: string; // UUID FK
-  chapterId?: string;
-  page_no: number; // Int Order
-  pageNumber?: number;
-  image_url: string; // String Image
-  imageUrl?: string;
-  is_drm_protected?: boolean;
-  created_at: string; // DateTime Created
-  updated_at?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface QueryPageParams {
-  chapterId?: string;
-  page?: number;
-  limit?: number;
+  coins_paid: number;
+  source: string;
+  unlocked_at: string;
+  created_at: string;
 }
 
 // Schema: reading
@@ -463,7 +487,9 @@ export interface ReadingProgress {
   user_id: string; // UUID FK
   book_id: string; // UUID FK
   chapter_id: string; // UUID FK
-  page_id: string; // UUID FK (points to the page id)
+  progress_percent?: number;
+  last_pdf_page?: number;
+  last_scroll_position?: number;
   updated_at: string; // DateTime Updated
 }
 

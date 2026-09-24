@@ -4,7 +4,7 @@ import type {
   BookSeries,
   Book,
   Chapter,
-  Page,
+  ChapterUnlock,
   Wallet,
   CoinTransaction,
   CoinPackage,
@@ -18,7 +18,7 @@ import {
   initialBookSeries,
   initialBooks,
   initialChapters,
-  initialPages,
+  initialChapterUnlocks,
   initialWallets,
   initialCoinPackages,
   initialCoinTransactions,
@@ -31,7 +31,7 @@ interface UserContextType {
   bookSeries: BookSeries[];
   books: Book[];
   chapters: Chapter[];
-  pages: Page[];
+  chapterUnlocks: ChapterUnlock[];
   userLibrary: UserLibrary[];
   readingProgress: ReadingProgress[];
   wallet: Wallet | null;
@@ -45,8 +45,20 @@ interface UserContextType {
   unlockChapter: (chapterId: string) => boolean;
   rechargeCoins: (packageId: string) => void;
   toggleBookmark: (seriesId: string) => void;
-  saveProgress: (bookId: string, chapterId: string, pageId: string) => void;
-  publishBook: (seriesTitle: string, bookTitle: string, chapterTitle: string, pagesCount: number, cost: number) => void;
+  saveProgress: (
+    bookId: string,
+    chapterId: string,
+    progressPercent?: number,
+    lastPdfPage?: number,
+    lastScrollPosition?: number
+  ) => void;
+  publishBook: (
+    seriesTitle: string,
+    bookTitle: string,
+    chapterTitle: string,
+    pagesCount: number,
+    cost: number
+  ) => void;
   deleteBookSeries: (seriesId: string) => void;
   toggleSeriesStatus: (seriesId: string) => void;
 }
@@ -72,9 +84,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : initialChapters;
   });
 
-  const [pages, setPages] = useState<Page[]>(() => {
-    const saved = localStorage.getItem('ky_pages');
-    return saved ? JSON.parse(saved) : initialPages;
+  const [chapterUnlocks, setChapterUnlocks] = useState<ChapterUnlock[]>(() => {
+    const saved = localStorage.getItem('ky_chapter_unlocks');
+    return saved ? JSON.parse(saved) : initialChapterUnlocks;
   });
 
   const [userLibrary, setUserLibrary] = useState<UserLibrary[]>(() => {
@@ -123,8 +135,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [chapters]);
 
   useEffect(() => {
-    localStorage.setItem('ky_pages', JSON.stringify(pages));
-  }, [pages]);
+    localStorage.setItem('ky_chapter_unlocks', JSON.stringify(chapterUnlocks));
+  }, [chapterUnlocks]);
 
   useEffect(() => {
     localStorage.setItem('ky_user_library', JSON.stringify(userLibrary));
@@ -159,13 +171,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!ch) return false;
     
     // 1. FREE Chapters
-    if (ch.access_type === 'FREE' || ch.coin_cost === 0) return true;
+    const pricing = ch.pricing_model || ch.pricingModel || ch.access_type || 'FREE';
+    const cost = ch.coin_cost ?? ch.coinCost ?? 0;
+    if (pricing === 'FREE' || cost === 0) return true;
 
     // 2. Volume/Book is Unlocked in Library
     const isBookUnlocked = userLibrary.some(lib => lib.user_id === currentUser?.id && lib.book_id === ch.book_id);
     if (isBookUnlocked) return true;
 
-    // 3. Chapter-specific debit coin transaction exists
+    // 3. User has an explicit ChapterUnlock entitlement
+    const hasUnlock = chapterUnlocks.some(
+      u => u.user_id === currentUser?.id && u.chapter_id === chapterId
+    );
+    if (hasUnlock) return true;
+
+    // 4. Fallback check for past debit transactions
     const hasTx = coinTransactions.some(tx => 
       tx.wallet_id === wallet?.id && 
       tx.type === 'Debit' && 
@@ -182,17 +202,31 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (isChapterUnlocked(chapterId)) return true;
 
-    if (wallet.balance >= ch.coin_cost) {
-      // Deduct coins from wallet balance
-      setWallets(prev => prev.map(w => w.id === wallet.id ? { ...w, balance: w.balance - ch.coin_cost } : w));
+    const cost = ch.coin_cost ?? ch.coinCost ?? 0;
 
-      // Log transaction
+    if (wallet.balance >= cost) {
+      // Deduct coins from wallet balance
+      setWallets(prev => prev.map(w => w.id === wallet.id ? { ...w, balance: w.balance - cost } : w));
+
+      // Create new ChapterUnlock entitlement
+      const newUnlock: ChapterUnlock = {
+        id: `unlock-${Date.now()}`,
+        user_id: currentUser.id,
+        chapter_id: chapterId,
+        coins_paid: cost,
+        source: 'COIN_PURCHASE',
+        unlocked_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+      };
+      setChapterUnlocks(prev => [newUnlock, ...prev]);
+
+      // Log coin debit transaction
       const newTx: CoinTransaction = {
         id: `tx-${Date.now()}`,
         wallet_id: wallet.id,
         type: 'Debit',
-        coins: -ch.coin_cost,
-        reason: `Unlocked chapter: ${chapterId}`,
+        coins: -cost,
+        reason: `Unlocked chapter: ${ch.title} (${chapterId})`,
         created_at: new Date().toISOString()
       };
       setCoinTransactions(prev => [newTx, ...prev]);
@@ -255,20 +289,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const toggleBookmark = (seriesId: string) => {
     if (!currentUser) return;
     
-    // Find all books (volumes) under this series
     const seriesBooks = books.filter(b => b.series_id === seriesId);
     if (seriesBooks.length === 0) return;
 
-    // We bookmark the first book/volume of this series
     const targetBook = seriesBooks[0];
     const existingIndex = userLibrary.findIndex(lib => lib.user_id === currentUser.id && lib.book_id === targetBook.id);
 
     if (existingIndex > -1) {
-      // Remove from Library
       const itemToRemove = userLibrary[existingIndex];
       setUserLibrary(prev => prev.filter(lib => lib.id !== itemToRemove.id));
     } else {
-      // Add to Library
       const newLib: UserLibrary = {
         id: `lib-${Date.now()}`,
         user_id: currentUser.id,
@@ -279,19 +309,28 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Save progress positions
-  const saveProgress = (bookId: string, chapterId: string, pageId: string) => {
+  // Save chapter reading progress
+  const saveProgress = (
+    bookId: string,
+    chapterId: string,
+    progressPercent = 0,
+    lastPdfPage = 1,
+    lastScrollPosition = 0
+  ) => {
     if (!currentUser) return;
 
-    // Check if progress already logged for this book/volume
-    const existingIndex = readingProgress.findIndex(p => p.user_id === currentUser.id && p.book_id === bookId);
+    const existingIndex = readingProgress.findIndex(
+      p => p.user_id === currentUser.id && p.book_id === bookId
+    );
 
     const updatedRow: ReadingProgress = {
       id: existingIndex > -1 ? readingProgress[existingIndex].id : `prog-${Date.now()}`,
       user_id: currentUser.id,
       book_id: bookId,
       chapter_id: chapterId,
-      page_id: pageId,
+      progress_percent: progressPercent,
+      last_pdf_page: lastPdfPage,
+      last_scroll_position: lastScrollPosition,
       updated_at: new Date().toISOString()
     };
 
@@ -302,8 +341,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Creator Studio Publishing compile simulator
-  const publishBook = (seriesTitle: string, bookTitle: string, chapterTitle: string, pagesCount: number, cost: number) => {
+  // Creator Studio Publishing simulator (creates Series -> Book -> Chapter -> PDF metadata)
+  const publishBook = (
+    seriesTitle: string,
+    bookTitle: string,
+    chapterTitle: string,
+    pagesCount: number,
+    cost: number
+  ) => {
     if (!currentUser) return;
 
     const seriesId = `series-upload-${Date.now()}`;
@@ -320,55 +365,50 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       created_at: new Date().toISOString()
     };
 
-    // 2. Create Book (Volume) record
+    // 2. Create Book record
     const newBook: Book = {
       id: bookId,
       series_id: seriesId,
       title: bookTitle,
       summary: `A compiled creator volume for ${seriesTitle}.`,
       cover_image: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400&auto=format&fit=crop",
-      coin_price: cost * 5, // Volume price
+      coin_price: cost * 5,
+      default_chapter_coin_cost: cost,
+      default_free_chapters: cost > 0 ? 0 : 1,
       status: "ONGOING",
       created_at: new Date().toISOString()
     };
 
-    // 3. Create Chapter record
+    // 3. Create Chapter record with Chapter PDF metadata
+    const slugFile = chapterTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const newChapter: Chapter = {
       id: chapterId,
       book_id: bookId,
       chapter_no: 1,
+      chapterNumber: 1,
       title: chapterTitle,
       access_type: cost > 0 ? "PAID" : "FREE",
-      free_pages: cost > 0 ? 1 : pagesCount,
+      pricing_model: cost > 0 ? "PAID" : "FREE",
       coin_cost: cost,
+      coinCost: cost,
+      pdf_file_name: `${slugFile}.pdf`,
+      pdf_file_size: (pagesCount || 24) * 650000,
+      pdf_page_count: pagesCount || 24,
+      content_status: "READY",
+      published: true,
       created_at: new Date().toISOString()
     };
-
-    // 4. Create Pages records
-    const newPages: Page[] = [];
-    for (let i = 1; i <= pagesCount; i++) {
-      newPages.push({
-        id: `page-upload-${chapterId}-${i}-${Date.now()}`,
-        chapter_id: chapterId,
-        page_no: i,
-        image_url: `https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&width=800&auto=format&fit=crop&text=Page+${i}`,
-        created_at: new Date().toISOString()
-      });
-    }
 
     setBookSeries(prev => [newSeries, ...prev]);
     setBooks(prev => [newBook, ...prev]);
     setChapters(prev => [newChapter, ...prev]);
-    setPages(prev => [...newPages, ...prev]);
   };
 
   const deleteBookSeries = (seriesId: string) => {
     setBookSeries(prev => prev.filter(s => s.id !== seriesId));
     const relatedBookIds = books.filter(b => b.series_id === seriesId).map(b => b.id);
     setBooks(prev => prev.filter(b => b.series_id !== seriesId));
-    const relatedChapterIds = chapters.filter(c => relatedBookIds.includes(c.book_id)).map(c => c.id);
     setChapters(prev => prev.filter(c => !relatedBookIds.includes(c.book_id)));
-    setPages(prev => prev.filter(p => !relatedChapterIds.includes(p.chapter_id)));
   };
 
   const toggleSeriesStatus = (seriesId: string) => {
@@ -387,7 +427,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       bookSeries,
       books,
       chapters,
-      pages,
+      chapterUnlocks,
       userLibrary,
       readingProgress,
       wallet,

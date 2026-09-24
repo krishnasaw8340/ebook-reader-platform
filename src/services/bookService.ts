@@ -43,19 +43,15 @@ const seedBooks = (): Book[] => {
             coverImage: b.cover_image,
             pricing_model: b.coin_price > 0 ? 'PER_CHAPTER' : 'FREE',
             pricingModel: b.coin_price > 0 ? 'PER_CHAPTER' : 'FREE',
-            default_coins_per_page: 0,
-            defaultCoinPerPage: 0,
+            default_chapter_coin_cost: b.coin_price > 0 ? 2 : 0,
+            defaultChapterCoinCost: b.coin_price > 0 ? 2 : 0,
             default_free_chapters: 2,
             defaultFreeChapters: 2,
-            default_free_pages: 5,
-            defaultFreePages: 5,
             is_premium: b.coin_price > 0,
             isPremium: b.coin_price > 0,
             status: (b.status === 'COMPLETED' ? 'PUBLISHED' : 'PUBLISHED') as BookStatus,
             chapter_count: 5,
             totalChapters: 5,
-            page_count: 95,
-            totalPages: 95,
             updated_at: new Date().toISOString()
         };
     });
@@ -73,11 +69,9 @@ export const mapBookFromApi = (item: any): Book => {
     const releaseDate = item.releaseDate || item.release_date || null;
     const pricingModel = (item.pricingModel || item.pricing_model || (item.coinPrice > 0 || item.coin_price > 0 ? 'PER_CHAPTER' : 'FREE')) as PricingModel;
     const coinPrice = Number(item.coinPrice ?? item.coin_price ?? 0);
-    const defaultCoinPerPage = Number(item.defaultCoinPerPage ?? item.default_coins_per_page ?? 0);
+    const defaultChapterCoinCost = Number(item.defaultChapterCoinCost ?? item.default_chapter_coin_cost ?? 0);
     const defaultFreeChapters = Number(item.defaultFreeChapters ?? item.default_free_chapters ?? 0);
-    const defaultFreePages = Number(item.defaultFreePages ?? item.default_free_pages ?? 0);
     const totalChapters = Number(item.totalChapters ?? item.chapter_count ?? 0);
-    const totalPages = Number(item.totalPages ?? item.page_count ?? 0);
 
     const coverImage = item.cover_image || item.coverImage || item.mediaAssets?.[0]?.url || 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400';
     const bannerImage = item.banner_image || item.bannerImage || coverImage;
@@ -121,20 +115,17 @@ export const mapBookFromApi = (item: any): Book => {
         pricingModel: pricingModel,
         coin_price: coinPrice,
         coinPrice: coinPrice,
-        default_coins_per_page: defaultCoinPerPage,
-        defaultCoinPerPage: defaultCoinPerPage,
+        default_chapter_coin_cost: defaultChapterCoinCost,
+        defaultChapterCoinCost: defaultChapterCoinCost,
         default_free_chapters: defaultFreeChapters,
         defaultFreeChapters: defaultFreeChapters,
-        default_free_pages: defaultFreePages,
-        defaultFreePages: defaultFreePages,
         is_premium: Boolean(item.isPremium ?? item.is_premium),
         isPremium: Boolean(item.isPremium ?? item.is_premium),
 
         status: (item.status as BookStatus) || 'DRAFT',
         chapter_count: totalChapters,
         totalChapters: totalChapters,
-        page_count: totalPages,
-        totalPages: totalPages,
+
         averageRating: Number(item.averageRating || 0),
         totalViews: Number(item.totalViews || 0),
         created_at: createdAt,
@@ -342,9 +333,8 @@ export const bookService = {
             tagIds: data.tagIds || (Array.isArray(data.tags) ? data.tags : undefined),
             status: data.status || 'DRAFT',
             pricingModel: data.pricingModel || data.pricing_model || 'FREE',
-            defaultCoinPerPage: data.defaultCoinPerPage !== undefined ? data.defaultCoinPerPage : data.default_coins_per_page,
+            defaultChapterCoinCost: data.defaultChapterCoinCost !== undefined ? data.defaultChapterCoinCost : data.default_chapter_coin_cost,
             defaultFreeChapters: data.defaultFreeChapters !== undefined ? data.defaultFreeChapters : data.default_free_chapters,
-            defaultFreePages: data.defaultFreePages !== undefined ? data.defaultFreePages : data.default_free_pages,
             isPremium: data.isPremium !== undefined ? data.isPremium : Boolean(data.is_premium),
             releaseDate: data.releaseDate || data.release_date || undefined,
             publishedAt: data.publishedAt
@@ -381,9 +371,8 @@ export const bookService = {
         if (data.tagIds !== undefined || data.tags !== undefined) payload.tagIds = data.tagIds || data.tags;
         if (data.status !== undefined) payload.status = data.status;
         if (data.pricingModel !== undefined || data.pricing_model !== undefined) payload.pricingModel = data.pricingModel || data.pricing_model;
-        if (data.defaultCoinPerPage !== undefined || data.default_coins_per_page !== undefined) payload.defaultCoinPerPage = data.defaultCoinPerPage ?? data.default_coins_per_page;
+        if (data.defaultChapterCoinCost !== undefined || data.default_chapter_coin_cost !== undefined) payload.defaultChapterCoinCost = data.defaultChapterCoinCost ?? data.default_chapter_coin_cost;
         if (data.defaultFreeChapters !== undefined || data.default_free_chapters !== undefined) payload.defaultFreeChapters = data.defaultFreeChapters ?? data.default_free_chapters;
-        if (data.defaultFreePages !== undefined || data.default_free_pages !== undefined) payload.defaultFreePages = data.defaultFreePages ?? data.default_free_pages;
         if (data.isPremium !== undefined || data.is_premium !== undefined) payload.isPremium = data.isPremium !== undefined ? data.isPremium : data.is_premium;
         if (data.releaseDate !== undefined || data.release_date !== undefined) payload.releaseDate = data.releaseDate || data.release_date;
         if (data.publishedAt !== undefined) payload.publishedAt = data.publishedAt;

@@ -1,20 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import {
     Coins,
-    DollarSign,
     Lock,
     Unlock,
-    Plus,
-    Edit2,
-    ShieldAlert,
-    CheckCircle2
+    Edit2
 } from 'lucide-react';
 import {
     adminPricingService,
     adminChapterService,
     adminBookService
 } from '../../services/admin/adminServices';
-import type { CoinPackage, Chapter, Book } from '../../types';
+import type { CoinPackage, Chapter, Book, ChapterPricingModel } from '../../types';
 import {
     PageHeader,
     StatCard,
@@ -43,9 +39,8 @@ export const AdminPricing: React.FC = () => {
 
     // Edit chapter pricing modal
     const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
-    const [formAccessType, setFormAccessType] = useState<'FREE' | 'PARTIAL' | 'PARTIAL_FREE' | 'PAID'>('FREE');
+    const [formAccessType, setFormAccessType] = useState<ChapterPricingModel>('FREE');
     const [formCoinCost, setFormCoinCost] = useState(1);
-    const [formFreePages, setFormFreePages] = useState(1);
 
     const loadPricing = async () => {
         setLoading(true);
@@ -98,9 +93,9 @@ export const AdminPricing: React.FC = () => {
 
     const openEditChapterModal = (ch: Chapter) => {
         setEditingChapter(ch);
-        setFormAccessType(ch.access_type);
-        setFormCoinCost(ch.coin_cost);
-        setFormFreePages(ch.free_pages || 1);
+        const pModel = (ch.pricingModel || ch.pricing_model || ch.access_type || 'FREE') as ChapterPricingModel;
+        setFormAccessType(pModel === 'PAID' ? 'PAID' : 'FREE');
+        setFormCoinCost(ch.coinCost ?? ch.coin_cost ?? 1);
     };
 
     const handleChapterPricingSubmit = async (e: React.FormEvent) => {
@@ -111,9 +106,10 @@ export const AdminPricing: React.FC = () => {
 
         try {
             await adminChapterService.update(editingChapter.id, {
+                pricingModel: formAccessType,
                 access_type: formAccessType,
-                coin_cost: formAccessType === 'FREE' ? 0 : Number(formCoinCost),
-                free_pages: Number(formFreePages)
+                coinCost: formAccessType === 'FREE' ? 0 : Number(formCoinCost),
+                coin_cost: formAccessType === 'FREE' ? 0 : Number(formCoinCost)
             });
             setSuccessMessage(`Pricing for "${editingChapter.title}" updated.`);
             setEditingChapter(null);
@@ -123,14 +119,21 @@ export const AdminPricing: React.FC = () => {
         }
     };
 
-    const freeChaptersCount = chapters.filter((c) => c.access_type === 'FREE' || c.coin_cost === 0).length;
+    const freeChaptersCount = chapters.filter((c) => {
+        const p = c.pricingModel || c.pricing_model || c.access_type;
+        return p === 'FREE' || (c.coinCost ?? c.coin_cost ?? 0) === 0;
+    }).length;
     const paidChaptersCount = chapters.length - freeChaptersCount;
 
     return (
         <div>
             <PageHeader
                 title="Pricing & Coin Monetization Engine"
-                subtitle="Configure coin refill packages, chapter unlock costs, and free preview page allowances."
+                subtitle="Configure coin refill packages and chapter unlock costs for monetization."
+                breadcrumbs={[
+                    { label: 'Admin', path: '/admin' },
+                    { label: 'Pricing & Monetization' }
+                ]}
             />
 
             {successMessage && <SuccessBanner message={successMessage} />}
@@ -156,7 +159,7 @@ export const AdminPricing: React.FC = () => {
                     title="Monetized Chapters"
                     value={paidChaptersCount}
                     icon={<Lock size={20} />}
-                    subtitle="Require coin balance unlock"
+                    subtitle="Require chapter coin unlock"
                     trendColor="#f59e0b"
                 />
             </div>
@@ -219,8 +222,8 @@ export const AdminPricing: React.FC = () => {
             {/* Chapter Pricing Rules */}
             <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-primary)' }}>Content Pricing & Free Preview Rules</h3>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Configure chapter unlocking requirements</span>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-primary)' }}>Chapter Pricing & Monetization</h3>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Whole-chapter monetization unlock costs</span>
                 </div>
 
                 <div className={styles.tableCard}>
@@ -232,24 +235,25 @@ export const AdminPricing: React.FC = () => {
                                 <thead>
                                     <tr>
                                         <th>Chapter</th>
-                                        <th>Parent Volume</th>
-                                        <th>Access Model</th>
+                                        <th>Parent Book</th>
+                                        <th>Pricing Model</th>
                                         <th>Coin Unlock Cost</th>
-                                        <th>Free Preview Pages</th>
                                         <th style={{ textAlign: 'right' }}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {chapters.map((ch) => {
-                                        const parentBook = books.find((b) => b.id === ch.book_id);
-                                        const isPaid = ch.access_type === 'PAID' || ch.coin_cost > 0;
+                                        const parentBook = books.find((b) => b.id === (ch.bookId || ch.book_id));
+                                        const pModel = ch.pricingModel || ch.pricing_model || ch.access_type || 'FREE';
+                                        const isPaid = pModel === 'PAID';
+                                        const cost = ch.coinCost ?? ch.coin_cost ?? 0;
 
                                         return (
                                             <tr key={ch.id}>
                                                 <td style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                                                    Ch. {ch.chapter_no}: {ch.title}
+                                                    Ch. {ch.chapterNumber ?? ch.chapter_no}: {ch.title}
                                                 </td>
-                                                <td>{parentBook?.title || 'Unknown Volume'}</td>
+                                                <td>{parentBook?.title || 'Unknown Book'}</td>
                                                 <td>
                                                     {isPaid ? (
                                                         <StatusBadge status="PAID" type="warning" />
@@ -258,14 +262,11 @@ export const AdminPricing: React.FC = () => {
                                                     )}
                                                 </td>
                                                 <td>
-                                                    {ch.coin_cost > 0 ? (
-                                                        <span style={{ color: '#ffd700', fontWeight: 700 }}>{ch.coin_cost} Coins</span>
+                                                    {cost > 0 ? (
+                                                        <span style={{ color: '#ffd700', fontWeight: 700 }}>{cost} Coins</span>
                                                     ) : (
-                                                        <span style={{ color: 'var(--text-muted)' }}>0 (Free)</span>
+                                                        <span style={{ color: '#10b981', fontWeight: 700 }}>FREE (0 Coins)</span>
                                                     )}
-                                                </td>
-                                                <td>
-                                                    {ch.free_pages > 0 ? `${ch.free_pages} page(s) free` : 'No preview'}
                                                 </td>
                                                 <td style={{ textAlign: 'right' }}>
                                                     <button
@@ -361,48 +362,36 @@ export const AdminPricing: React.FC = () => {
             >
                 <form onSubmit={handleChapterPricingSubmit}>
                     <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>Access Model</label>
+                        <label className={styles.formLabel}>Pricing Model *</label>
                         <select
                             className={styles.formSelect}
                             value={formAccessType}
                             onChange={(e) => {
-                                const val = e.target.value as 'FREE' | 'PARTIAL' | 'PAID';
+                                const val = e.target.value as ChapterPricingModel;
                                 setFormAccessType(val);
                                 if (val === 'FREE') setFormCoinCost(0);
-                                else if (formCoinCost === 0) setFormCoinCost(1);
+                                else if (formCoinCost === 0) setFormCoinCost(2);
                             }}
                         >
-                            <option value="FREE">FREE (All pages free of charge)</option>
-                            <option value="PAID">PAID (Full chapter locked behind coin cost)</option>
-                            <option value="PARTIAL">PARTIAL (Initial preview pages free, remaining paid)</option>
+                            <option value="FREE">FREE (All readers can access chapter)</option>
+                            <option value="PAID">PAID (Full chapter unlocked with coins)</option>
                         </select>
                     </div>
 
-                    {formAccessType !== 'FREE' && (
-                        <div className={styles.formGrid}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Unlock Cost (Coins)</label>
-                                <input
-                                    type="number"
-                                    min={1}
-                                    className={styles.formInput}
-                                    value={formCoinCost}
-                                    onChange={(e) => setFormCoinCost(parseInt(e.target.value) || 1)}
-                                    required
-                                />
-                            </div>
-
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Free Preview Pages</label>
-                                <input
-                                    type="number"
-                                    min={0}
-                                    className={styles.formInput}
-                                    value={formFreePages}
-                                    onChange={(e) => setFormFreePages(parseInt(e.target.value) || 0)}
-                                    required
-                                />
-                            </div>
+                    {formAccessType === 'PAID' && (
+                        <div className={styles.formGroup}>
+                            <label className={styles.formLabel}>Chapter Unlock Cost (Coins) *</label>
+                            <input
+                                type="number"
+                                min={1}
+                                className={styles.formInput}
+                                value={formCoinCost}
+                                onChange={(e) => setFormCoinCost(parseInt(e.target.value) || 1)}
+                                required
+                            />
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                Coins deducted once when the user unlocks this chapter. Subsequent reads do not charge again.
+                            </p>
                         </div>
                     )}
                 </form>

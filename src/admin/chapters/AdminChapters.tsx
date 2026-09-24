@@ -4,20 +4,25 @@ import {
     Plus,
     Edit2,
     Trash2,
-    FileImage,
+    FileText,
+    Upload,
     ExternalLink,
     Lock,
     Unlock,
     ChevronUp,
     ChevronDown,
     Eye,
-    EyeOff
+    EyeOff,
+    CheckCircle2,
+    Clock,
+    AlertCircle
 } from 'lucide-react';
 import {
     adminChapterService,
     adminBookService
 } from '../../services/admin/adminServices';
-import type { Chapter, Book, ChapterPricingModel } from '../../types';
+import { chapterService } from '../../services/chapterService';
+import type { Chapter, Book, ChapterPricingModel, ChapterContentStatus } from '../../types';
 import {
     PageHeader,
     SearchBar,
@@ -25,9 +30,7 @@ import {
     Modal,
     ConfirmDialog,
     LoadingState,
-    EmptyState,
-    SuccessBanner,
-    ErrorBanner
+    EmptyState
 } from '../components/AdminUI';
 import styles from '../components/AdminUI.module.css';
 
@@ -38,7 +41,6 @@ export const AdminChapters: React.FC = () => {
 
     const [chapters, setChapters] = useState<Chapter[]>([]);
     const [books, setBooks] = useState<Book[]>([]);
-    const [pagesMap, setPagesMap] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
     const [selectedBookId, setSelectedBookId] = useState(initialBookId);
     const [searchQuery, setSearchQuery] = useState('');
@@ -46,7 +48,7 @@ export const AdminChapters: React.FC = () => {
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    // Modal
+    // Chapter Modal
     const [modalOpen, setModalOpen] = useState(false);
     const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
     const [formBookId, setFormBookId] = useState('');
@@ -55,23 +57,28 @@ export const AdminChapters: React.FC = () => {
     const [formTitle, setFormTitle] = useState('');
     const [formPricingModel, setFormPricingModel] = useState<ChapterPricingModel>('FREE');
     const [formCoinCost, setFormCoinCost] = useState(0);
-    const [formFreePages, setFormFreePages] = useState(0);
     const [formPublished, setFormPublished] = useState(true);
+
+    // PDF Upload Modal
+    const [pdfModalOpen, setPdfModalOpen] = useState(false);
+    const [uploadTargetChapter, setUploadTargetChapter] = useState<Chapter | null>(null);
+    const [uploadFileName, setUploadFileName] = useState('');
+    const [uploadFileSize, setUploadFileSize] = useState(15728640); // 15MB default
+    const [uploadPageCount, setUploadPageCount] = useState(32);
+    const [uploadingPdf, setUploadingPdf] = useState(false);
 
     // Delete
     const [deleteTarget, setDeleteTarget] = useState<Chapter | null>(null);
 
-    // Load books list once on mount (used for filter dropdown + modal form)
     const loadBooks = async () => {
         try {
             const bList = await adminBookService.getAll();
             setBooks(bList);
         } catch {
-            // Non-critical for dropdowns
+            // Non-critical
         }
     };
 
-    // Load chapters reactively when book filter or search changes
     const loadChapters = async () => {
         setLoading(true);
         try {
@@ -80,13 +87,6 @@ export const AdminChapters: React.FC = () => {
                 search: searchQuery || undefined,
             });
             setChapters(cList);
-
-            // Build page count map from the chapters' own pageCount field (no extra API calls)
-            const pCounts: Record<string, number> = {};
-            cList.forEach((c) => {
-                pCounts[c.id] = c.pageCount ?? c.page_count ?? 0;
-            });
-            setPagesMap(pCounts);
         } catch (err: any) {
             const msg = err.response?.data?.message || err.message || 'Unable to load chapters.';
             setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
@@ -95,20 +95,16 @@ export const AdminChapters: React.FC = () => {
         }
     };
 
-    // Alias for post-mutation refresh (chapters only)
     const loadData = loadChapters;
 
-    // Fetch books once on mount
     useEffect(() => {
         loadBooks();
     }, []);
 
-    // Fetch chapters when filter/search changes
     useEffect(() => {
         loadChapters();
     }, [selectedBookId, searchQuery]);
 
-    // Keep URL search query in sync when selected book changes
     const handleBookFilterChange = (bookId: string) => {
         setSelectedBookId(bookId);
         if (bookId) {
@@ -129,7 +125,6 @@ export const AdminChapters: React.FC = () => {
         setFormTitle(`Chapter ${nextNo}`);
         setFormPricingModel('FREE');
         setFormCoinCost(0);
-        setFormFreePages(0);
         setFormPublished(true);
         setModalOpen(true);
     };
@@ -140,10 +135,9 @@ export const AdminChapters: React.FC = () => {
         setFormChapterNo(ch.chapterNumber ?? ch.chapter_no);
         setFormSortOrder(ch.sortOrder ?? ch.sort_order ?? (ch.chapter_no * 10));
         setFormTitle(ch.title);
-        const pricing = (ch.pricingModel || ch.pricing_model || ch.access_type || 'FREE') as ChapterPricingModel;
-        setFormPricingModel(pricing);
+        const pricing = (ch.pricingModel || ch.pricing_model || 'FREE') as ChapterPricingModel;
+        setFormPricingModel(pricing === 'PAID' ? 'PAID' : 'FREE');
         setFormCoinCost(ch.coinCost ?? ch.coin_cost ?? 0);
-        setFormFreePages(ch.freePageCount ?? ch.free_pages ?? 0);
         setFormPublished(ch.published !== undefined ? ch.published : true);
         setModalOpen(true);
     };
@@ -167,7 +161,6 @@ export const AdminChapters: React.FC = () => {
                     title: formTitle,
                     pricingModel: formPricingModel,
                     coinCost: formPricingModel === 'FREE' ? 0 : Number(formCoinCost),
-                    freePageCount: formPricingModel === 'PARTIAL_FREE' ? Number(formFreePages) : 0,
                     published: formPublished
                 });
                 setSuccessMessage(`Chapter "${formTitle}" updated.`);
@@ -179,7 +172,6 @@ export const AdminChapters: React.FC = () => {
                     title: formTitle,
                     pricingModel: formPricingModel,
                     coinCost: formPricingModel === 'FREE' ? 0 : Number(formCoinCost),
-                    freePageCount: formPricingModel === 'PARTIAL_FREE' ? Number(formFreePages) : 0,
                     published: formPublished
                 });
                 setSuccessMessage(`Chapter "${formTitle}" created.`);
@@ -189,6 +181,48 @@ export const AdminChapters: React.FC = () => {
         } catch (err: any) {
             const msg = err.response?.data?.message || err.message || 'Failed to save chapter.';
             setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
+        }
+    };
+
+    const openPdfUploadModal = (ch: Chapter) => {
+        setUploadTargetChapter(ch);
+        const numPadded = String(ch.chapterNumber ?? ch.chapter_no).padStart(3, '0');
+        setUploadFileName(ch.pdfFileName || ch.pdf_file_name || `chapter-${numPadded}.pdf`);
+        setUploadFileSize(ch.pdfFileSize || ch.pdf_file_size || 18500000);
+        setUploadPageCount(ch.pdfPageCount || ch.pdf_page_count || 42);
+        setPdfModalOpen(true);
+    };
+
+    const handlePdfUploadSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!uploadTargetChapter) return;
+        setUploadingPdf(true);
+        setErrorMessage(null);
+
+        try {
+            // 1. Initialize upload contract
+            const initRes = await chapterService.uploadInit(uploadTargetChapter.id, {
+                fileName: uploadFileName,
+                fileSize: Number(uploadFileSize),
+                mimeType: 'application/pdf'
+            });
+
+            // 2. Complete upload contract with metadata
+            await chapterService.uploadComplete(uploadTargetChapter.id, {
+                fileName: uploadFileName,
+                fileSize: Number(uploadFileSize),
+                pageCount: Number(uploadPageCount),
+                checksum: `sha256-mock-${Date.now()}`
+            });
+
+            setSuccessMessage(`Chapter PDF "${uploadFileName}" attached successfully.`);
+            setPdfModalOpen(false);
+            loadData();
+        } catch (err: any) {
+            const msg = err.response?.data?.message || err.message || 'Failed to attach Chapter PDF.';
+            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
+        } finally {
+            setUploadingPdf(false);
         }
     };
 
@@ -224,7 +258,7 @@ export const AdminChapters: React.FC = () => {
                 adminChapterService.update(ch.id, { sortOrder: targetSort }),
                 adminChapterService.update(targetChap.id, { sortOrder: currentSort })
             ]);
-            setSuccessMessage(`Chapter sequence updated.`);
+            setSuccessMessage('Chapter sequence updated.');
             loadData();
         } catch (err: any) {
             const msg = err.response?.data?.message || err.message || 'Failed to reorder chapters.';
@@ -250,44 +284,44 @@ export const AdminChapters: React.FC = () => {
         return b ? b.title : 'Unassigned Book';
     };
 
-    const currentBook = books.find(b => b.id === selectedBookId);
-
     return (
         <div>
             <PageHeader
                 title="Chapter & Content Management"
-                subtitle="Configure chapter pricing models (Free, Paid, Partial-Free), DRM pages, publication status, and sequence ordering."
+                subtitle="Manage manga chapter PDFs, monetization pricing (FREE or PAID with coins), and publishing status."
                 breadcrumbs={[
-                    { label: 'Dashboard', path: '/admin/dashboard' },
-                    ...(selectedBookId ? [
-                        { label: 'Books', path: '/admin/books' },
-                        { label: currentBook?.title || 'Selected Book', path: `/admin/books/${selectedBookId}` },
-                    ] : [
-                        { label: 'Books', path: '/admin/books' },
-                    ]),
+                    { label: 'Admin', path: '/admin' },
                     { label: 'Chapters' }
                 ]}
                 actions={
                     <button className={styles.btnPrimary} onClick={openCreateModal}>
-                        <Plus size={16} /> New Chapter
+                        <Plus size={16} /> Add Chapter
                     </button>
                 }
             />
 
-            {successMessage && <SuccessBanner message={successMessage} />}
-            {errorMessage && <ErrorBanner message={errorMessage} />}
+            {successMessage && (
+                <div className={styles.alertSuccess} style={{ marginBottom: '16px' }}>
+                    {successMessage}
+                </div>
+            )}
+            {errorMessage && (
+                <div className={styles.alertError} style={{ marginBottom: '16px' }}>
+                    {errorMessage}
+                </div>
+            )}
 
             <div className={styles.filterBar}>
-                <SearchBar
-                    value={searchQuery}
-                    onChange={setSearchQuery}
-                    placeholder="Search chapters by title or keyword..."
-                />
-
-                <div className={styles.filterGroup}>
-                    <label style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Filter by Book:</label>
+                <div style={{ flex: 1 }}>
+                    <SearchBar
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        placeholder="Search chapters by title or sequence..."
+                    />
+                </div>
+                <div style={{ minWidth: '220px' }}>
                     <select
-                        className={styles.selectInput}
+                        className={styles.formSelect}
                         value={selectedBookId}
                         onChange={(e) => handleBookFilterChange(e.target.value)}
                     >
@@ -322,21 +356,24 @@ export const AdminChapters: React.FC = () => {
                                     <th>#</th>
                                     <th>Chapter Title</th>
                                     <th>Parent Book</th>
-                                    <th>Pages</th>
-                                    <th>Pricing Model</th>
-                                    <th>Unlock Price</th>
-                                    <th>Status</th>
-                                    <th>Created Date</th>
+                                    <th>Content (PDF Asset)</th>
+                                    <th>Pricing</th>
+                                    <th>Coin Cost</th>
+                                    <th>Content Status</th>
+                                    <th>Publication</th>
                                     <th style={{ textAlign: 'right' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {chapters.map((ch) => {
-                                    const pageCount = pagesMap[ch.id] ?? ch.pageCount ?? ch.page_count ?? 0;
-                                    const pricing = (ch.pricingModel || ch.pricing_model || ch.access_type || 'FREE') as ChapterPricingModel;
+                                    const pricing = (ch.pricingModel || ch.pricing_model || 'FREE') as ChapterPricingModel;
                                     const isPaid = pricing === 'PAID';
-                                    const isPartial = pricing === 'PARTIAL_FREE' || pricing === 'PARTIAL';
                                     const isPublished = ch.published !== undefined ? ch.published : true;
+                                    const pdfName = ch.pdfFileName || ch.pdf_file_name;
+                                    const pdfPages = ch.pdfPageCount ?? ch.pdf_page_count;
+                                    const pdfSize = ch.pdfFileSize ?? ch.pdf_file_size;
+                                    const contentStatus = (ch.contentStatus || ch.content_status || (pdfName ? 'READY' : 'PENDING')) as ChapterContentStatus;
+                                    const sizeMb = pdfSize ? (pdfSize / (1024 * 1024)).toFixed(1) + ' MB' : null;
 
                                     return (
                                         <tr key={ch.id}>
@@ -358,18 +395,25 @@ export const AdminChapters: React.FC = () => {
                                                 </span>
                                             </td>
                                             <td>
-                                                <span style={{ fontWeight: 600, color: pageCount > 0 ? 'var(--color-text-primary)' : 'var(--text-muted)' }}>
-                                                    {pageCount} scan(s)
-                                                </span>
+                                                {pdfName ? (
+                                                    <div>
+                                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#38bdf8' }}>
+                                                            <FileText size={14} /> {pdfName}
+                                                        </div>
+                                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                            {pdfPages ? `${pdfPages} PDF pages` : 'PDF'} {sizeMb ? ` • ${sizeMb}` : ''}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span style={{ fontSize: '12px', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                        <AlertCircle size={13} /> No PDF uploaded
+                                                    </span>
+                                                )}
                                             </td>
                                             <td>
                                                 {isPaid ? (
                                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#ffd700', fontSize: '12px', fontWeight: 700 }}>
                                                         <Lock size={12} /> PAID
-                                                    </span>
-                                                ) : isPartial ? (
-                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#38bdf8', fontSize: '12px', fontWeight: 700 }}>
-                                                        <Unlock size={12} /> PARTIAL FREE ({ch.freePageCount ?? ch.free_pages ?? 0} pgs)
                                                     </span>
                                                 ) : (
                                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#2ecc71', fontSize: '12px', fontWeight: 700 }}>
@@ -382,6 +426,21 @@ export const AdminChapters: React.FC = () => {
                                                     <StatusBadge status={`${ch.coinCost ?? ch.coin_cost} Coins`} type="coin" />
                                                 ) : (
                                                     <StatusBadge status="0 Coins" type="info" />
+                                                )}
+                                            </td>
+                                            <td>
+                                                {contentStatus === 'READY' ? (
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981', fontSize: '12px', fontWeight: 700 }}>
+                                                        <CheckCircle2 size={13} /> READY
+                                                    </span>
+                                                ) : contentStatus === 'FAILED' ? (
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '12px', fontWeight: 700 }}>
+                                                        <AlertCircle size={13} /> FAILED
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#f59e0b', fontSize: '12px', fontWeight: 700 }}>
+                                                        <Clock size={13} /> PENDING
+                                                    </span>
                                                 )}
                                             </td>
                                             <td>
@@ -402,9 +461,6 @@ export const AdminChapters: React.FC = () => {
                                                     />
                                                 </button>
                                             </td>
-                                            <td style={{ fontSize: '12px' }}>
-                                                {new Date(ch.createdAt || ch.created_at).toLocaleDateString()}
-                                            </td>
                                             <td style={{ textAlign: 'right' }}>
                                                 <div style={{ display: 'inline-flex', gap: '4px' }}>
                                                     <button
@@ -424,10 +480,10 @@ export const AdminChapters: React.FC = () => {
                                                     <button
                                                         className={styles.btnSecondary}
                                                         style={{ padding: '4px 8px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                                        title="Manage Manga Pages"
-                                                        onClick={() => navigate(`/admin/pages?chapterId=${ch.id}`)}
+                                                        title={pdfName ? 'Replace Chapter PDF' : 'Upload Chapter PDF'}
+                                                        onClick={() => openPdfUploadModal(ch)}
                                                     >
-                                                        <FileImage size={12} /> Pages ({pageCount})
+                                                        <Upload size={12} /> {pdfName ? 'Replace PDF' : 'Upload PDF'}
                                                     </button>
                                                     <button
                                                         className={styles.btnIcon}
@@ -445,7 +501,7 @@ export const AdminChapters: React.FC = () => {
                                                     </button>
                                                     <button
                                                         className={styles.btnIcon}
-                                                        title="Read in Reader"
+                                                        title="Preview Chapter Reader"
                                                         onClick={() => navigate(`/reader/${ch.bookId || ch.book_id}/${ch.id}`)}
                                                     >
                                                         <ExternalLink size={13} />
@@ -469,7 +525,7 @@ export const AdminChapters: React.FC = () => {
                 )}
             </div>
 
-            {/* Create / Edit Modal */}
+            {/* Create / Edit Chapter Modal */}
             <Modal
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
@@ -535,7 +591,7 @@ export const AdminChapters: React.FC = () => {
                         <input
                             type="text"
                             className={styles.formInput}
-                            placeholder="e.g. Chapter 1: The Awakening"
+                            placeholder="e.g. Chapter 1: The Firekeeper's Mark"
                             value={formTitle}
                             onChange={(e) => setFormTitle(e.target.value)}
                             required
@@ -543,7 +599,7 @@ export const AdminChapters: React.FC = () => {
                     </div>
 
                     <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>Pricing & Access Model *</label>
+                        <label className={styles.formLabel}>Pricing Model *</label>
                         <select
                             className={styles.formSelect}
                             value={formPricingModel}
@@ -552,52 +608,30 @@ export const AdminChapters: React.FC = () => {
                                 setFormPricingModel(val);
                                 if (val === 'FREE') {
                                     setFormCoinCost(0);
-                                    setFormFreePages(0);
-                                } else if (val === 'PARTIAL_FREE') {
-                                    if (formCoinCost === 0) setFormCoinCost(5);
-                                    if (formFreePages === 0) setFormFreePages(3);
                                 } else if (val === 'PAID') {
-                                    if (formCoinCost === 0) setFormCoinCost(5);
-                                    setFormFreePages(0);
+                                    if (formCoinCost === 0) setFormCoinCost(2);
                                 }
                             }}
                         >
-                            <option value="FREE">FREE — Everyone can read unrestricted</option>
-                            <option value="PARTIAL_FREE">PARTIAL_FREE — Free preview pages, coin unlock for full</option>
-                            <option value="PAID">PAID — Full coin unlock required</option>
+                            <option value="FREE">FREE — All readers can access chapter</option>
+                            <option value="PAID">PAID — Chapter unlocked with coins</option>
                         </select>
                     </div>
 
-                    {formPricingModel !== 'FREE' && (
-                        <div className={styles.formGrid}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Unlock Cost (Coins) *</label>
-                                <input
-                                    type="number"
-                                    min={1}
-                                    className={styles.formInput}
-                                    value={formCoinCost}
-                                    onChange={(e) => setFormCoinCost(parseInt(e.target.value) || 1)}
-                                    required
-                                />
-                            </div>
-
-                            {formPricingModel === 'PARTIAL_FREE' && (
-                                <div className={styles.formGroup}>
-                                    <label className={styles.formLabel}>Free Preview Pages *</label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        className={styles.formInput}
-                                        value={formFreePages}
-                                        onChange={(e) => setFormFreePages(parseInt(e.target.value) || 1)}
-                                        required
-                                    />
-                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                        Number of initial pages readers can preview for free
-                                    </p>
-                                </div>
-                            )}
+                    {formPricingModel === 'PAID' && (
+                        <div className={styles.formGroup}>
+                            <label className={styles.formLabel}>Chapter Unlock Cost (Coins) *</label>
+                            <input
+                                type="number"
+                                min={1}
+                                className={styles.formInput}
+                                value={formCoinCost}
+                                onChange={(e) => setFormCoinCost(parseInt(e.target.value) || 1)}
+                                required
+                            />
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                Coins deducted when the user unlocks this chapter. Subsequent reads do not recharge.
+                            </p>
                         </div>
                     )}
 
@@ -616,13 +650,74 @@ export const AdminChapters: React.FC = () => {
                 </form>
             </Modal>
 
+            {/* PDF Upload / Replace Modal */}
+            <Modal
+                isOpen={pdfModalOpen}
+                onClose={() => setPdfModalOpen(false)}
+                title={uploadTargetChapter ? `Upload PDF: ${uploadTargetChapter.title}` : 'Upload Chapter PDF'}
+                footer={
+                    <>
+                        <button className={styles.btnSecondary} onClick={() => setPdfModalOpen(false)} disabled={uploadingPdf}>
+                            Cancel
+                        </button>
+                        <button className={styles.btnPrimary} onClick={handlePdfUploadSubmit} disabled={uploadingPdf}>
+                            {uploadingPdf ? 'Attaching PDF...' : 'Attach PDF to Chapter'}
+                        </button>
+                    </>
+                }
+            >
+                <form onSubmit={handlePdfUploadSubmit}>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                        One chapter corresponds to one PDF asset stored in object storage. Internal PDF pages are rendered continuously by the reader.
+                    </p>
+
+                    <div className={styles.formGroup}>
+                        <label className={styles.formLabel}>PDF File Name *</label>
+                        <input
+                            type="text"
+                            className={styles.formInput}
+                            placeholder="e.g. chapter-001.pdf"
+                            value={uploadFileName}
+                            onChange={(e) => setUploadFileName(e.target.value)}
+                            required
+                        />
+                    </div>
+
+                    <div className={styles.formGrid}>
+                        <div className={styles.formGroup}>
+                            <label className={styles.formLabel}>PDF Total Pages *</label>
+                            <input
+                                type="number"
+                                min={1}
+                                className={styles.formInput}
+                                value={uploadPageCount}
+                                onChange={(e) => setUploadPageCount(parseInt(e.target.value) || 1)}
+                                required
+                            />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label className={styles.formLabel}>File Size (Bytes) *</label>
+                            <input
+                                type="number"
+                                min={1024}
+                                className={styles.formInput}
+                                value={uploadFileSize}
+                                onChange={(e) => setUploadFileSize(parseInt(e.target.value) || 1024)}
+                                required
+                            />
+                        </div>
+                    </div>
+                </form>
+            </Modal>
+
             {/* Confirm Dialog */}
             <ConfirmDialog
                 isOpen={!!deleteTarget}
                 onClose={() => setDeleteTarget(null)}
                 onConfirm={handleDelete}
                 title="Delete Chapter"
-                message={`Are you sure you want to delete "${deleteTarget?.title}"? All page scans associated with this chapter will also be removed.`}
+                message={`Are you sure you want to delete "${deleteTarget?.title}"? The chapter and its associated PDF asset reference will be removed.`}
                 confirmText="Delete Chapter"
             />
         </div>

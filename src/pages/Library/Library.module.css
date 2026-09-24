@@ -1,18 +1,27 @@
+/* ============================================================ */
+/* LIBRARY PAGE                                                  */
+/* ============================================================ */
 .library {
-  padding-top: 40px;
-  padding-bottom: 80px;
+  padding-top: 24px;
+  padding-bottom: 60px;
+}
+
+.library h2 {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 4px;
 }
 
 .subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-bottom: 28px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 14px;
 }
 
 @media (min-width: 480px) {
@@ -24,7 +33,7 @@
 @media (min-width: 768px) {
   .grid {
     grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
+    gap: 16px;
   }
 }
 
@@ -40,51 +49,51 @@
   }
 }
 
+/* Empty State */
 .emptyCard {
-  background-color: var(--card);
-  border: 1px solid var(--glass-border);
-  padding: 64px 24px;
-  border-radius: var(--border-radius-lg);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 48px 24px;
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .emptyIcon {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 .emptyCard h4 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .emptyCard p {
   font-size: 13px;
-  color: var(--text-secondary);
-  max-width: 380px;
+  color: var(--color-text-secondary);
+  max-width: 340px;
   line-height: 1.5;
-  margin-bottom: 8px;
 }
 
 .btnBrowse {
-  background-color: var(--primary);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 13px;
-  padding: 10px 24px;
-  border-radius: var(--border-radius-sm);
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  background-color: var(--color-brand-primary);
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: var(--shadow-glow);
+  border: none;
+  margin-top: 8px;
   transition: var(--transition-fast);
 }
 
 .btnBrowse:hover {
-  background-color: #B91C1C;
-  transform: translateY(-1px);
+  background-color: var(--color-brand-primary-hover);
 }

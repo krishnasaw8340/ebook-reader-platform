@@ -39,7 +39,6 @@ export const AdminLayout: React.FC = () => {
         { path: '/admin/series', label: 'Series', icon: <Layers size={18} /> },
         { path: '/admin/volumes', label: 'Volumes', icon: <FolderKanban size={18} /> },
         { path: '/admin/chapters', label: 'Chapters', icon: <FileText size={18} /> },
-        { path: '/admin/pages', label: 'Pages & DRM', icon: <FileImage size={18} /> },
         { path: '/admin/uploads', label: 'Uploads & Ingestion', icon: <UploadCloud size={18} /> },
     ];
 

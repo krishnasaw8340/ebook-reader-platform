@@ -1,38 +1,40 @@
+/* ============================================================ */
+/* PROFILE PAGE — Clean, information-first                       */
+/* ============================================================ */
 .profile {
-  padding-top: 40px;
-  padding-bottom: 80px;
+  padding-top: 24px;
+  padding-bottom: 60px;
 }
 
-/* User Card Section */
+/* User Card */
 .userCard {
-  background-color: var(--card);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--border-radius-lg);
-  padding: 32px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   text-align: center;
-  margin-bottom: 32px;
-  box-shadow: var(--shadow-soft);
+  margin-bottom: 24px;
 }
 
 @media (min-width: 768px) {
   .userCard {
     flex-direction: row;
     text-align: left;
-    gap: 32px;
+    gap: 24px;
     align-items: center;
   }
 }
 
 .avatar {
-  width: 100px;
-  height: 100px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
-  border: 4px solid var(--secondary);
-  box-shadow: var(--shadow-soft);
+  border: 3px solid var(--color-border);
+  object-fit: cover;
 }
 
 .userInfo {
@@ -40,48 +42,46 @@
 }
 
 .userInfo h2 {
-  font-family: var(--font-heading);
-  font-size: 26px;
-  font-weight: 800;
-  margin-bottom: 4px;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 2px;
 }
 
 .userInfo p {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
 }
 
 .userTier {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background-color: rgba(230, 57, 70, 0.08);
-  color: var(--primary);
-  border: 1px solid rgba(230, 57, 70, 0.25);
-  font-family: var(--font-heading);
-  font-size: 11px;
-  font-weight: 800;
-  padding: 4px 12px;
-  border-radius: 30px;
-  letter-spacing: 0.05em;
+  gap: 4px;
+  background-color: var(--color-brand-primary-subtle);
+  color: var(--color-brand-primary);
+  border: 1px solid transparent;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .statsContainer {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
   justify-content: center;
 }
 
 .statBox {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background-color: var(--color-surface);
-  padding: 10px 16px;
-  border-radius: var(--border-radius-sm);
+  gap: 8px;
+  background-color: var(--color-bg-secondary);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
 }
 
@@ -91,22 +91,22 @@
 }
 
 .statVal {
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .statLabel {
   font-size: 10px;
-  color: var(--text-muted);
-  font-weight: 700;
+  color: var(--color-text-muted);
+  font-weight: 600;
   text-transform: uppercase;
 }
 
-/* Page Columns Split */
+/* Page Columns */
 .splitsGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 32px;
+  gap: 20px;
 }
 
 @media (min-width: 900px) {
@@ -116,129 +116,53 @@
 }
 
 .block {
-  background-color: var(--card);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--border-radius-lg);
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-soft);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
 }
 
 .blockTitle {
-  font-size: 16px;
-  font-weight: 800;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding-bottom: 12px;
-}
-
-/* Achievements */
-.achievementsList {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.achievementRow {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 12px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
-}
-
-.lockedAch {
-  opacity: 0.55;
-  background-color: rgba(0, 0, 0, 0.2);
-}
-
-.achIcon {
-  font-size: 24px;
-}
-
-.achInfo {
-  flex: 1;
-}
-
-.achTitle {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.lockAchIcon {
-  color: var(--text-muted);
-}
-
-.achDesc {
-  font-size: 11px;
-  color: var(--text-secondary);
-  line-height: 1.4;
-  margin-top: 2px;
-}
-
-.achProgress {
-  position: relative;
-  height: 8px;
-  background-color: rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  margin-top: 8px;
-  overflow: hidden;
-}
-
-.achProgressBar {
-  height: 100%;
-  background-color: var(--primary);
-  border-radius: 4px;
-}
-
-.achProgressText {
-  position: absolute;
-  right: 6px;
-  top: -2px;
-  font-size: 8px;
-  font-weight: 700;
-  color: var(--text-primary);
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: 10px;
 }
 
 /* Settings Menu */
 .settingsMenu {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .settingItem {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
+  gap: 10px;
+  padding: 10px 12px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition-fast);
 }
 
 .settingItem:hover {
   background-color: var(--color-surface-hover);
-  border-color: var(--color-border-hover);
 }
 
 .settingItem span {
   flex: 1;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
-/* Transactions logs table styles */
+/* Transactions table */
 .transactionsContainer {
   width: 100%;
 }
@@ -255,32 +179,35 @@
 }
 
 .transactionsTable th, .transactionsTable td {
-  padding: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .transactionsTable th {
-  color: var(--text-muted);
-  font-weight: 700;
+  color: var(--color-text-muted);
+  font-weight: 600;
   text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.04em;
 }
 
 .txDesc {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .positiveCoins {
-  color: var(--success);
-  font-weight: 700;
+  color: var(--color-status-success);
+  font-weight: 600;
 }
 
 .negativeCoins {
-  color: var(--primary);
-  font-weight: 700;
+  color: var(--color-brand-primary);
+  font-weight: 600;
 }
 
 .emptyTransactions {
-  padding: 40px;
+  padding: 32px;
   text-align: center;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
