@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Compass, SlidersHorizontal } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 import { BookCard } from '../../components/common/BookCard';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import styles from './Browse.module.css';
 
-const GENRES = ['All', 'Action', 'Adventure', 'Fantasy', 'Romance', 'Drama', 'Comedy', 'Sci-Fi', 'Horror', 'Mystery', 'Slice of Life'] as const;
+const GENRES = ['All', 'Action', 'Adventure', 'Fantasy', 'Romance', 'Drama', 'Comedy', 'Sci-Fi', 'Cyberpunk', 'Horror', 'Mystery', 'Slice of Life'] as const;
 const STATUS_OPTIONS = ['All', 'Ongoing', 'Completed'] as const;
 const SORT_OPTIONS = [
   { label: 'Popular', value: 'popular' },
@@ -15,10 +16,22 @@ const SORT_OPTIONS = [
 
 export const Browse: React.FC = () => {
   const { bookSeries } = useUser();
-  const [query, setQuery] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState<string>('All');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialGenre = searchParams.get('genre') || 'All';
+  const initialQuery = searchParams.get('q') || searchParams.get('search') || '';
+
+  const [query, setQuery] = useState(initialQuery);
+  const [selectedGenre, setSelectedGenre] = useState<string>(initialGenre);
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [sortBy, setSortBy] = useState<string>('popular');
+
+  // Sync state if URL query params change (e.g. user clicks another genre in the footer)
+  useEffect(() => {
+    const g = searchParams.get('genre');
+    if (g && g !== selectedGenre) {
+      setSelectedGenre(g);
+    }
+  }, [searchParams]);
 
   let filteredSeries = bookSeries.filter(series => {
     const matchesSearch = series.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -26,7 +39,11 @@ export const Browse: React.FC = () => {
 
     const matchesStatus = selectedStatus === 'All' || series.status === selectedStatus.toUpperCase();
 
-    return matchesSearch && matchesStatus;
+    const matchesGenre = selectedGenre === 'All' ||
+      (series.title && series.title.toLowerCase().includes(selectedGenre.toLowerCase())) ||
+      (series.description && series.description.toLowerCase().includes(selectedGenre.toLowerCase()));
+
+    return matchesSearch && matchesStatus && matchesGenre;
   });
 
   // Sort

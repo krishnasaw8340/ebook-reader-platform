@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { api } from './api';
 import type {
     Chapter,
@@ -6,6 +7,8 @@ import type {
     QueryChapterParams,
     PaginatedChapterResponse,
     ChapterPricingModel,
+    ChapterPdfUploadUrlPayload,
+    ChapterPdfUploadUrlResponse,
     ChapterPdfUploadInitPayload,
     ChapterPdfUploadInitResponse,
     ChapterPdfUploadCompletePayload,
@@ -282,45 +285,77 @@ export const chapterService = {
     },
 
     /**
-     * POST /admin/chapters/:chapterId/content/upload-init
+     * POST /chapters/:chapterId/content/upload-url
+     * Requests presigned S3 PUT URL and versioned object key from NestJS backend
      */
-    uploadInit: async (chapterId: string, data: ChapterPdfUploadInitPayload): Promise<ChapterPdfUploadInitResponse> => {
-        try {
-            const res = await api.post<ChapterPdfUploadInitResponse>(`/admin/chapters/${encodeURIComponent(chapterId)}/content/upload-init`, data);
-            return res.data;
-        } catch {
-            // Mock fallback response for offline / dev
-            const storageKey = `books/book/chapters/${chapterId}/chapter.pdf`;
-            return {
-                chapterId,
-                storageKey,
-                uploadUrl: `https://storage.kuroyomi.local/upload/${encodeURIComponent(storageKey)}?mock=1`,
-                expiresInSeconds: 3600,
-            };
-        }
+    getUploadUrl: async (
+        chapterId: string,
+        data: { fileName: string; contentType?: string; fileSize: number }
+    ): Promise<ChapterPdfUploadUrlResponse> => {
+        const payload = {
+            fileName: data.fileName,
+            contentType: data.contentType || 'application/pdf',
+            fileSize: data.fileSize,
+        };
+        const res = await api.post<ChapterPdfUploadUrlResponse>(
+            `/chapters/${encodeURIComponent(chapterId)}/content/upload-url`,
+            payload
+        );
+        return res.data;
     },
 
     /**
-     * POST /admin/chapters/:chapterId/content/complete
+     * Uploads the PDF file DIRECTLY to AWS S3 via presigned PUT URL.
+     * CRITICAL: Uses standard axios without Authorization header so S3 presigned signature is not invalidated.
+     * Reports live upload progress.
+     */
+    uploadPdfToS3: async (
+        uploadUrl: string,
+        file: File,
+        onProgress?: (progress: { loaded: number; total: number; percentage: number }) => void
+    ): Promise<void> => {
+        await axios.put(uploadUrl, file, {
+            headers: {
+                'Content-Type': 'application/pdf',
+            },
+            onUploadProgress: (progressEvent) => {
+                if (progressEvent.total && onProgress) {
+                    const percentage = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    onProgress({
+                        loaded: progressEvent.loaded,
+                        total: progressEvent.total,
+                        percentage,
+                    });
+                }
+            },
+        });
+    },
+
+    /**
+     * POST /chapters/:chapterId/content/upload-init
+     * Backward-compatible alias for getUploadUrl
+     */
+    uploadInit: async (chapterId: string, data: ChapterPdfUploadInitPayload): Promise<ChapterPdfUploadInitResponse> => {
+        return chapterService.getUploadUrl(chapterId, {
+            fileName: data.fileName,
+            contentType: data.mimeType || 'application/pdf',
+            fileSize: data.fileSize,
+        });
+    },
+
+    /**
+     * POST /chapters/:chapterId/content/complete
+     * Informs backend that S3 direct upload succeeded and verifies S3 object
      */
     uploadComplete: async (chapterId: string, data: ChapterPdfUploadCompletePayload): Promise<Chapter> => {
-        try {
-            const res = await api.post<any>(`/admin/chapters/${encodeURIComponent(chapterId)}/content/complete`, data);
-            const updated = mapChapterFromApi(res.data);
-            const currentList = getFallbackChapters();
-            saveFallbackChapters(currentList.map((c) => (c.id === chapterId ? updated : c)));
-            return updated;
-        } catch {
-            // Mock fallback
-            const updated = await chapterService.update(chapterId, {
-                pdfFileName: data.fileName,
-                pdfFileSize: data.fileSize,
-                pdfPageCount: data.pageCount || 24,
-                pdfChecksum: data.checksum,
-                contentStatus: 'READY',
-            });
-            return updated;
-        }
+        const res = await api.post<any>(
+            `/chapters/${encodeURIComponent(chapterId)}/content/complete`,
+            data
+        );
+        const updated = mapChapterFromApi(res.data);
+        const currentList = getFallbackChapters();
+        saveFallbackChapters(currentList.map((c) => (c.id === chapterId ? updated : c)));
+        return updated;
     },
 
     /**

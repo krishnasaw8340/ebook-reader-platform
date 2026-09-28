@@ -189,6 +189,59 @@ const saveFallbackBooks = (list: Book[]) => {
  * - PATCH  /books/:id (Admin)
  * - DELETE /books/:id (Admin)
  */
+
+const isUUID = (val: any): boolean =>
+    typeof val === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+const DEFAULT_LANGUAGES: Record<string, string> = {
+    english: 'aa47e99c-8a1a-4d5e-970c-db916528b199',
+    en: 'aa47e99c-8a1a-4d5e-970c-db916528b199',
+    japanese: '830f6493-88c4-4fd0-b922-c96d459f844e',
+    ja: '830f6493-88c4-4fd0-b922-c96d459f844e',
+    french: 'c7c3a0d9-f32d-4968-bdec-092f05c09d23',
+    fr: 'c7c3a0d9-f32d-4968-bdec-092f05c09d23',
+    german: 'cd418489-4799-4606-a0b6-6d8e958c7959',
+    de: 'cd418489-4799-4606-a0b6-6d8e958c7959',
+};
+
+const DEFAULT_CATEGORIES: Record<string, string> = {
+    manga: '00142c6a-cf97-4d2f-ab9f-7ad6499f6e26',
+    manhwa: 'bc94a884-e419-4022-aec6-c3579a20f8d5',
+    manhua: '45af38b8-eb85-442f-92e8-440d3abba462',
+    novel: '8899aeb1-e17e-479f-89aa-51d348af3cf7',
+    'light novel': '0d480761-e69f-48a4-9e84-d0e9b1e053c4',
+    'light-novel': '0d480761-e69f-48a4-9e84-d0e9b1e053c4',
+    shonen: '00142c6a-cf97-4d2f-ab9f-7ad6499f6e26',
+    seinen: '00142c6a-cf97-4d2f-ab9f-7ad6499f6e26',
+    shojo: '00142c6a-cf97-4d2f-ab9f-7ad6499f6e26',
+    josei: '00142c6a-cf97-4d2f-ab9f-7ad6499f6e26',
+    webtoon: 'bc94a884-e419-4022-aec6-c3579a20f8d5',
+};
+
+const DEFAULT_GENRES: Record<string, string> = {
+    action: '5d3ab5fb-19eb-40c2-9922-a1d5846578ed',
+    adventure: 'abd96397-6387-4c2d-a451-f0fb7744aa51',
+    comedy: '5cf3a7e8-21a5-4da8-9b19-ae34df65e991',
+    drama: '67cbe159-2168-417c-964a-2b3d064c8e7c',
+    fantasy: '70f3900f-42eb-43da-94f7-7ae3405c829c',
+    romance: '2b9d22d9-412d-42ac-a824-a9bf9d47e348',
+    horror: 'b86ae00d-f34d-44ca-bd3e-85677f61dd3c',
+    mystery: '70c88542-b603-448e-84f6-ba1665e9484a',
+    'sci-fi': 'db2fb621-a540-4cc0-9701-64441881c1bc',
+    scifi: 'db2fb621-a540-4cc0-9701-64441881c1bc',
+};
+
+const DEFAULT_TAGS: Record<string, string> = {
+    school: 'b1ab7696-dda1-49e2-a035-264a2972ced9',
+    magic: '962adf53-a653-4b19-97f4-dedbb9019d6f',
+    revenge: '2d624a75-b2e4-404d-97fd-d25d268ca921',
+    'time travel': '0144c50e-0c27-462a-9235-d22dc0bee967',
+    timetravel: '0144c50e-0c27-462a-9235-d22dc0bee967',
+    pirates: '3895728e-86bc-48a8-a3c4-03a9ce87f0f4',
+    supernatural: '22709ac7-527a-4991-a743-73f5c07dc33a',
+};
+
 export const bookService = {
     /**
      * GET /books
@@ -314,23 +367,69 @@ export const bookService = {
      */
     create: async (data: CreateBookPayload | any): Promise<Book> => {
         const seriesId = data.seriesId || data.series_id;
-        const volumeId = data.volumeId !== undefined ? data.volumeId : (data.volume_id !== undefined ? data.volume_id : null);
+        const rawVolId = data.volumeId !== undefined ? data.volumeId : data.volume_id;
+        const volumeId = isUUID(rawVolId) ? rawVolId : undefined;
         const title = data.title ? data.title.trim() : '';
         const slug = data.slug ? data.slug.trim().toLowerCase() : generateSlug(title);
 
+        // Resolve languageId (ensure valid UUID v4)
+        let languageId = data.languageId || data.language_id;
+        if (!isUUID(languageId)) {
+            const rawLang = String(data.language || languageId || 'English').toLowerCase().trim();
+            languageId = DEFAULT_LANGUAGES[rawLang] || 'aa47e99c-8a1a-4d5e-970c-db916528b199';
+        }
+
+        // Resolve categoryId (ensure valid UUID v4)
+        let categoryId = data.categoryId || data.category_id;
+        if (!isUUID(categoryId)) {
+            const rawCat = String(data.category || categoryId || 'Manga').toLowerCase().trim();
+            categoryId = DEFAULT_CATEGORIES[rawCat] || '00142c6a-cf97-4d2f-ab9f-7ad6499f6e26';
+        }
+
+        // Resolve genreIds (ensure all are valid UUID v4)
+        const rawGenres = data.genreIds || data.genres || [];
+        const genreIds: string[] = [];
+        if (Array.isArray(rawGenres)) {
+            for (const item of rawGenres) {
+                if (isUUID(item)) {
+                    if (!genreIds.includes(item)) genreIds.push(item);
+                } else if (typeof item === 'string') {
+                    const mapped = DEFAULT_GENRES[item.toLowerCase().trim()];
+                    if (mapped && !genreIds.includes(mapped)) genreIds.push(mapped);
+                }
+            }
+        }
+
+        // Resolve tagIds (ensure all are valid UUID v4)
+        const rawTags = data.tagIds || data.tags || [];
+        const tagIds: string[] = [];
+        if (Array.isArray(rawTags)) {
+            for (const item of rawTags) {
+                if (isUUID(item)) {
+                    if (!tagIds.includes(item)) tagIds.push(item);
+                } else if (typeof item === 'string') {
+                    const mapped = DEFAULT_TAGS[item.toLowerCase().trim()];
+                    if (mapped && !tagIds.includes(mapped)) tagIds.push(mapped);
+                }
+            }
+        }
+
+        const authorId = isUUID(data.authorId) ? data.authorId : undefined;
+        const artistId = isUUID(data.artistId) ? data.artistId : undefined;
+
         const payload: CreateBookPayload = {
             seriesId,
-            volumeId: volumeId || undefined,
+            volumeId,
             title,
             japaneseTitle: data.japaneseTitle || data.japanese_title || undefined,
             slug,
             description: data.description || data.summary || undefined,
-            authorId: data.authorId || undefined,
-            artistId: data.artistId || undefined,
-            languageId: data.languageId || data.language_id,
-            categoryId: data.categoryId || data.category_id,
-            genreIds: data.genreIds || (Array.isArray(data.genres) ? data.genres : undefined),
-            tagIds: data.tagIds || (Array.isArray(data.tags) ? data.tags : undefined),
+            authorId,
+            artistId,
+            languageId,
+            categoryId,
+            genreIds: genreIds.length > 0 ? genreIds : undefined,
+            tagIds: tagIds.length > 0 ? tagIds : undefined,
             status: data.status || 'DRAFT',
             pricingModel: data.pricingModel || data.pricing_model || 'FREE',
             defaultChapterCoinCost: data.defaultChapterCoinCost !== undefined ? data.defaultChapterCoinCost : data.default_chapter_coin_cost,

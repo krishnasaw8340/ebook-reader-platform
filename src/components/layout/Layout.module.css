@@ -507,6 +507,12 @@
 /* ============================================================ */
 /* RESPONSIVE BREAKPOINTS                                        */
 /* ============================================================ */
+@media (max-width: 767px) {
+  .globalFooter {
+    padding-bottom: calc(var(--mobile-nav-height, 60px) + 32px);
+  }
+}
+
 @media (min-width: 768px) {
   .desktopNav {
     display: block;

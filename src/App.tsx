@@ -14,6 +14,12 @@ import { Login } from './pages/Login/Login';
 import { Browse } from './pages/Browse/Browse';
 import { Library } from './pages/Library/Library';
 
+// Support & Legal Pages
+import { TermsOfService } from './pages/Support/TermsOfService';
+import { PrivacyPolicy } from './pages/Support/PrivacyPolicy';
+import { CoinPolicy } from './pages/Support/CoinPolicy';
+import { ContactSupport } from './pages/Support/ContactSupport';
+
 // Admin CMS
 import { AdminRoute } from './admin/guards/AdminRoute';
 import { AdminLayout } from './admin/layout/AdminLayout';
@@ -58,6 +64,11 @@ const AppContent: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/browse" element={<Browse />} />
           <Route path="/library" element={<Library />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/coin-policy" element={<CoinPolicy />} />
+          <Route path="/support" element={<ContactSupport />} />
+          <Route path="/contact" element={<ContactSupport />} />
 
           {/* Admin CMS Nested Routes with Guard */}
           <Route
@@ -93,30 +104,25 @@ const AppContent: React.FC = () => {
 
       {/* Conditionally show mobile bottom nav & global footer */}
       {!isImmersive && <BottomNavigation />}
-      {!isImmersive && (
-        <div className="desktop-only-footer" style={{ display: 'none' }}>
-          <GlobalFooter />
-        </div>
-      )}
-      
-      {/* Inline media query style to handle desktop footer display */}
-      <style>{`
-        @media (min-width: 768px) {
-          .desktop-only-footer {
-            display: block !important;
-          }
-          main {
-            padding-bottom: 0 !important;
-          }
-        }
-      `}</style>
+      {!isImmersive && <GlobalFooter />}
     </div>
   );
+};
+
+const ScrollToTop: React.FC = () => {
+  const { pathname } = useLocation();
+
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
 };
 
 const App: React.FC = () => {
   return (
     <Router>
+      <ScrollToTop />
       <AppContent />
     </Router>
   );

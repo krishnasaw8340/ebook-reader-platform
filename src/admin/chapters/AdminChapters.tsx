@@ -15,7 +15,10 @@ import {
     EyeOff,
     CheckCircle2,
     Clock,
-    AlertCircle
+    AlertCircle,
+    RefreshCw,
+    FileUp,
+    Check
 } from 'lucide-react';
 import {
     adminChapterService,
@@ -59,13 +62,19 @@ export const AdminChapters: React.FC = () => {
     const [formCoinCost, setFormCoinCost] = useState(0);
     const [formPublished, setFormPublished] = useState(true);
 
-    // PDF Upload Modal
+    // PDF Upload Modal & AWS S3 Flow
+    const MAX_PDF_SIZE_MB = 200;
+    const MAX_PDF_SIZE_BYTES = MAX_PDF_SIZE_MB * 1024 * 1024;
+
     const [pdfModalOpen, setPdfModalOpen] = useState(false);
     const [uploadTargetChapter, setUploadTargetChapter] = useState<Chapter | null>(null);
-    const [uploadFileName, setUploadFileName] = useState('');
-    const [uploadFileSize, setUploadFileSize] = useState(15728640); // 15MB default
-    const [uploadPageCount, setUploadPageCount] = useState(32);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [uploadStep, setUploadStep] = useState<'idle' | 'requesting_url' | 'uploading_s3' | 'verifying' | 'success' | 'error'>('idle');
+    const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number; percentage: number }>({ loaded: 0, total: 0, percentage: 0 });
+    const [uploadError, setUploadError] = useState<string | null>(null);
     const [uploadingPdf, setUploadingPdf] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
     // Delete
     const [deleteTarget, setDeleteTarget] = useState<Chapter | null>(null);
@@ -186,41 +195,120 @@ export const AdminChapters: React.FC = () => {
 
     const openPdfUploadModal = (ch: Chapter) => {
         setUploadTargetChapter(ch);
-        const numPadded = String(ch.chapterNumber ?? ch.chapter_no).padStart(3, '0');
-        setUploadFileName(ch.pdfFileName || ch.pdf_file_name || `chapter-${numPadded}.pdf`);
-        setUploadFileSize(ch.pdfFileSize || ch.pdf_file_size || 18500000);
-        setUploadPageCount(ch.pdfPageCount || ch.pdf_page_count || 42);
+        setSelectedFile(null);
+        setUploadStep('idle');
+        setUploadProgress({ loaded: 0, total: 0, percentage: 0 });
+        setUploadError(null);
+        setIsDragOver(false);
         setPdfModalOpen(true);
     };
 
-    const handlePdfUploadSubmit = async (e: React.FormEvent) => {
+    const validateAndSelectFile = (file: File) => {
+        setUploadError(null);
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        if (!isPdf) {
+            setUploadError('Invalid file type. Please select a valid PDF file (.pdf).');
+            setSelectedFile(null);
+            return;
+        }
+
+        if (file.size <= 0) {
+            setUploadError('The selected file is empty. Please select a valid PDF.');
+            setSelectedFile(null);
+            return;
+        }
+
+        if (file.size > MAX_PDF_SIZE_BYTES) {
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+            setUploadError(`File is too large (${sizeMb} MB). Maximum allowed size is ${MAX_PDF_SIZE_MB} MB.`);
+            setSelectedFile(null);
+            return;
+        }
+
+        setSelectedFile(file);
+        setUploadStep('idle');
+    };
+
+    const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            validateAndSelectFile(e.target.files[0]);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
-        if (!uploadTargetChapter) return;
+        e.stopPropagation();
+        if (!uploadingPdf) setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+        if (uploadingPdf) return;
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            validateAndSelectFile(e.dataTransfer.files[0]);
+        }
+    };
+
+    const handlePdfUpload = async () => {
+        if (!uploadTargetChapter || !selectedFile) return;
         setUploadingPdf(true);
-        setErrorMessage(null);
+        setUploadError(null);
 
         try {
-            // 1. Initialize upload contract
-            const initRes = await chapterService.uploadInit(uploadTargetChapter.id, {
-                fileName: uploadFileName,
-                fileSize: Number(uploadFileSize),
-                mimeType: 'application/pdf'
+            // Step 1: Request S3 presigned PUT URL from NestJS backend
+            setUploadStep('requesting_url');
+            const uploadContract = await chapterService.getUploadUrl(uploadTargetChapter.id, {
+                fileName: selectedFile.name,
+                contentType: 'application/pdf',
+                fileSize: selectedFile.size,
             });
 
-            // 2. Complete upload contract with metadata
+            // Step 2: Upload PDF directly to AWS S3 via presigned PUT URL
+            // (PDF bytes never touch NestJS!)
+            setUploadStep('uploading_s3');
+            setUploadProgress({ loaded: 0, total: selectedFile.size, percentage: 0 });
+
+            await chapterService.uploadPdfToS3(uploadContract.uploadUrl, selectedFile, (prog) => {
+                setUploadProgress(prog);
+            });
+
+            // Step 3: Complete upload and verify S3 object integrity with NestJS backend
+            setUploadStep('verifying');
             await chapterService.uploadComplete(uploadTargetChapter.id, {
-                fileName: uploadFileName,
-                fileSize: Number(uploadFileSize),
-                pageCount: Number(uploadPageCount),
-                checksum: `sha256-mock-${Date.now()}`
+                uploadId: uploadContract.uploadId,
+                versionId: uploadContract.versionId,
+                objectKey: uploadContract.objectKey,
+                storageKey: uploadContract.objectKey,
+                fileName: selectedFile.name,
+                fileSize: selectedFile.size,
             });
 
-            setSuccessMessage(`Chapter PDF "${uploadFileName}" attached successfully.`);
-            setPdfModalOpen(false);
-            loadData();
+            // Step 4: Success
+            setUploadStep('success');
+            setSuccessMessage(`Chapter PDF "${selectedFile.name}" uploaded and verified successfully in AWS S3.`);
+            setTimeout(() => {
+                setPdfModalOpen(false);
+                loadData();
+            }, 1000);
         } catch (err: any) {
-            const msg = err.response?.data?.message || err.message || 'Failed to attach Chapter PDF.';
-            setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
+            console.error('[handlePdfUpload] Upload error:', err);
+            setUploadStep('error');
+            let message = 'Upload failed. Please check your network and try again.';
+            if (err.response?.data?.message) {
+                const m = err.response.data.message;
+                message = Array.isArray(m) ? m.join(', ') : m;
+            } else if (err.message) {
+                message = err.message;
+            }
+            setUploadError(message);
         } finally {
             setUploadingPdf(false);
         }
@@ -650,65 +738,330 @@ export const AdminChapters: React.FC = () => {
                 </form>
             </Modal>
 
-            {/* PDF Upload / Replace Modal */}
+            {/* PDF Upload / Replace Modal with Direct AWS S3 Flow */}
             <Modal
                 isOpen={pdfModalOpen}
-                onClose={() => setPdfModalOpen(false)}
-                title={uploadTargetChapter ? `Upload PDF: ${uploadTargetChapter.title}` : 'Upload Chapter PDF'}
+                onClose={() => {
+                    if (!uploadingPdf) {
+                        setPdfModalOpen(false);
+                    }
+                }}
+                title={
+                    uploadTargetChapter
+                        ? `${uploadTargetChapter.pdfFileName || uploadTargetChapter.pdf_file_name ? 'Replace' : 'Upload'} PDF: ${uploadTargetChapter.title}`
+                        : 'Upload Chapter PDF'
+                }
                 footer={
                     <>
-                        <button className={styles.btnSecondary} onClick={() => setPdfModalOpen(false)} disabled={uploadingPdf}>
-                            Cancel
+                        <button
+                            className={styles.btnSecondary}
+                            onClick={() => setPdfModalOpen(false)}
+                            disabled={uploadingPdf}
+                        >
+                            {uploadStep === 'success' ? 'Done' : 'Cancel'}
                         </button>
-                        <button className={styles.btnPrimary} onClick={handlePdfUploadSubmit} disabled={uploadingPdf}>
-                            {uploadingPdf ? 'Attaching PDF...' : 'Attach PDF to Chapter'}
-                        </button>
+                        {uploadStep === 'error' ? (
+                            <button
+                                className={styles.btnPrimary}
+                                onClick={handlePdfUpload}
+                                disabled={uploadingPdf || !selectedFile}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            >
+                                <RefreshCw size={14} className={uploadingPdf ? styles.spinner : ''} />
+                                Retry Upload
+                            </button>
+                        ) : (
+                            <button
+                                className={styles.btnPrimary}
+                                onClick={handlePdfUpload}
+                                disabled={uploadingPdf || !selectedFile || uploadStep === 'success'}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            >
+                                <Upload size={14} />
+                                {uploadingPdf
+                                    ? uploadStep === 'requesting_url'
+                                        ? 'Generating S3 URL...'
+                                        : uploadStep === 'uploading_s3'
+                                        ? `Uploading (${uploadProgress.percentage}%)`
+                                        : 'Verifying with S3...'
+                                    : uploadStep === 'success'
+                                    ? 'Upload Complete'
+                                    : uploadTargetChapter?.pdfFileName || uploadTargetChapter?.pdf_file_name
+                                    ? 'Replace PDF Asset'
+                                    : 'Upload Chapter PDF'}
+                            </button>
+                        )}
                     </>
                 }
             >
-                <form onSubmit={handlePdfUploadSubmit}>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                        One chapter corresponds to one PDF asset stored in object storage. Internal PDF pages are rendered continuously by the reader.
-                    </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Existing PDF Info Banner */}
+                    {(uploadTargetChapter?.pdfFileName || uploadTargetChapter?.pdf_file_name) && (
+                        <div
+                            style={{
+                                background: 'rgba(59, 130, 246, 0.08)',
+                                border: '1px solid rgba(59, 130, 246, 0.25)',
+                                borderRadius: '8px',
+                                padding: '12px 14px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '6px',
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Current PDF Asset
+                                </span>
+                                <span
+                                    style={{
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        padding: '2px 8px',
+                                        borderRadius: '10px',
+                                        background: uploadTargetChapter.contentStatus === 'READY' || uploadTargetChapter.content_status === 'READY'
+                                            ? 'rgba(16, 185, 129, 0.2)'
+                                            : 'rgba(245, 158, 11, 0.2)',
+                                        color: uploadTargetChapter.contentStatus === 'READY' || uploadTargetChapter.content_status === 'READY'
+                                            ? '#34d399'
+                                            : '#fbbf24',
+                                    }}
+                                >
+                                    {uploadTargetChapter.contentStatus || uploadTargetChapter.content_status || 'PENDING'}
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                                <FileText size={16} color="#60a5fa" />
+                                <span>{uploadTargetChapter.pdfFileName || uploadTargetChapter.pdf_file_name}</span>
+                                {(uploadTargetChapter.pdfFileSize || uploadTargetChapter.pdf_file_size) && (
+                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 400 }}>
+                                        • {(((uploadTargetChapter.pdfFileSize ?? uploadTargetChapter.pdf_file_size) ?? 0) / (1024 * 1024)).toFixed(1)} MB
+                                    </span>
+                                )}
+                            </div>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                Note: Replacing will generate a new immutable version key in S3 without overwriting the previous asset.
+                            </span>
+                        </div>
+                    )}
 
-                    <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>PDF File Name *</label>
-                        <input
-                            type="text"
-                            className={styles.formInput}
-                            placeholder="e.g. chapter-001.pdf"
-                            value={uploadFileName}
-                            onChange={(e) => setUploadFileName(e.target.value)}
-                            required
-                        />
+                    {/* Drag and drop file picker area */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="application/pdf,.pdf"
+                        style={{ display: 'none' }}
+                        onChange={handleFileInputChange}
+                        disabled={uploadingPdf}
+                    />
+
+                    <div
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={() => {
+                            if (!uploadingPdf && fileInputRef.current) {
+                                fileInputRef.current.click();
+                            }
+                        }}
+                        style={{
+                            border: isDragOver
+                                ? '2px dashed var(--primary)'
+                                : '2px dashed var(--color-border)',
+                            borderRadius: '10px',
+                            padding: '24px 16px',
+                            textAlign: 'center',
+                            cursor: uploadingPdf ? 'not-allowed' : 'pointer',
+                            background: isDragOver
+                                ? 'rgba(230, 57, 70, 0.06)'
+                                : 'var(--color-bg-secondary)',
+                            transition: 'var(--transition-fast)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '10px',
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '50%',
+                                background: 'rgba(230, 57, 70, 0.12)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--primary)',
+                            }}
+                        >
+                            <FileUp size={24} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '4px' }}>
+                                {isDragOver ? 'Drop PDF file here' : 'Choose a Chapter PDF file'}
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                Drag and drop your manga/ebook PDF here, or click to browse
+                            </div>
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            Format: PDF only (application/pdf) • Maximum file size: {MAX_PDF_SIZE_MB} MB
+                        </div>
                     </div>
 
-                    <div className={styles.formGrid}>
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>PDF Total Pages *</label>
-                            <input
-                                type="number"
-                                min={1}
-                                className={styles.formInput}
-                                value={uploadPageCount}
-                                onChange={(e) => setUploadPageCount(parseInt(e.target.value) || 1)}
-                                required
-                            />
+                    {/* Selected File Details */}
+                    {selectedFile && (
+                        <div
+                            style={{
+                                background: 'var(--color-surface)',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: '8px',
+                                padding: '12px 16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div
+                                    style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        borderRadius: '6px',
+                                        background: 'rgba(230, 57, 70, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'var(--primary)',
+                                    }}
+                                >
+                                    <FileText size={18} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                                        {selectedFile.name}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                        {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • application/pdf
+                                    </div>
+                                </div>
+                            </div>
+                            {!uploadingPdf && uploadStep !== 'success' && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (fileInputRef.current) fileInputRef.current.click();
+                                    }}
+                                    style={{
+                                        background: 'transparent',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: '6px',
+                                        color: 'var(--text-secondary)',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        padding: '4px 10px',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Change
+                                </button>
+                            )}
                         </div>
+                    )}
 
-                        <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>File Size (Bytes) *</label>
-                            <input
-                                type="number"
-                                min={1024}
-                                className={styles.formInput}
-                                value={uploadFileSize}
-                                onChange={(e) => setUploadFileSize(parseInt(e.target.value) || 1024)}
-                                required
-                            />
+                    {/* Live Upload Progress */}
+                    {(uploadingPdf || uploadStep === 'success') && (
+                        <div
+                            style={{
+                                background: 'var(--color-surface)',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: '8px',
+                                padding: '14px 16px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px',
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                                    {uploadStep === 'requesting_url' && 'Step 1/3: Requesting presigned S3 upload URL...'}
+                                    {uploadStep === 'uploading_s3' && `Step 2/3: Uploading ${selectedFile?.name} directly to S3...`}
+                                    {uploadStep === 'verifying' && 'Step 3/3: Verifying S3 object integrity with backend...'}
+                                    {uploadStep === 'success' && 'Upload Complete! S3 object verified.'}
+                                </span>
+                                <span style={{ fontSize: '12px', fontWeight: 800, color: uploadStep === 'success' ? '#10b981' : 'var(--primary)' }}>
+                                    {uploadStep === 'success' ? '100%' : `${uploadProgress.percentage}%`}
+                                </span>
+                            </div>
+
+                            {/* Progress bar */}
+                            <div
+                                style={{
+                                    height: '8px',
+                                    borderRadius: '4px',
+                                    background: 'rgba(255, 255, 255, 0.08)',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        width: uploadStep === 'success' ? '100%' : `${uploadProgress.percentage}%`,
+                                        height: '100%',
+                                        background: uploadStep === 'success'
+                                            ? '#10b981'
+                                            : 'linear-gradient(90deg, var(--primary), #ff758f)',
+                                        transition: 'width 0.2s ease-in-out',
+                                        borderRadius: '4px',
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
+                                <span>
+                                    {uploadStep === 'uploading_s3'
+                                        ? `${(uploadProgress.loaded / (1024 * 1024)).toFixed(1)} MB / ${(uploadProgress.total / (1024 * 1024)).toFixed(1)} MB`
+                                        : uploadStep === 'success'
+                                        ? 'Verified in ap-south-1 S3 bucket'
+                                        : 'Amazon S3 private PUT stream'}
+                                </span>
+                                <span>
+                                    {uploadStep === 'uploading_s3' && 'Direct Browser → S3'}
+                                    {uploadStep === 'verifying' && 'HeadObject check'}
+                                    {uploadStep === 'success' && 'Metadata synced'}
+                                </span>
+                            </div>
                         </div>
+                    )}
+
+                    {/* Error Banner */}
+                    {uploadError && (
+                        <div
+                            style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '8px',
+                                padding: '12px 14px',
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '10px',
+                                color: '#f87171',
+                                fontSize: '13px',
+                            }}
+                        >
+                            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 700, marginBottom: '2px' }}>Upload Error</div>
+                                <div>{uploadError}</div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Direct S3 Architecture Notice */}
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                        🔒 <strong>Zero-Proxy S3 Security:</strong> The PDF binary is uploaded directly from your browser to Amazon S3 via a temporary signed PUT contract. File bytes never pass through the API server, ensuring zero buffer bottlenecks.
                     </div>
-                </form>
+                </div>
             </Modal>
 
             {/* Confirm Dialog */}

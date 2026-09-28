@@ -24,6 +24,7 @@ import {
     adminChapterService
 } from '../../services/admin/adminServices';
 import type { BookSeries, Volume, PricingModel } from '../../types';
+import { catalogService, type CatalogLanguage, type CatalogCategory, type CatalogGenre, type CatalogTag } from '../../services/catalogService';
 import {
     PageHeader,
     FileUploadDropzone,
@@ -44,23 +45,40 @@ const STEPS = [
     { number: 7, title: 'Review & Publish' }
 ];
 
-const AVAILABLE_GENRES = [
-    'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Horror',
-    'Mystery', 'Psychological', 'Romance', 'Sci-Fi', 'Slice of Life',
-    'Supernatural', 'Thriller', 'Martial Arts', 'Cyberpunk', 'Isekai'
+const DEFAULT_LANGUAGES_INIT: CatalogLanguage[] = [
+    { id: 'aa47e99c-8a1a-4d5e-970c-db916528b199', name: 'English', code: 'en' },
+    { id: '830f6493-88c4-4fd0-b922-c96d459f844e', name: 'Japanese', code: 'ja' },
+    { id: 'c7c3a0d9-f32d-4968-bdec-092f05c09d23', name: 'French', code: 'fr' },
+    { id: 'cd418489-4799-4606-a0b6-6d8e958c7959', name: 'German', code: 'de' },
 ];
 
-const AVAILABLE_TAGS = [
-    'Underground', 'Tournament', 'High Stakes', 'Revenge', 'Magic System',
-    'Dystopian', 'Netrunner', 'Valkyrie', 'Demons', 'AI Takeover', 'School Life'
+const DEFAULT_CATEGORIES_INIT: CatalogCategory[] = [
+    { id: '00142c6a-cf97-4d2f-ab9f-7ad6499f6e26', name: 'Manga', slug: 'manga' },
+    { id: 'bc94a884-e419-4022-aec6-c3579a20f8d5', name: 'Manhwa', slug: 'manhwa' },
+    { id: '45af38b8-eb85-442f-92e8-440d3abba462', name: 'Manhua', slug: 'manhua' },
+    { id: '8899aeb1-e17e-479f-89aa-51d348af3cf7', name: 'Novel', slug: 'novel' },
+    { id: '0d480761-e69f-48a4-9e84-d0e9b1e053c4', name: 'Light Novel', slug: 'light-novel' },
 ];
 
-const AVAILABLE_LANGUAGES = [
-    'English', 'Japanese', 'Spanish', 'French', 'German', 'Italian', 'Chinese', 'Korean'
+const DEFAULT_GENRES_INIT: CatalogGenre[] = [
+    { id: '5d3ab5fb-19eb-40c2-9922-a1d5846578ed', name: 'Action', slug: 'action' },
+    { id: 'abd96397-6387-4c2d-a451-f0fb7744aa51', name: 'Adventure', slug: 'adventure' },
+    { id: '5cf3a7e8-21a5-4da8-9b19-ae34df65e991', name: 'Comedy', slug: 'comedy' },
+    { id: '67cbe159-2168-417c-964a-2b3d064c8e7c', name: 'Drama', slug: 'drama' },
+    { id: '70f3900f-42eb-43da-94f7-7ae3405c829c', name: 'Fantasy', slug: 'fantasy' },
+    { id: '2b9d22d9-412d-42ac-a824-a9bf9d47e348', name: 'Romance', slug: 'romance' },
+    { id: 'b86ae00d-f34d-44ca-bd3e-85677f61dd3c', name: 'Horror', slug: 'horror' },
+    { id: '70c88542-b603-448e-84f6-ba1665e9484a', name: 'Mystery', slug: 'mystery' },
+    { id: 'db2fb621-a540-4cc0-9701-64441881c1bc', name: 'Sci-Fi', slug: 'sci-fi' },
 ];
 
-const AVAILABLE_CATEGORIES = [
-    'Shonen', 'Seinen', 'Shojo', 'Josei', 'Kodomo', 'Webtoon', 'Manga'
+const DEFAULT_TAGS_INIT: CatalogTag[] = [
+    { id: 'b1ab7696-dda1-49e2-a035-264a2972ced9', name: 'School', slug: 'school' },
+    { id: '962adf53-a653-4b19-97f4-dedbb9019d6f', name: 'Magic', slug: 'magic' },
+    { id: '2d624a75-b2e4-404d-97fd-d25d268ca921', name: 'Revenge', slug: 'revenge' },
+    { id: '0144c50e-0c27-462a-9235-d22dc0bee967', name: 'Time Travel', slug: 'time-travel' },
+    { id: '3895728e-86bc-48a8-a3c4-03a9ce87f0f4', name: 'Pirates', slug: 'pirates' },
+    { id: '22709ac7-527a-4991-a743-73f5c07dc33a', name: 'Supernatural', slug: 'supernatural' },
 ];
 
 export const BookWizard: React.FC = () => {
@@ -88,17 +106,28 @@ export const BookWizard: React.FC = () => {
     const [newVolumeTitle, setNewVolumeTitle] = useState('');
     const [newVolumeDesc, setNewVolumeDesc] = useState('');
 
+    // Catalog Metadata
+    const [languages, setLanguages] = useState<CatalogLanguage[]>(DEFAULT_LANGUAGES_INIT);
+    const [categories, setCategories] = useState<CatalogCategory[]>(DEFAULT_CATEGORIES_INIT);
+    const [genres, setGenres] = useState<CatalogGenre[]>(DEFAULT_GENRES_INIT);
+    const [tags, setTags] = useState<CatalogTag[]>(DEFAULT_TAGS_INIT);
+
     // STEP 3 — BOOK INFO STATE
     const [bookTitle, setBookTitle] = useState('Shatterfirst - Arc 3: Corporate Arena');
     const [japaneseTitle, setJapaneseTitle] = useState('シャッターファースト 第3巻');
     const [slug, setSlug] = useState('shatterfirst-arc-3-corporate-arena');
-    const [language, setLanguage] = useState('English');
+    const [languageId, setLanguageId] = useState('aa47e99c-8a1a-4d5e-970c-db916528b199');
     const [description, setDescription] = useState('The stakes rise as underground gladiators face against mechanized mega-corporations.');
     const [author, setAuthor] = useState('Tatsuki Fujimoto');
     const [artist, setArtist] = useState('Yusuke Murata');
-    const [category, setCategory] = useState('Shonen');
-    const [selectedGenres, setSelectedGenres] = useState<string[]>(['Action', 'Sci-Fi']);
-    const [selectedTags, setSelectedTags] = useState<string[]>(['Tournament']);
+    const [categoryId, setCategoryId] = useState('00142c6a-cf97-4d2f-ab9f-7ad6499f6e26');
+    const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>([
+        '5d3ab5fb-19eb-40c2-9922-a1d5846578ed',
+        'db2fb621-a540-4cc0-9701-64441881c1bc',
+    ]);
+    const [selectedTagIds, setSelectedTagIds] = useState<string[]>([
+        '2d624a75-b2e4-404d-97fd-d25d268ca921',
+    ]);
     const [coverImage, setCoverImage] = useState('https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400');
     const [bannerImage, setBannerImage] = useState('https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&width=800');
     const [thumbnailImage, setThumbnailImage] = useState('https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=200');
@@ -163,18 +192,31 @@ export const BookWizard: React.FC = () => {
     const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
     const filePdfInputRef = useRef<HTMLInputElement>(null);
 
-    // Load initial series & volumes
+    // Load initial series, volumes & catalog metadata
     useEffect(() => {
         const loadInitial = async () => {
             try {
-                const [sList, vList] = await Promise.all([
+                const [sList, vList, meta] = await Promise.all([
                     adminSeriesService.getAll(),
-                    adminVolumeService.getAll()
+                    adminVolumeService.getAll(),
+                    catalogService.getMetadata().catch(() => null)
                 ]);
                 setSeriesList(sList);
                 setVolumesList(vList);
                 if (sList.length > 0) {
                     setSelectedSeriesId(sList[0].id);
+                }
+                if (meta) {
+                    if (meta.languages && meta.languages.length > 0) {
+                        setLanguages(meta.languages);
+                        setLanguageId(meta.languages[0].id);
+                    }
+                    if (meta.categories && meta.categories.length > 0) {
+                        setCategories(meta.categories);
+                        setCategoryId(meta.categories[0].id);
+                    }
+                    if (meta.genres && meta.genres.length > 0) setGenres(meta.genres);
+                    if (meta.tags && meta.tags.length > 0) setTags(meta.tags);
                 }
             } catch (err: any) {
                 setErrorMessage(err.message || 'Failed to initialize catalog data.');
@@ -339,12 +381,10 @@ export const BookWizard: React.FC = () => {
                 japanese_title: japaneseTitle || null,
                 slug: slug || bookTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
                 summary: description,
-                language,
-                author,
-                artist,
-                category,
-                genres: selectedGenres,
-                tags: selectedTags,
+                languageId,
+                categoryId,
+                genreIds: selectedGenreIds,
+                tagIds: selectedTagIds,
                 cover_image: coverImage,
                 banner_image: bannerImage,
                 thumbnail_image: thumbnailImage,
@@ -704,11 +744,11 @@ export const BookWizard: React.FC = () => {
                             <label className={uiStyles.formLabel}>Language</label>
                             <select
                                 className={uiStyles.formSelect}
-                                value={language}
-                                onChange={(e) => setLanguage(e.target.value)}
+                                value={languageId}
+                                onChange={(e) => setLanguageId(e.target.value)}
                             >
-                                {AVAILABLE_LANGUAGES.map(lang => (
-                                    <option key={lang} value={lang}>{lang}</option>
+                                {languages.map(lang => (
+                                    <option key={lang.id} value={lang.id}>{lang.name} ({lang.code})</option>
                                 ))}
                             </select>
                         </div>
@@ -738,14 +778,14 @@ export const BookWizard: React.FC = () => {
 
                     <div className={uiStyles.formGrid}>
                         <div className={uiStyles.formGroup}>
-                            <label className={uiStyles.formLabel}>Demographic Category</label>
+                            <label className={uiStyles.formLabel}>Primary Category</label>
                             <select
                                 className={uiStyles.formSelect}
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value)}
+                                value={categoryId}
+                                onChange={(e) => setCategoryId(e.target.value)}
                             >
-                                {AVAILABLE_CATEGORIES.map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
+                                {categories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
                                 ))}
                             </select>
                         </div>
@@ -775,18 +815,18 @@ export const BookWizard: React.FC = () => {
                     <div className={uiStyles.formGroup}>
                         <label className={uiStyles.formLabel}>Genres (Click to toggle)</label>
                         <div className={styles.chipsContainer}>
-                            {AVAILABLE_GENRES.map(g => {
-                                const selected = selectedGenres.includes(g);
+                            {genres.map(g => {
+                                const selected = selectedGenreIds.includes(g.id);
                                 return (
                                     <div
-                                        key={g}
+                                        key={g.id}
                                         className={`${styles.chip} ${selected ? styles.chipSelected : ''}`}
                                         onClick={() => {
-                                            if (selected) setSelectedGenres(selectedGenres.filter(item => item !== g));
-                                            else setSelectedGenres([...selectedGenres, g]);
+                                            if (selected) setSelectedGenreIds(selectedGenreIds.filter(id => id !== g.id));
+                                            else setSelectedGenreIds([...selectedGenreIds, g.id]);
                                         }}
                                     >
-                                        <span>{g}</span>
+                                        <span>{g.name}</span>
                                         {selected && <X size={12} className={styles.chipRemoveBtn} />}
                                     </div>
                                 );
@@ -797,18 +837,18 @@ export const BookWizard: React.FC = () => {
                     <div className={uiStyles.formGroup}>
                         <label className={uiStyles.formLabel}>Content Tags</label>
                         <div className={styles.chipsContainer}>
-                            {AVAILABLE_TAGS.map(t => {
-                                const selected = selectedTags.includes(t);
+                            {tags.map(t => {
+                                const selected = selectedTagIds.includes(t.id);
                                 return (
                                     <div
-                                        key={t}
+                                        key={t.id}
                                         className={`${styles.chip} ${selected ? styles.chipSelected : ''}`}
                                         onClick={() => {
-                                            if (selected) setSelectedTags(selectedTags.filter(item => item !== t));
-                                            else setSelectedTags([...selectedTags, t]);
+                                            if (selected) setSelectedTagIds(selectedTagIds.filter(id => id !== t.id));
+                                            else setSelectedTagIds([...selectedTagIds, t.id]);
                                         }}
                                     >
-                                        <span>#{t}</span>
+                                        <span>#{t.name}</span>
                                         {selected && <X size={12} className={styles.chipRemoveBtn} />}
                                     </div>
                                 );
@@ -1192,7 +1232,7 @@ export const BookWizard: React.FC = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Language:</span>
-                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{language}</span>
+                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{languages.find(l => l.id === languageId)?.name || 'English'}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Author / Artist:</span>

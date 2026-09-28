@@ -420,20 +420,33 @@ export interface UpdateChapterPayload {
   publishedAt?: string;
 }
 
-export interface ChapterPdfUploadInitPayload {
+export interface ChapterPdfUploadUrlPayload {
   fileName: string;
   fileSize: number;
+  contentType?: string;
   mimeType?: string;
 }
 
-export interface ChapterPdfUploadInitResponse {
+export type ChapterPdfUploadInitPayload = ChapterPdfUploadUrlPayload;
+
+export interface ChapterPdfUploadUrlResponse {
+  uploadId: string;
   chapterId: string;
-  storageKey: string;
+  versionId: string;
+  objectKey: string;
+  storageKey?: string;
   uploadUrl: string;
-  expiresInSeconds: number;
+  expiresIn: number;
+  expiresInSeconds?: number;
 }
 
+export type ChapterPdfUploadInitResponse = ChapterPdfUploadUrlResponse;
+
 export interface ChapterPdfUploadCompletePayload {
+  uploadId?: string;
+  versionId?: string;
+  objectKey?: string;
+  storageKey?: string;
   fileName: string;
   fileSize: number;
   pageCount?: number;
