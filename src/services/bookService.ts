@@ -8,54 +8,9 @@ import type {
     BookStatus,
     PricingModel,
 } from '../types';
-import { initialBooks } from './mockData';
 import { generateSlug } from './seriesService';
 
 const LS_BOOKS = 'ky_books';
-
-const seedBooks = (): Book[] => {
-    return initialBooks.map((b, idx) => {
-        const volumeId = idx === 0 ? 'vol-shatterfirst-1' : idx === 1 ? 'vol-shatterfirst-2' : idx === 2 ? 'vol-cyberpunk-1' : null;
-        return {
-            ...b,
-            seriesId: b.series_id,
-            volume_id: volumeId,
-            volumeId: volumeId,
-            japanese_title: idx === 0 ? 'シャッターファースト 第1巻' : idx === 2 ? 'サイバーパンク・ネオ東京' : undefined,
-            japaneseTitle: idx === 0 ? 'シャッターファースト 第1巻' : idx === 2 ? 'サイバーパンク・ネオ東京' : undefined,
-            slug: b.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-            language: 'English',
-            languageId: '',
-            author: idx % 2 === 0 ? 'Tatsuki Fujimoto' : 'Eiichiro Oda',
-            authorId: undefined,
-            artist: idx % 2 === 0 ? 'Yusuke Murata' : 'Kentaro Miura',
-            artistId: undefined,
-            category: 'Shonen',
-            categoryId: '',
-            genres: ['Action', 'Martial Arts', 'Sci-Fi'],
-            genreIds: [],
-            tags: ['Cyberpunk', 'Tournament', 'High Stakes'],
-            tagIds: [],
-            banner_image: b.cover_image,
-            bannerImage: b.cover_image,
-            thumbnail_image: b.cover_image,
-            thumbnailImage: b.cover_image,
-            coverImage: b.cover_image,
-            pricing_model: b.coin_price > 0 ? 'PER_CHAPTER' : 'FREE',
-            pricingModel: b.coin_price > 0 ? 'PER_CHAPTER' : 'FREE',
-            default_chapter_coin_cost: b.coin_price > 0 ? 2 : 0,
-            defaultChapterCoinCost: b.coin_price > 0 ? 2 : 0,
-            default_free_chapters: 2,
-            defaultFreeChapters: 2,
-            is_premium: b.coin_price > 0,
-            isPremium: b.coin_price > 0,
-            status: (b.status === 'COMPLETED' ? 'PUBLISHED' : 'PUBLISHED') as BookStatus,
-            chapter_count: 5,
-            totalChapters: 5,
-            updated_at: new Date().toISOString()
-        };
-    });
-};
 
 /**
  * Normalizes backend Book entity into frontend Book
@@ -73,7 +28,7 @@ export const mapBookFromApi = (item: any): Book => {
     const defaultFreeChapters = Number(item.defaultFreeChapters ?? item.default_free_chapters ?? 0);
     const totalChapters = Number(item.totalChapters ?? item.chapter_count ?? 0);
 
-    const coverImage = item.cover_image || item.coverImage || item.mediaAssets?.[0]?.url || 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400';
+    const coverImage = item.cover_image || item.coverImage || item.mediaAssets?.[0]?.url || null;
     const bannerImage = item.banner_image || item.bannerImage || coverImage;
     const thumbnailImage = item.thumbnail_image || item.thumbnailImage || coverImage;
 
@@ -89,13 +44,13 @@ export const mapBookFromApi = (item: any): Book => {
         slug: item.slug || generateSlug(title),
         summary: item.description ?? item.summary ?? null,
         description: item.description ?? item.summary ?? null,
-        language: item.language?.name || item.language || 'English',
+        language: item.language?.name || item.language || null,
         languageId: item.languageId || item.language_id || '',
-        author: item.author?.name || item.author || 'Manga Author',
+        author: item.author?.name || item.author || null,
         authorId: item.authorId || null,
-        artist: item.artist?.name || item.artist || 'Manga Artist',
+        artist: item.artist?.name || item.artist || null,
         artistId: item.artistId || null,
-        category: item.category?.name || item.category || 'Shonen',
+        category: item.category?.name || item.category || null,
         categoryId: item.categoryId || item.category_id || '',
         genres: Array.isArray(item.genres) ? item.genres.map((g: any) => typeof g === 'string' ? g : g.name) : (item.genreIds || []),
         genreIds: Array.isArray(item.genres) ? item.genres.map((g: any) => typeof g === 'string' ? g : g.id) : (item.genreIds || []),
@@ -140,7 +95,7 @@ export const mapBookFromApi = (item: any): Book => {
 const getFallbackBooks = (params?: QueryBookParams): Book[] => {
     try {
         const saved = localStorage.getItem(LS_BOOKS);
-        let list: Book[] = saved ? JSON.parse(saved) : seedBooks();
+        let list: Book[] = saved ? JSON.parse(saved) : [];
 
         if (params?.seriesId) {
             list = list.filter((b) => b.seriesId === params.seriesId || b.series_id === params.seriesId);
@@ -169,7 +124,7 @@ const getFallbackBooks = (params?: QueryBookParams): Book[] => {
         }
         return list.map(mapBookFromApi);
     } catch {
-        return seedBooks().map(mapBookFromApi);
+        return [];
     }
 };
 

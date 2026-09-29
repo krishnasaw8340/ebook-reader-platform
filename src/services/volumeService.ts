@@ -11,59 +11,7 @@ import { generateSlug } from './seriesService';
 
 const LS_VOLUMES = 'ky_volumes';
 
-export const initialVolumes: Volume[] = [
-    {
-        id: 'vol-shatterfirst-1',
-        series_id: 'series-shatterfirst',
-        seriesId: 'series-shatterfirst',
-        volume_no: 1,
-        volumeNumber: 1,
-        title: 'Volume 1: Reality Cracks',
-        slug: 'shatterfirst-vol-1',
-        description: 'First official compilation collecting Chapters 1 through 10.',
-        cover_image: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400',
-        status: 'PUBLISHED',
-        sortOrder: 1,
-        release_date: '2026-07-10',
-        releaseDate: '2026-07-10',
-        created_at: '2026-07-10T00:00:00Z',
-        createdAt: '2026-07-10T00:00:00Z'
-    },
-    {
-        id: 'vol-shatterfirst-2',
-        series_id: 'series-shatterfirst',
-        seriesId: 'series-shatterfirst',
-        volume_no: 2,
-        volumeNumber: 2,
-        title: 'Volume 2: Corporate Arena',
-        slug: 'shatterfirst-vol-2',
-        description: 'Collecting the tournament arc and underground matches.',
-        cover_image: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400',
-        status: 'PUBLISHED',
-        sortOrder: 2,
-        release_date: '2026-07-18',
-        releaseDate: '2026-07-18',
-        created_at: '2026-07-18T00:00:00Z',
-        createdAt: '2026-07-18T00:00:00Z'
-    },
-    {
-        id: 'vol-cyberpunk-1',
-        series_id: 'series-cyberpunk-neotokyo',
-        seriesId: 'series-cyberpunk-neotokyo',
-        volume_no: 1,
-        volumeNumber: 1,
-        title: 'Volume 1: Interface Protocol',
-        slug: 'cyberpunk-vol-1',
-        description: 'Introduction to Neo-Tokyo underground netrunners.',
-        cover_image: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&width=400',
-        status: 'PUBLISHED',
-        sortOrder: 1,
-        release_date: '2026-07-01',
-        releaseDate: '2026-07-01',
-        created_at: '2026-07-01T00:00:00Z',
-        createdAt: '2026-07-01T00:00:00Z'
-    }
-];
+
 
 /**
  * Normalizes backend Volume entity into frontend Volume with full backward compatibility
@@ -105,7 +53,7 @@ export const mapVolumeFromApi = (item: any): Volume => {
 const getFallbackVolumes = (seriesId?: string, search?: string): Volume[] => {
     try {
         const saved = localStorage.getItem(LS_VOLUMES);
-        let list: Volume[] = saved ? JSON.parse(saved) : initialVolumes;
+        let list: Volume[] = saved ? JSON.parse(saved) : [];
         if (seriesId) {
             list = list.filter((v) => (v.seriesId === seriesId || v.series_id === seriesId));
         }
@@ -120,7 +68,7 @@ const getFallbackVolumes = (seriesId?: string, search?: string): Volume[] => {
         }
         return list.map(mapVolumeFromApi);
     } catch {
-        return initialVolumes.map(mapVolumeFromApi);
+        return [];
     }
 };
 

@@ -7,7 +7,6 @@ import type {
     PaginatedSeriesResponse,
     SeriesStatus,
 } from '../types';
-import { initialBookSeries } from './mockData';
 
 const LS_SERIES = 'ky_book_series';
 
@@ -48,12 +47,12 @@ export const mapSeriesFromApi = (item: any): BookSeries => {
 };
 
 /**
- * Helper to retrieve mock/cached series from localStorage if backend is unreachable
+ * Helper to retrieve cached series from localStorage if backend is unreachable
  */
 const getFallbackSeries = (search?: string): BookSeries[] => {
     try {
         const saved = localStorage.getItem(LS_SERIES);
-        let list: BookSeries[] = saved ? JSON.parse(saved) : initialBookSeries;
+        let list: BookSeries[] = saved ? JSON.parse(saved) : [];
         if (search && search.trim()) {
             const q = search.toLowerCase().trim();
             list = list.filter(
@@ -65,7 +64,7 @@ const getFallbackSeries = (search?: string): BookSeries[] => {
         }
         return list.map(mapSeriesFromApi);
     } catch {
-        return initialBookSeries.map(mapSeriesFromApi);
+        return [];
     }
 };
 

@@ -13,7 +13,6 @@ import type {
     ChapterPdfUploadInitResponse,
     ChapterPdfUploadCompletePayload,
 } from '../types';
-import { initialChapters } from './mockData';
 
 const LS_CHAPTERS = 'ky_chapters';
 
@@ -77,7 +76,7 @@ export const mapChapterFromApi = (item: any): Chapter => {
 const getFallbackChapters = (bookId?: string, search?: string): Chapter[] => {
     try {
         const raw = localStorage.getItem(LS_CHAPTERS);
-        let list: Chapter[] = raw ? JSON.parse(raw) : initialChapters;
+        let list: Chapter[] = raw ? JSON.parse(raw) : [];
 
         if (bookId) {
             list = list.filter((c) => c.book_id === bookId || c.bookId === bookId);
@@ -90,7 +89,7 @@ const getFallbackChapters = (bookId?: string, search?: string): Chapter[] => {
 
         return list.sort((a, b) => (a.sortOrder ?? a.sort_order ?? 0) - (b.sortOrder ?? b.sort_order ?? 0));
     } catch {
-        return initialChapters;
+        return [];
     }
 };
 
