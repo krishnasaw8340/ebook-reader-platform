@@ -31,7 +31,7 @@ export const Profile: React.FC = () => {
     const displayEmail = user?.email || currentUser?.email || 'guest@kuroyomi.com';
     const displayUsername = user?.username || user?.fullName || currentUser?.username || currentUser?.full_name || user?.email?.split('@')[0] || 'KuroYomi User';
     const displayRoles = user?.roles?.join(', ') || 'USER';
-    const avatarUrl = user?.avatarUrl || currentUser?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&width=100&auto=format&fit=crop';
+    const avatarUrl = user?.avatarUrl || currentUser?.avatar_url || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' fill='%236366f1' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
 
     // Profile Edit State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);

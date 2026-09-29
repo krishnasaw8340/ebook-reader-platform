@@ -19,8 +19,7 @@ export const Library: React.FC = () => {
     const seriesBooks = books.filter(b => b.series_id === seriesId);
     const prog = readingProgress.find(p => seriesBooks.some(b => b.id === p.book_id));
     if (!prog) return undefined;
-    // Mock progress percent
-    return 75;
+    return prog.progress_percent ?? 0;
   };
 
   return (

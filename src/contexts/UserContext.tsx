@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type {
   User,
   BookSeries,
@@ -13,18 +13,9 @@ import type {
   PaymentOrder,
   PaymentTransaction
 } from '../types';
-import {
-  initialUsers,
-  initialBookSeries,
-  initialBooks,
-  initialChapters,
-  initialChapterUnlocks,
-  initialWallets,
-  initialCoinPackages,
-  initialCoinTransactions,
-  initialUserLibrary,
-  initialReadingProgress
-} from '../services/mockData';
+import { seriesService } from '../services/seriesService';
+import { bookService } from '../services/bookService';
+import { chapterService } from '../services/chapterService';
 
 interface UserContextType {
   currentUser: User | null;
@@ -39,6 +30,7 @@ interface UserContextType {
   coinPackages: CoinPackage[];
   paymentOrders: PaymentOrder[];
   paymentTransactions: PaymentTransaction[];
+  loading: boolean;
   
   // Database Operations
   isChapterUnlocked: (chapterId: string) => boolean;
@@ -66,50 +58,40 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Simulator Tables States
-  const [currentUser] = useState<User | null>(initialUsers[0]);
+  // All state starts empty — populated from API
+  const [currentUser] = useState<User | null>(null);
+  const [bookSeries, setBookSeries] = useState<BookSeries[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [bookSeries, setBookSeries] = useState<BookSeries[]>(() => {
-    const saved = localStorage.getItem('ky_book_series');
-    return saved ? JSON.parse(saved) : initialBookSeries;
-  });
-
-  const [books, setBooks] = useState<Book[]>(() => {
-    const saved = localStorage.getItem('ky_books');
-    return saved ? JSON.parse(saved) : initialBooks;
-  });
-
-  const [chapters, setChapters] = useState<Chapter[]>(() => {
-    const saved = localStorage.getItem('ky_chapters');
-    return saved ? JSON.parse(saved) : initialChapters;
-  });
-
+  // User-specific state (these will eventually come from APIs too)
   const [chapterUnlocks, setChapterUnlocks] = useState<ChapterUnlock[]>(() => {
     const saved = localStorage.getItem('ky_chapter_unlocks');
-    return saved ? JSON.parse(saved) : initialChapterUnlocks;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [userLibrary, setUserLibrary] = useState<UserLibrary[]>(() => {
     const saved = localStorage.getItem('ky_user_library');
-    return saved ? JSON.parse(saved) : initialUserLibrary;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [readingProgress, setReadingProgress] = useState<ReadingProgress[]>(() => {
     const saved = localStorage.getItem('ky_reading_progress');
-    return saved ? JSON.parse(saved) : initialReadingProgress;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [wallets, setWallets] = useState<Wallet[]>(() => {
     const saved = localStorage.getItem('ky_wallets');
-    return saved ? JSON.parse(saved) : initialWallets;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [coinTransactions, setCoinTransactions] = useState<CoinTransaction[]>(() => {
     const saved = localStorage.getItem('ky_coin_transactions');
-    return saved ? JSON.parse(saved) : initialCoinTransactions;
+    return saved ? JSON.parse(saved) : [];
   });
 
-  const [coinPackages] = useState<CoinPackage[]>(initialCoinPackages);
+  const [coinPackages] = useState<CoinPackage[]>([]);
 
   const [paymentOrders, setPaymentOrders] = useState<PaymentOrder[]>(() => {
     const saved = localStorage.getItem('ky_payment_orders');
@@ -121,19 +103,30 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Sync state to local storage
+  // Fetch catalog data from backend APIs on mount
   useEffect(() => {
-    localStorage.setItem('ky_book_series', JSON.stringify(bookSeries));
-  }, [bookSeries]);
+    const fetchCatalog = async () => {
+      setLoading(true);
+      try {
+        const [seriesData, booksData, chaptersData] = await Promise.all([
+          seriesService.getAll().catch(() => []),
+          bookService.getAll().catch(() => []),
+          chapterService.getAll().catch(() => []),
+        ]);
+        setBookSeries(seriesData);
+        setBooks(booksData);
+        setChapters(chaptersData);
+      } catch (err) {
+        console.warn('[UserContext] Failed to fetch catalog data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  useEffect(() => {
-    localStorage.setItem('ky_books', JSON.stringify(books));
-  }, [books]);
+    fetchCatalog();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('ky_chapters', JSON.stringify(chapters));
-  }, [chapters]);
-
+  // Sync user-specific state to local storage
   useEffect(() => {
     localStorage.setItem('ky_chapter_unlocks', JSON.stringify(chapterUnlocks));
   }, [chapterUnlocks]);
@@ -341,84 +334,71 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Creator Studio Publishing simulator (creates Series -> Book -> Chapter -> PDF metadata)
-  const publishBook = (
+  // Creator Studio Publishing — creates real API records now
+  const publishBook = async (
     seriesTitle: string,
     bookTitle: string,
     chapterTitle: string,
     pagesCount: number,
     cost: number
   ) => {
-    if (!currentUser) return;
+    try {
+      // 1. Create Series via API
+      const newSeries = await seriesService.create({
+        name: seriesTitle,
+        description: `Creator Published Comic. Uploaded by admin user.`,
+        status: 'ONGOING',
+      });
 
-    const seriesId = `series-upload-${Date.now()}`;
-    const bookId = `book-upload-${Date.now()}`;
-    const chapterId = `ch-upload-${Date.now()}`;
+      // 2. Create Book via API
+      const newBook = await bookService.create({
+        seriesId: newSeries.id,
+        title: bookTitle,
+        description: `A compiled creator volume for ${seriesTitle}.`,
+        status: 'PUBLISHED',
+        pricingModel: cost > 0 ? 'PER_CHAPTER' : 'FREE',
+        defaultChapterCoinCost: cost,
+        defaultFreeChapters: cost > 0 ? 0 : 1,
+      });
 
-    // 1. Create Series record
-    const newSeries: BookSeries = {
-      id: seriesId,
-      title: seriesTitle,
-      description: `Creator Published Comic. Uploaded by admin user.`,
-      cover_image: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400&auto=format&fit=crop",
-      status: "ONGOING",
-      created_at: new Date().toISOString()
-    };
+      // 3. Create Chapter via API
+      const newChapter = await chapterService.create({
+        bookId: newBook.id,
+        chapterNumber: 1,
+        title: chapterTitle,
+        pricingModel: cost > 0 ? 'PAID' : 'FREE',
+        coinCost: cost,
+        published: true,
+      });
 
-    // 2. Create Book record
-    const newBook: Book = {
-      id: bookId,
-      series_id: seriesId,
-      title: bookTitle,
-      summary: `A compiled creator volume for ${seriesTitle}.`,
-      cover_image: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400&auto=format&fit=crop",
-      coin_price: cost * 5,
-      default_chapter_coin_cost: cost,
-      default_free_chapters: cost > 0 ? 0 : 1,
-      status: "ONGOING",
-      created_at: new Date().toISOString()
-    };
-
-    // 3. Create Chapter record with Chapter PDF metadata
-    const slugFile = chapterTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const newChapter: Chapter = {
-      id: chapterId,
-      book_id: bookId,
-      chapter_no: 1,
-      chapterNumber: 1,
-      title: chapterTitle,
-      access_type: cost > 0 ? "PAID" : "FREE",
-      pricing_model: cost > 0 ? "PAID" : "FREE",
-      coin_cost: cost,
-      coinCost: cost,
-      pdf_file_name: `${slugFile}.pdf`,
-      pdf_file_size: (pagesCount || 24) * 650000,
-      pdf_page_count: pagesCount || 24,
-      content_status: "READY",
-      published: true,
-      created_at: new Date().toISOString()
-    };
-
-    setBookSeries(prev => [newSeries, ...prev]);
-    setBooks(prev => [newBook, ...prev]);
-    setChapters(prev => [newChapter, ...prev]);
+      // Refresh state from what was created
+      setBookSeries(prev => [newSeries, ...prev]);
+      setBooks(prev => [newBook, ...prev]);
+      setChapters(prev => [newChapter, ...prev]);
+    } catch (err) {
+      console.error('[UserContext] Failed to publish book via API:', err);
+    }
   };
 
-  const deleteBookSeries = (seriesId: string) => {
-    setBookSeries(prev => prev.filter(s => s.id !== seriesId));
-    const relatedBookIds = books.filter(b => b.series_id === seriesId).map(b => b.id);
-    setBooks(prev => prev.filter(b => b.series_id !== seriesId));
-    setChapters(prev => prev.filter(c => !relatedBookIds.includes(c.book_id)));
+  const deleteBookSeries = async (seriesId: string) => {
+    try {
+      await seriesService.delete(seriesId);
+      setBookSeries(prev => prev.filter(s => s.id !== seriesId));
+      const relatedBookIds = books.filter(b => b.series_id === seriesId).map(b => b.id);
+      setBooks(prev => prev.filter(b => b.series_id !== seriesId));
+      setChapters(prev => prev.filter(c => !relatedBookIds.includes(c.book_id)));
+    } catch (err) {
+      console.error('[UserContext] Failed to delete series:', err);
+    }
   };
 
-  const toggleSeriesStatus = (seriesId: string) => {
-    setBookSeries(prev => prev.map(s => {
-      if (s.id === seriesId) {
-        const nextStatus = s.status === 'ONGOING' ? 'COMPLETED' : 'ONGOING';
-        return { ...s, status: nextStatus };
-      }
-      return s;
-    }));
+  const toggleSeriesStatus = async (seriesId: string) => {
+    try {
+      const updated = await seriesService.toggleStatus(seriesId);
+      setBookSeries(prev => prev.map(s => s.id === seriesId ? updated : s));
+    } catch (err) {
+      console.error('[UserContext] Failed to toggle series status:', err);
+    }
   };
 
   return (
@@ -435,6 +415,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       coinPackages,
       paymentOrders,
       paymentTransactions,
+      loading,
       isChapterUnlocked,
       unlockChapter,
       rechargeCoins,
