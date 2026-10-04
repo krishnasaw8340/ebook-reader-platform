@@ -23,6 +23,8 @@ import {
     adminBookService,
     adminChapterService
 } from '../../services/admin/adminServices';
+import { chapterService } from '../../services/chapterService';
+import { storeChapterPdf } from '../../utils/pdfStorage';
 import type { BookSeries, Volume, PricingModel } from '../../types';
 import { catalogService, type CatalogLanguage, type CatalogCategory, type CatalogGenre, type CatalogTag } from '../../services/catalogService';
 import {
@@ -32,6 +34,8 @@ import {
     SuccessBanner,
     ErrorBanner
 } from '../components/AdminUI';
+import { generateSlug } from '../../services/seriesService';
+import { BookCoverUploader, uploadBookCover, extractApiError } from './BookCoverUploader';
 import styles from './BookWizard.module.css';
 import uiStyles from '../components/AdminUI.module.css';
 
@@ -113,25 +117,24 @@ export const BookWizard: React.FC = () => {
     const [tags, setTags] = useState<CatalogTag[]>(DEFAULT_TAGS_INIT);
 
     // STEP 3 — BOOK INFO STATE
-    const [bookTitle, setBookTitle] = useState('Shatterfirst - Arc 3: Corporate Arena');
-    const [japaneseTitle, setJapaneseTitle] = useState('シャッターファースト 第3巻');
-    const [slug, setSlug] = useState('shatterfirst-arc-3-corporate-arena');
+    const [bookTitle, setBookTitle] = useState('');
+    const [japaneseTitle, setJapaneseTitle] = useState('');
     const [languageId, setLanguageId] = useState('aa47e99c-8a1a-4d5e-970c-db916528b199');
-    const [description, setDescription] = useState('The stakes rise as underground gladiators face against mechanized mega-corporations.');
-    const [author, setAuthor] = useState('Tatsuki Fujimoto');
-    const [artist, setArtist] = useState('Yusuke Murata');
+    const [author, setAuthor] = useState('');
+    const [artist, setArtist] = useState('');
     const [categoryId, setCategoryId] = useState('00142c6a-cf97-4d2f-ab9f-7ad6499f6e26');
-    const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>([
-        '5d3ab5fb-19eb-40c2-9922-a1d5846578ed',
-        'db2fb621-a540-4cc0-9701-64441881c1bc',
-    ]);
-    const [selectedTagIds, setSelectedTagIds] = useState<string[]>([
-        '2d624a75-b2e4-404d-97fd-d25d268ca921',
-    ]);
-    const [coverImage, setCoverImage] = useState('https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400');
-    const [bannerImage, setBannerImage] = useState('https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&width=800');
-    const [thumbnailImage, setThumbnailImage] = useState('https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=200');
-    const [releaseDate, setReleaseDate] = useState(new Date().toISOString().split('T')[0]);
+    // Cover is uploaded AFTER the book exists (object key contains the book ID).
+    const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
+    const [coverPreview, setCoverPreview] = useState<string>('');
+    const releaseDate = new Date().toISOString().split('T')[0];
+    const slug = generateSlug(bookTitle);
+
+    useEffect(() => {
+        if (!pendingCoverFile) { setCoverPreview(''); return; }
+        const url = URL.createObjectURL(pendingCoverFile);
+        setCoverPreview(url);
+        return () => URL.revokeObjectURL(url);
+    }, [pendingCoverFile]);
 
     // STEP 4 — PRICING STATE
     const [pricingModel, setPricingModel] = useState<PricingModel>('PER_CHAPTER');
@@ -151,6 +154,7 @@ export const BookWizard: React.FC = () => {
         pdfFileName: string;
         pdfPageCount: number;
         pdfFileSize: number;
+        pdfFile?: File;
     }
     const [chapters, setChapters] = useState<WizardChapter[]>([
         {
@@ -342,7 +346,8 @@ export const BookWizard: React.FC = () => {
                     ...c,
                     pdfFileName: file.name,
                     pdfFileSize: file.size,
-                    pdfPageCount: c.pdfPageCount || 35
+                    pdfPageCount: c.pdfPageCount || 35,
+                    pdfFile: file
                 };
             }
             return c;
@@ -379,15 +384,9 @@ export const BookWizard: React.FC = () => {
                 volume_id: finalVolumeId,
                 title: bookTitle,
                 japanese_title: japaneseTitle || null,
-                slug: slug || bookTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                summary: description,
+                slug,
                 languageId,
                 categoryId,
-                genreIds: selectedGenreIds,
-                tagIds: selectedTagIds,
-                cover_image: coverImage,
-                banner_image: bannerImage,
-                thumbnail_image: thumbnailImage,
                 release_date: releaseDate,
                 pricing_model: pricingModel,
                 coin_price: coinPrice,
@@ -398,9 +397,18 @@ export const BookWizard: React.FC = () => {
                 chapter_count: chapters.length
             });
 
+            // 2b. Upload cover (book ID now exists): React -> S3 direct, then complete.
+            if (pendingCoverFile) {
+                try {
+                    await uploadBookCover(newBook.id, pendingCoverFile);
+                } catch (coverErr: any) {
+                    setErrorMessage(`Book created, but cover upload failed: ${extractApiError(coverErr, coverErr?.message || 'unknown error')}. You can retry from the book's Media tab.`);
+                }
+            }
+
             // 3. Create Chapters with PDF Content Metadata
             for (const ch of chapters) {
-                await adminChapterService.create({
+                const createdChapter = await adminChapterService.create({
                     book_id: newBook.id,
                     bookId: newBook.id,
                     chapter_no: ch.chapterNo,
@@ -420,6 +428,28 @@ export const BookWizard: React.FC = () => {
                     content_status: 'READY',
                     published: ch.published
                 });
+
+                if (ch.pdfFile) {
+                    try {
+                        // Store in IndexedDB for immediate, guaranteed offline and local reading
+                        await storeChapterPdf(createdChapter.id, ch.pdfFile, ch.pdfFileName);
+
+                        // Upload to S3 if backend S3 endpoint is configured
+                        const { uploadUrl, key } = await chapterService.getUploadUrl(createdChapter.id, {
+                            fileName: ch.pdfFile.name,
+                            fileSize: ch.pdfFile.size,
+                            contentType: ch.pdfFile.type || 'application/pdf',
+                        });
+                        await chapterService.uploadPdfToS3(uploadUrl, ch.pdfFile);
+                        await chapterService.uploadComplete(createdChapter.id, {
+                            key,
+                            fileSize: ch.pdfFile.size,
+                            pageCount: ch.pdfPageCount || 30
+                        });
+                    } catch (pdfErr) {
+                        console.warn(`[BookWizard] Chapter ${ch.chapterNo} PDF remote sync notice:`, pdfErr);
+                    }
+                }
             }
 
             // 4. Navigate to central book workspace
@@ -431,10 +461,10 @@ export const BookWizard: React.FC = () => {
     };
 
     return (
-        <div>
+        <div className={styles.wizardContainer}>
             <PageHeader
                 title="Create Manga Book"
-                subtitle="7-step wizard to create book metadata, monetization defaults, chapter structures, and PDF assets."
+                subtitle="Just follow the steps — it only takes a minute."
                 breadcrumbs={[
                     { label: 'Admin', path: '/admin' },
                     { label: 'Catalog', path: '/admin/series' },
@@ -571,59 +601,32 @@ export const BookWizard: React.FC = () => {
                         </p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+                    <div className={styles.choiceGrid}>
                         <div
                             onClick={() => setVolumeChoice('none')}
-                            style={{
-                                background: volumeChoice === 'none' ? 'rgba(230, 57, 70, 0.15)' : 'rgba(255,255,255,0.03)',
-                                border: volumeChoice === 'none' ? '1px solid var(--primary)' : '1px solid var(--glass-border)',
-                                borderRadius: '8px',
-                                padding: '16px',
-                                cursor: 'pointer',
-                                textAlign: 'center'
-                            }}
+                            className={`${styles.choiceCard} ${volumeChoice === 'none' ? styles.choiceCardActive : ''}`}
                         >
-                            <Layers size={24} color={volumeChoice === 'none' ? 'var(--primary)' : 'var(--text-muted)'} style={{ margin: '0 auto 8px' }} />
-                            <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '14px' }}>[ No Volume ]</div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                Direct Series ➔ Book
-                            </div>
+                            <Layers size={24} />
+                            <div className={styles.choiceTitle}>No Volume</div>
+                            <div className={styles.choiceDesc}>Skip this (recommended)</div>
                         </div>
 
                         <div
                             onClick={() => setVolumeChoice('existing')}
-                            style={{
-                                background: volumeChoice === 'existing' ? 'rgba(230, 57, 70, 0.15)' : 'rgba(255,255,255,0.03)',
-                                border: volumeChoice === 'existing' ? '1px solid var(--primary)' : '1px solid var(--glass-border)',
-                                borderRadius: '8px',
-                                padding: '16px',
-                                cursor: 'pointer',
-                                textAlign: 'center'
-                            }}
+                            className={`${styles.choiceCard} ${volumeChoice === 'existing' ? styles.choiceCardActive : ''}`}
                         >
-                            <FolderKanban size={24} color={volumeChoice === 'existing' ? 'var(--primary)' : 'var(--text-muted)'} style={{ margin: '0 auto 8px' }} />
-                            <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '14px' }}>[ Select Existing Volume ]</div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                {seriesVolumes.length} volume(s) available
-                            </div>
+                            <FolderKanban size={24} />
+                            <div className={styles.choiceTitle}>Existing Volume</div>
+                            <div className={styles.choiceDesc}>{seriesVolumes.length} available</div>
                         </div>
 
                         <div
                             onClick={() => setVolumeChoice('new')}
-                            style={{
-                                background: volumeChoice === 'new' ? 'rgba(230, 57, 70, 0.15)' : 'rgba(255,255,255,0.03)',
-                                border: volumeChoice === 'new' ? '1px solid var(--primary)' : '1px solid var(--glass-border)',
-                                borderRadius: '8px',
-                                padding: '16px',
-                                cursor: 'pointer',
-                                textAlign: 'center'
-                            }}
+                            className={`${styles.choiceCard} ${volumeChoice === 'new' ? styles.choiceCardActive : ''}`}
                         >
-                            <Plus size={24} color={volumeChoice === 'new' ? 'var(--primary)' : 'var(--text-muted)'} style={{ margin: '0 auto 8px' }} />
-                            <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '14px' }}>Create New Volume</div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                Create new volume compilation
-                            </div>
+                            <Plus size={24} />
+                            <div className={styles.choiceTitle}>New Volume</div>
+                            <div className={styles.choiceDesc}>Create one now</div>
                         </div>
                     </div>
 
@@ -699,18 +702,19 @@ export const BookWizard: React.FC = () => {
             {currentStep === 3 && (
                 <div className={styles.stepCard}>
                     <div className={styles.stepCardHeader}>
-                        <h2 className={styles.stepCardTitle}>Step 3 — Book Metadata & Artwork</h2>
+                        <h2 className={styles.stepCardTitle}>Step 3 — Book Info</h2>
                         <p className={styles.stepCardSubtitle}>
-                            Display title, author, demographic categories, synopsis, and cover assets.
+                            Basic book details and cover image. The cover is uploaded right after the book is created.
                         </p>
                     </div>
 
                     <div className={uiStyles.formGrid}>
                         <div className={uiStyles.formGroup}>
-                            <label className={uiStyles.formLabel}>Book Title (English / Main Display) *</label>
+                            <label className={uiStyles.formLabel}>Book Title *</label>
                             <input
                                 type="text"
                                 className={uiStyles.formInput}
+                                placeholder="e.g. The Last Ember - Volume 1"
                                 value={bookTitle}
                                 onChange={(e) => setBookTitle(e.target.value)}
                                 required
@@ -718,11 +722,11 @@ export const BookWizard: React.FC = () => {
                         </div>
 
                         <div className={uiStyles.formGroup}>
-                            <label className={uiStyles.formLabel}>Japanese Title (Original Kanzenban)</label>
+                            <label className={uiStyles.formLabel}>Japanese Title</label>
                             <input
                                 type="text"
                                 className={uiStyles.formInput}
-                                placeholder="e.g. シャッターファースト"
+                                placeholder="Optional"
                                 value={japaneseTitle}
                                 onChange={(e) => setJapaneseTitle(e.target.value)}
                             />
@@ -731,26 +735,19 @@ export const BookWizard: React.FC = () => {
 
                     <div className={uiStyles.formGrid}>
                         <div className={uiStyles.formGroup}>
-                            <label className={uiStyles.formLabel}>URL Slug</label>
-                            <input
-                                type="text"
-                                className={uiStyles.formInput}
-                                value={slug}
-                                onChange={(e) => setSlug(e.target.value)}
-                            />
+                            <label className={uiStyles.formLabel}>URL Slug (automatic)</label>
+                            <input type="text" className={uiStyles.formInput} value={slug} readOnly disabled />
                         </div>
 
                         <div className={uiStyles.formGroup}>
                             <label className={uiStyles.formLabel}>Language</label>
-                            <select
-                                className={uiStyles.formSelect}
-                                value={languageId}
-                                onChange={(e) => setLanguageId(e.target.value)}
-                            >
-                                {languages.map(lang => (
-                                    <option key={lang.id} value={lang.id}>{lang.name} ({lang.code})</option>
-                                ))}
-                            </select>
+                            <input
+                                type="text"
+                                className={uiStyles.formInput}
+                                value={languages.find(l => l.id === languageId)?.name || 'English'}
+                                readOnly
+                                disabled
+                            />
                         </div>
                     </div>
 
@@ -760,6 +757,7 @@ export const BookWizard: React.FC = () => {
                             <input
                                 type="text"
                                 className={uiStyles.formInput}
+                                placeholder="Optional"
                                 value={author}
                                 onChange={(e) => setAuthor(e.target.value)}
                             />
@@ -770,6 +768,7 @@ export const BookWizard: React.FC = () => {
                             <input
                                 type="text"
                                 className={uiStyles.formInput}
+                                placeholder="Optional"
                                 value={artist}
                                 onChange={(e) => setArtist(e.target.value)}
                             />
@@ -778,7 +777,7 @@ export const BookWizard: React.FC = () => {
 
                     <div className={uiStyles.formGrid}>
                         <div className={uiStyles.formGroup}>
-                            <label className={uiStyles.formLabel}>Primary Category</label>
+                            <label className={uiStyles.formLabel}>Primary Category *</label>
                             <select
                                 className={uiStyles.formSelect}
                                 value={categoryId}
@@ -792,87 +791,15 @@ export const BookWizard: React.FC = () => {
 
                         <div className={uiStyles.formGroup}>
                             <label className={uiStyles.formLabel}>Release Date</label>
-                            <input
-                                type="date"
-                                className={uiStyles.formInput}
-                                value={releaseDate}
-                                onChange={(e) => setReleaseDate(e.target.value)}
-                            />
+                            <input type="date" className={uiStyles.formInput} value={releaseDate} readOnly disabled />
                         </div>
                     </div>
 
-                    <div className={uiStyles.formGroup}>
-                        <label className={uiStyles.formLabel}>Plot Summary / Synopsis</label>
-                        <textarea
-                            className={uiStyles.formTextarea}
-                            rows={3}
-                            placeholder="Detailed synopsis for reader catalog..."
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                        />
-                    </div>
-
-                    <div className={uiStyles.formGroup}>
-                        <label className={uiStyles.formLabel}>Genres (Click to toggle)</label>
-                        <div className={styles.chipsContainer}>
-                            {genres.map(g => {
-                                const selected = selectedGenreIds.includes(g.id);
-                                return (
-                                    <div
-                                        key={g.id}
-                                        className={`${styles.chip} ${selected ? styles.chipSelected : ''}`}
-                                        onClick={() => {
-                                            if (selected) setSelectedGenreIds(selectedGenreIds.filter(id => id !== g.id));
-                                            else setSelectedGenreIds([...selectedGenreIds, g.id]);
-                                        }}
-                                    >
-                                        <span>{g.name}</span>
-                                        {selected && <X size={12} className={styles.chipRemoveBtn} />}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className={uiStyles.formGroup}>
-                        <label className={uiStyles.formLabel}>Content Tags</label>
-                        <div className={styles.chipsContainer}>
-                            {tags.map(t => {
-                                const selected = selectedTagIds.includes(t.id);
-                                return (
-                                    <div
-                                        key={t.id}
-                                        className={`${styles.chip} ${selected ? styles.chipSelected : ''}`}
-                                        onClick={() => {
-                                            if (selected) setSelectedTagIds(selectedTagIds.filter(id => id !== t.id));
-                                            else setSelectedTagIds([...selectedTagIds, t.id]);
-                                        }}
-                                    >
-                                        <span>#{t.name}</span>
-                                        {selected && <X size={12} className={styles.chipRemoveBtn} />}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className={styles.mediaRow}>
-                        <FileUploadDropzone
-                            label="Cover Image (Portrait)"
-                            currentUrl={coverImage}
-                            onFileSelected={(url) => setCoverImage(url)}
-                        />
-                        <FileUploadDropzone
-                            label="Banner Artwork (Landscape)"
-                            currentUrl={bannerImage}
-                            onFileSelected={(url) => setBannerImage(url)}
-                        />
-                        <FileUploadDropzone
-                            label="Thumbnail (Square / Mobile)"
-                            currentUrl={thumbnailImage}
-                            onFileSelected={(url) => setThumbnailImage(url)}
-                        />
-                    </div>
+                    <BookCoverUploader
+                        pendingFile={pendingCoverFile}
+                        onFileSelected={setPendingCoverFile}
+                        onError={setErrorMessage}
+                    />
                 </div>
             )}
 
@@ -1144,50 +1071,16 @@ export const BookWizard: React.FC = () => {
 
                             <div className={uiStyles.formGrid}>
                                 <div className={uiStyles.formGroup}>
-                                    <label className={uiStyles.formLabel}>PDF File Name *</label>
+                                    <label className={uiStyles.formLabel}>PDF File</label>
                                     <input
                                         type="text"
                                         className={uiStyles.formInput}
                                         value={currentChapter.pdfFileName}
-                                        onChange={(e) => {
-                                            const updated = [...chapters];
-                                            updated[activeChapterIndex].pdfFileName = e.target.value;
-                                            setChapters(updated);
-                                        }}
-                                        placeholder="e.g. chapter-001.pdf"
+                                        readOnly
+                                        placeholder="No PDF attached yet"
                                     />
-                                </div>
-
-                                <div className={uiStyles.formGroup}>
-                                    <label className={uiStyles.formLabel}>Total PDF Pages *</label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        className={uiStyles.formInput}
-                                        value={currentChapter.pdfPageCount}
-                                        onChange={(e) => {
-                                            const updated = [...chapters];
-                                            updated[activeChapterIndex].pdfPageCount = parseInt(e.target.value) || 1;
-                                            setChapters(updated);
-                                        }}
-                                    />
-                                </div>
-
-                                <div className={uiStyles.formGroup}>
-                                    <label className={uiStyles.formLabel}>File Size (Bytes)</label>
-                                    <input
-                                        type="number"
-                                        min={1024}
-                                        className={uiStyles.formInput}
-                                        value={currentChapter.pdfFileSize}
-                                        onChange={(e) => {
-                                            const updated = [...chapters];
-                                            updated[activeChapterIndex].pdfFileSize = parseInt(e.target.value) || 1024;
-                                            setChapters(updated);
-                                        }}
-                                    />
-                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                        Approx. {(currentChapter.pdfFileSize / (1024 * 1024)).toFixed(1)} MB
+                                    <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                                        {(currentChapter.pdfFileSize / (1024 * 1024)).toFixed(1)} MB · {currentChapter.pdfPageCount} pages
                                     </p>
                                 </div>
                             </div>
@@ -1212,11 +1105,7 @@ export const BookWizard: React.FC = () => {
                         {/* Summary Card */}
                         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '20px' }}>
                             <div style={{ display: 'flex', gap: '14px', marginBottom: '16px' }}>
-                                <img
-                                    src={coverImage}
-                                    alt={bookTitle}
-                                    style={{ width: '70px', height: '100px', objectFit: 'cover', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}
-                                />
+                                {coverPreview ? (<img src={coverPreview} alt={bookTitle} style={{ width: '70px', height: '100px', objectFit: 'cover', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }} />) : (<div style={{ width: '70px', height: '100px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: 'var(--text-muted)' }}>No cover</div>)}
                                 <div>
                                     <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-text-primary)' }}>{bookTitle}</h3>
                                     {japaneseTitle && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{japaneseTitle}</div>}
@@ -1266,7 +1155,7 @@ export const BookWizard: React.FC = () => {
                                     <CheckCircle2 size={16} />
                                     <span>Book title & metadata complete</span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: coverImage ? '#10b981' : '#f59e0b' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: pendingCoverFile ? '#10b981' : '#f59e0b' }}>
                                     <CheckCircle2 size={16} />
                                     <span>Cover artwork verified</span>
                                 </div>

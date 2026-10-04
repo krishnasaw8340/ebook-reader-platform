@@ -50,34 +50,12 @@ export const mapVolumeFromApi = (item: any): Volume => {
     };
 };
 
-const getFallbackVolumes = (seriesId?: string, search?: string): Volume[] => {
-    try {
-        const saved = localStorage.getItem(LS_VOLUMES);
-        let list: Volume[] = saved ? JSON.parse(saved) : [];
-        if (seriesId) {
-            list = list.filter((v) => (v.seriesId === seriesId || v.series_id === seriesId));
-        }
-        if (search && search.trim()) {
-            const q = search.toLowerCase().trim();
-            list = list.filter(
-                (v) =>
-                    (v.title && v.title.toLowerCase().includes(q)) ||
-                    (v.description && v.description.toLowerCase().includes(q)) ||
-                    (v.slug && v.slug.toLowerCase().includes(q))
-            );
-        }
-        return list.map(mapVolumeFromApi);
-    } catch {
-        return [];
-    }
+const getFallbackVolumes = (_seriesId?: string, _search?: string): Volume[] => {
+    return [];
 };
 
-const saveFallbackVolumes = (list: Volume[]) => {
-    try {
-        localStorage.setItem(LS_VOLUMES, JSON.stringify(list));
-    } catch {
-        // Ignore localStorage quota errors
-    }
+const saveFallbackVolumes = (_list: Volume[]) => {
+    // No-op: only database data is maintained
 };
 
 /**
@@ -115,16 +93,10 @@ export const volumeService = {
                 ? (res.data as any).data
                 : [];
 
-            const normalized = rawList.map(mapVolumeFromApi);
-
-            if (normalized.length > 0 && !query.search && !query.seriesId) {
-                saveFallbackVolumes(normalized);
-            }
-
-            return normalized;
+            return rawList.map(mapVolumeFromApi);
         } catch (error) {
-            console.warn('[volumeService.getAll] Falling back to cached volumes:', error);
-            return getFallbackVolumes(query.seriesId, query.search);
+            console.warn('[volumeService.getAll] API request failed:', error);
+            return [];
         }
     },
 
@@ -160,14 +132,13 @@ export const volumeService = {
             };
         } catch (error) {
             console.warn('[volumeService.getPaginated] API request failed:', error);
-            const fallback = getFallbackVolumes(query.seriesId, query.search);
             return {
-                data: fallback,
+                data: [],
                 meta: {
-                    total: fallback.length,
+                    total: 0,
                     page: 1,
                     limit: 20,
-                    totalPages: 1,
+                    totalPages: 0,
                     hasNextPage: false,
                     hasPrevPage: false,
                 },
@@ -184,9 +155,8 @@ export const volumeService = {
             const res = await api.get<any>(`/volumes/${encodeURIComponent(idOrSlug)}`);
             return mapVolumeFromApi(res.data);
         } catch (error) {
-            console.warn(`[volumeService.getById] Failed fetching volume "${idOrSlug}":`, error);
-            const fallbackList = getFallbackVolumes();
-            return fallbackList.find((v) => v.id === idOrSlug || v.slug === idOrSlug);
+            console.warn(`[volumeService.getById] Volume "${idOrSlug}" not found:`, error);
+            return undefined;
         }
     },
 
@@ -213,13 +183,7 @@ export const volumeService = {
         };
 
         const res = await api.post<any>('/volumes', payload);
-        const created = mapVolumeFromApi(res.data);
-
-        // Update local cache
-        const currentList = getFallbackVolumes();
-        saveFallbackVolumes([created, ...currentList.filter((v) => v.id !== created.id)]);
-
-        return created;
+        return mapVolumeFromApi(res.data);
     },
 
     /**
@@ -248,13 +212,7 @@ export const volumeService = {
         if (data.publishedAt !== undefined) payload.publishedAt = data.publishedAt ?? undefined;
 
         const res = await api.patch<any>(`/volumes/${encodeURIComponent(id)}`, payload);
-        const updated = mapVolumeFromApi(res.data);
-
-        // Update local cache
-        const currentList = getFallbackVolumes();
-        saveFallbackVolumes(currentList.map((v) => (v.id === id ? updated : v)));
-
-        return updated;
+        return mapVolumeFromApi(res.data);
     },
 
     /**
@@ -263,9 +221,5 @@ export const volumeService = {
      */
     delete: async (id: string): Promise<void> => {
         await api.delete(`/volumes/${encodeURIComponent(id)}`);
-
-        // Update local cache
-        const currentList = getFallbackVolumes();
-        saveFallbackVolumes(currentList.filter((v) => v.id !== id));
     }
 };

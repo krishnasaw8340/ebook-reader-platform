@@ -5,6 +5,7 @@ import { useUser } from '../../contexts/UserContext';
 import { BookCard } from '../../components/common/BookCard';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import { RechargeModal } from '../../components/common/RechargeModal';
+import { getSeriesCover, getBookCover, getFallbackCoverUrl } from '../../utils/coverUtils';
 import styles from './BookDetails.module.css';
 
 export const BookDetails: React.FC = () => {
@@ -77,7 +78,14 @@ export const BookDetails: React.FC = () => {
           {/* Sidebar: Cover + Actions */}
           <div className={styles.sidebar}>
             <div className={styles.coverWrapper}>
-              <img src={series.cover_image || ''} alt={series.title} />
+              <img 
+                src={getSeriesCover(series, books)} 
+                alt={series.title}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = getFallbackCoverUrl(series.title, 'Manga');
+                }}
+              />
             </div>
             <div className={styles.sidebarActions}>
               <button className={styles.btnRead} onClick={handleReadNow} disabled={!currentBook}>
@@ -222,7 +230,15 @@ export const BookDetails: React.FC = () => {
                     </div>
                   </div>
                   <div className={styles.previewContainer}>
-                    <img src={currentBook.cover_image || ''} alt="Volume Cover" style={{ maxHeight: '280px', objectFit: 'contain' }} />
+                    <img 
+                      src={getBookCover(currentBook, series)} 
+                      alt={currentBook.title || 'Volume Cover'} 
+                      style={{ maxHeight: '280px', objectFit: 'contain' }}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = getFallbackCoverUrl(currentBook.title, 'Volume');
+                      }}
+                    />
                   </div>
                 </div>
               )}

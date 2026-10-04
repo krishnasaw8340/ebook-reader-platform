@@ -73,32 +73,12 @@ export const mapChapterFromApi = (item: any): Chapter => {
     };
 };
 
-const getFallbackChapters = (bookId?: string, search?: string): Chapter[] => {
-    try {
-        const raw = localStorage.getItem(LS_CHAPTERS);
-        let list: Chapter[] = raw ? JSON.parse(raw) : [];
-
-        if (bookId) {
-            list = list.filter((c) => c.book_id === bookId || c.bookId === bookId);
-        }
-
-        if (search) {
-            const q = search.toLowerCase();
-            list = list.filter((c) => c.title.toLowerCase().includes(q));
-        }
-
-        return list.sort((a, b) => (a.sortOrder ?? a.sort_order ?? 0) - (b.sortOrder ?? b.sort_order ?? 0));
-    } catch {
-        return [];
-    }
+const getFallbackChapters = (_bookId?: string, _search?: string): Chapter[] => {
+    return [];
 };
 
-const saveFallbackChapters = (chapters: Chapter[]) => {
-    try {
-        localStorage.setItem(LS_CHAPTERS, JSON.stringify(chapters));
-    } catch {
-        // Ignored
-    }
+const saveFallbackChapters = (_chapters: Chapter[]) => {
+    // No-op: only real database data is maintained
 };
 
 export const chapterService = {
@@ -127,16 +107,10 @@ export const chapterService = {
                 ? (res.data as any).data
                 : [];
 
-            const normalized = rawList.map(mapChapterFromApi);
-
-            if (normalized.length > 0 && !query.search && !query.bookId) {
-                saveFallbackChapters(normalized);
-            }
-
-            return normalized;
+            return rawList.map(mapChapterFromApi);
         } catch (error) {
-            console.warn('[chapterService.getAll] Falling back to cached chapters:', error);
-            return getFallbackChapters(query.bookId, query.search);
+            console.warn('[chapterService.getAll] API request failed:', error);
+            return [];
         }
     },
 
@@ -173,14 +147,13 @@ export const chapterService = {
             };
         } catch (error) {
             console.warn('[chapterService.getPaginated] API request failed:', error);
-            const fallback = getFallbackChapters(query.bookId, query.search);
             return {
-                data: fallback,
+                data: [],
                 meta: {
-                    total: fallback.length,
+                    total: 0,
                     page: 1,
                     limit: 20,
-                    totalPages: 1,
+                    totalPages: 0,
                     hasNextPage: false,
                     hasPrevPage: false,
                 },
@@ -197,9 +170,8 @@ export const chapterService = {
             const res = await api.get<any>(`/chapters/${encodeURIComponent(id)}`);
             return mapChapterFromApi(res.data);
         } catch (error) {
-            console.warn(`[chapterService.getById] Failed fetching chapter "${id}":`, error);
-            const fallbackList = getFallbackChapters();
-            return fallbackList.find((c) => c.id === id);
+            console.warn(`[chapterService.getById] Chapter "${id}" not found:`, error);
+            return undefined;
         }
     },
 
@@ -232,13 +204,7 @@ export const chapterService = {
         };
 
         const res = await api.post<any>('/chapters', payload);
-        const created = mapChapterFromApi(res.data);
-
-        // Update local cache
-        const currentList = getFallbackChapters();
-        saveFallbackChapters([created, ...currentList.filter((c) => c.id !== created.id)]);
-
-        return created;
+        return mapChapterFromApi(res.data);
     },
 
     /**
@@ -274,13 +240,7 @@ export const chapterService = {
         if (data.publishedAt !== undefined) payload.publishedAt = data.publishedAt;
 
         const res = await api.patch<any>(`/chapters/${encodeURIComponent(id)}`, payload);
-        const updated = mapChapterFromApi(res.data);
-
-        // Update local cache
-        const currentList = getFallbackChapters();
-        saveFallbackChapters(currentList.map((c) => (c.id === id ? updated : c)));
-
-        return updated;
+        return mapChapterFromApi(res.data);
     },
 
     /**
@@ -351,10 +311,7 @@ export const chapterService = {
             `/chapters/${encodeURIComponent(chapterId)}/content/complete`,
             data
         );
-        const updated = mapChapterFromApi(res.data);
-        const currentList = getFallbackChapters();
-        saveFallbackChapters(currentList.map((c) => (c.id === chapterId ? updated : c)));
-        return updated;
+        return mapChapterFromApi(res.data);
     },
 
     /**
@@ -372,9 +329,5 @@ export const chapterService = {
      */
     delete: async (id: string): Promise<void> => {
         await api.delete(`/chapters/${encodeURIComponent(id)}`);
-
-        // Update local cache
-        const currentList = getFallbackChapters();
-        saveFallbackChapters(currentList.filter((c) => c.id !== id));
     }
 };

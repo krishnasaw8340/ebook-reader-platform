@@ -12,12 +12,17 @@ import {
   Lock,
   Compass,
   Layout,
-  FileText
+  FileText,
+  UploadCloud,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../contexts/UserContext';
 import { RechargeModal } from '../../components/common/RechargeModal';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs';
+import { getChapterPdfUrl, storeChapterPdf } from '../../utils/pdfStorage';
+import { getFallbackCoverUrl, getBookCover } from '../../utils/coverUtils';
 import styles from './Reader.module.css';
 
 export const Reader: React.FC = () => {
@@ -57,6 +62,45 @@ export const Reader: React.FC = () => {
   const pdfFileName = chapter ? (chapter.pdfFileName ?? chapter.pdf_file_name ?? 'chapter.pdf') : 'chapter.pdf';
 
   const isSeriesBookmarked = series ? books.filter(b => b.series_id === series.id).some(b => userLibrary.some(lib => lib.book_id === b.id)) : false;
+
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [attachingPdf, setAttachingPdf] = useState(false);
+  const readerPdfInputRef = useRef<HTMLInputElement>(null);
+
+  // Load PDF from IndexedDB if available
+  useEffect(() => {
+    let currentUrl: string | null = null;
+    const loadPdf = async () => {
+      if (!chapter) return;
+      const url = await getChapterPdfUrl(chapter.id);
+      if (url) {
+        currentUrl = url;
+        setPdfBlobUrl(url);
+      } else {
+        setPdfBlobUrl(null);
+      }
+    };
+    loadPdf();
+    return () => {
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+    };
+  }, [chapter?.id]);
+
+  const handleReaderPdfSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !chapter) return;
+    setAttachingPdf(true);
+    try {
+      await storeChapterPdf(chapter.id, file, file.name);
+      const url = URL.createObjectURL(file);
+      setPdfBlobUrl(url);
+    } catch (err) {
+      console.warn('Failed to save chapter PDF:', err);
+    } finally {
+      setAttachingPdf(false);
+      if (readerPdfInputRef.current) readerPdfInputRef.current.value = '';
+    }
+  };
 
   // Auto-hide HUD on scroll inside vertical mode
   useEffect(() => {
@@ -182,8 +226,21 @@ export const Reader: React.FC = () => {
             </div>
 
             <div className={styles.headerRight}>
-              <div className={styles.metaBadge} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#38bdf8' }}>
-                <FileText size={13} /> {pdfFileName}
+              <input
+                type="file"
+                ref={readerPdfInputRef}
+                accept="application/pdf"
+                style={{ display: 'none' }}
+                onChange={handleReaderPdfSelect}
+              />
+              <div 
+                className={styles.metaBadge} 
+                onClick={() => readerPdfInputRef.current?.click()}
+                title="Click to attach or replace chapter PDF file"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: pdfBlobUrl ? '#10b981' : '#38bdf8', cursor: 'pointer' }}
+              >
+                {pdfBlobUrl ? <CheckCircle2 size={13} /> : <UploadCloud size={13} />}
+                <span>{pdfBlobUrl ? `${pdfFileName} (Loaded)` : pdfFileName}</span>
               </div>
 
               {/* Bookmark Toggle */}
@@ -253,26 +310,90 @@ export const Reader: React.FC = () => {
           </div>
         ) : (
           // Render Chapter PDF Continuous Viewport
-          <div className={styles.pagesContainer}>
-            {readingMode === 'vertical' ? (
-              // Continuous vertical scrollable reader
-              pdfPagesList.map((pgNumber) => (
-                <div key={pgNumber} className={styles.pageItem}>
-                  <div className={styles.pageLoader}><Compass className={styles.spin} /> PDF Page {pgNumber} loading...</div>
-                  <img 
-                    src={book.cover_image || `https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=800`}
-                    alt={`PDF Page ${pgNumber}`} 
-                    onLoad={(e) => e.currentTarget.parentElement?.classList.add(styles.loaded)}
-                    onError={(e) => {
-                      e.currentTarget.src = `https://placehold.co/600x900/121212/ffffff?text=${encodeURIComponent(chapter.title)}+Page+${pgNumber}`;
-                      e.currentTarget.parentElement?.classList.add(styles.loaded);
-                    }}
-                  />
-                  <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', padding: '6px' }}>
-                    {pdfFileName} • Page {pgNumber} of {totalPdfPages}
+          <div className={styles.pagesContainer} style={{ width: '100%', minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {pdfBlobUrl ? (
+              // Embedded native PDF viewer for the real uploaded PDF
+              <div 
+                style={{ 
+                  width: '100%', 
+                  height: 'calc(100vh - 120px)', 
+                  maxWidth: zoomLevel === 'large' ? '1280px' : zoomLevel === 'fit-width' ? '960px' : '760px', 
+                  margin: '0 auto', 
+                  display: 'flex', 
+                  flexDirection: 'column' 
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <iframe
+                  src={`${pdfBlobUrl}#toolbar=0&navpanes=0`}
+                  title={chapter.title}
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    border: '1px solid var(--color-border)', 
+                    borderRadius: '8px', 
+                    background: '#ffffff', 
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.5)' 
+                  }}
+                />
+              </div>
+            ) : readingMode === 'vertical' ? (
+              // If PDF blob is pending, offer direct PDF attach or continuous preview
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div 
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    gap: '16px', 
+                    width: '100%', 
+                    maxWidth: '640px', 
+                    margin: '30px auto', 
+                    padding: '32px 24px', 
+                    background: 'var(--color-surface)', 
+                    border: '1px solid var(--color-border)', 
+                    borderRadius: '12px', 
+                    textAlign: 'center',
+                    boxShadow: 'var(--color-shadow-sm)'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FileText size={32} />
                   </div>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-primary)', marginBottom: '6px' }}>
+                      {chapter.title}
+                    </h3>
+                    <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', maxWidth: '440px', margin: '0 auto' }}>
+                      Configured PDF asset: <strong style={{ color: 'var(--color-text-primary)' }}>{pdfFileName}</strong>.
+                      Attach your PDF file to read it directly inside KuroYomi.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => readerPdfInputRef.current?.click()}
+                    disabled={attachingPdf}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', fontSize: '13px', fontWeight: 700, borderRadius: '8px' }}
+                  >
+                    <UploadCloud size={16} /> {attachingPdf ? 'Saving PDF...' : 'Attach & Open PDF Now'}
+                  </button>
                 </div>
-              ))
+
+                {pdfPagesList.map((pgNumber) => (
+                  <div key={pgNumber} className={styles.pageItem}>
+                    <img 
+                      src={getFallbackCoverUrl(`${chapter.title} - Page ${pgNumber}`, 'Manga Reader')}
+                      alt={`PDF Page ${pgNumber}`} 
+                      className={styles.loaded}
+                    />
+                    <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', padding: '6px' }}>
+                      {pdfFileName} • Page {pgNumber} of {totalPdfPages}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               // Horizontal single page swipe viewport
               <div className={styles.singlePageWrapper} onClick={(e) => e.stopPropagation()}>
@@ -283,7 +404,7 @@ export const Reader: React.FC = () => {
                 
                 <div className={styles.horizontalPageItem}>
                   <img 
-                    src={book.cover_image || `https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=800`}
+                    src={getFallbackCoverUrl(`${chapter.title} - Page ${pageNum}`, 'Manga Reader')}
                     alt={`PDF Page ${pageNum}`} 
                   />
                   <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', padding: '6px' }}>

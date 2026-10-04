@@ -16,7 +16,12 @@ import {
     AlertCircle,
     Clock,
     Lock,
-    Unlock
+    Unlock,
+    Sparkles,
+    UploadCloud,
+    Globe,
+    Tag,
+    ChevronRight
 } from 'lucide-react';
 import {
     adminBookService,
@@ -24,6 +29,8 @@ import {
     adminVolumeService,
     adminChapterService
 } from '../../services/admin/adminServices';
+import { chapterService } from '../../services/chapterService';
+import { storeChapterPdf } from '../../utils/pdfStorage';
 import type { Book, BookSeries, Volume, Chapter, ChapterPricingModel, PricingModel } from '../../types';
 import {
     PageHeader,
@@ -36,6 +43,7 @@ import {
     ConfirmDialog,
     FileUploadDropzone
 } from '../components/AdminUI';
+import { BookCoverUploader } from './BookCoverUploader';
 import styles from './AdminBookDetail.module.css';
 import uiStyles from '../components/AdminUI.module.css';
 
@@ -76,8 +84,6 @@ export const AdminBookDetail: React.FC = () => {
 
     // Media Form State (Media Tab)
     const [formCover, setFormCover] = useState('');
-    const [formBanner, setFormBanner] = useState('');
-    const [formThumbnail, setFormThumbnail] = useState('');
 
     // Chapter Modal
     const [chapterModalOpen, setChapterModalOpen] = useState(false);
@@ -115,9 +121,7 @@ export const AdminBookDetail: React.FC = () => {
             setFormDefaultChapterCoinCost(b.default_chapter_coin_cost ?? b.defaultChapterCoinCost ?? 2);
             setFormFreeChapters(b.default_free_chapters || 0);
             setFormIsPremium(Boolean(b.is_premium));
-            setFormCover(b.cover_image || '');
-            setFormBanner(b.banner_image || '');
-            setFormThumbnail(b.thumbnail_image || '');
+            setFormCover(b.coverUrl || '');
 
             const [s, vList, cList] = await Promise.all([
                 adminSeriesService.getById(b.series_id),
@@ -187,25 +191,6 @@ export const AdminBookDetail: React.FC = () => {
         }
     };
 
-    // Save Media
-    const handleSaveMedia = async () => {
-        if (!id) return;
-        setSaving(true);
-        try {
-            const updated = await adminBookService.update(id, {
-                cover_image: formCover,
-                banner_image: formBanner,
-                thumbnail_image: formThumbnail
-            });
-            setBook(updated);
-            setSuccessMessage('Media artwork assets updated.');
-        } catch (err: any) {
-            setErrorMessage(err.message || 'Failed to update media.');
-        } finally {
-            setSaving(false);
-        }
-    };
-
     // Chapter Modal Handlers
     const openCreateChapter = () => {
         setEditingChapter(null);
@@ -264,6 +249,41 @@ export const AdminBookDetail: React.FC = () => {
         }
     };
 
+    const handleChapterPdfUpload = async (ch: Chapter, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setSaving(true);
+        try {
+            await storeChapterPdf(ch.id, file, file.name);
+            await adminChapterService.update(ch.id, {
+                pdfFileName: file.name,
+                pdfFileSize: file.size,
+                contentStatus: 'READY'
+            });
+            try {
+                const { uploadUrl, key } = await chapterService.getUploadUrl(ch.id, {
+                    fileName: file.name,
+                    fileSize: file.size,
+                    contentType: file.type || 'application/pdf',
+                });
+                await chapterService.uploadPdfToS3(uploadUrl, file);
+                await chapterService.uploadComplete(ch.id, {
+                    key,
+                    fileSize: file.size,
+                    pageCount: ch.pdfPageCount || 30
+                });
+            } catch (s3Err) {
+                console.warn('S3 remote sync notice:', s3Err);
+            }
+            setSuccessMessage(`PDF "${file.name}" attached successfully to Chapter ${ch.chapterNumber ?? ch.chapter_no}. Ready for reader.`);
+            loadBookData();
+        } catch (err: any) {
+            setErrorMessage(err.message || 'Failed to attach PDF.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     // Delete confirmation
     const handleConfirmDelete = async () => {
         if (!deleteTarget) return;
@@ -304,69 +324,181 @@ export const AdminBookDetail: React.FC = () => {
     }
 
     return (
-        <div>
+        <div className={styles.container}>
             {/* Header with Hierarchy Context */}
-            <div style={{ marginBottom: '16px' }}>
+            <div className={styles.backNavRow}>
                 <button
-                    className={uiStyles.btnSecondary}
+                    className={styles.backBtn}
                     onClick={() => navigate(series ? `/admin/series/${series.id}` : '/admin/series')}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 12px' }}
                 >
                     <ArrowLeft size={14} /> Back to {series?.title || 'Series'}
                 </button>
+                <div className={styles.breadcrumbPath}>
+                    <span className={styles.breadcrumbLink} onClick={() => navigate('/admin')}>Admin</span>
+                    <ChevronRight size={12} />
+                    <span className={styles.breadcrumbLink} onClick={() => navigate('/admin/series')}>Catalog</span>
+                    {series && (
+                        <>
+                            <ChevronRight size={12} />
+                            <span className={styles.breadcrumbLink} onClick={() => navigate(`/admin/series/${series.id}`)}>{series.title}</span>
+                        </>
+                    )}
+                    <ChevronRight size={12} />
+                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{book.title}</span>
+                </div>
             </div>
 
-            <PageHeader
-                title={book.title}
-                subtitle={`${series?.title ? `Franchise: ${series.title}` : ''} ${volume ? `• Vol. ${volume.volumeNumber ?? (volume as any).volume_number}: ${volume.title}` : '• Standalone Book'}`}
-                breadcrumbs={[
-                    { label: 'Admin', path: '/admin' },
-                    { label: series?.title || 'Series', path: series ? `/admin/series/${series.id}` : '/admin/series' },
-                    { label: book.title }
-                ]}
-                actions={
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                            className={uiStyles.btnSecondary}
-                            onClick={() => navigate(`/admin/chapters?bookId=${book.id}`)}
-                        >
-                            <FileText size={14} /> Manage Chapter PDFs
-                        </button>
-                        <button
-                            className={uiStyles.btnDanger}
-                            onClick={() => setDeleteTarget('book')}
-                        >
-                            <Trash2 size={14} /> Delete Book
-                        </button>
+            {/* Book Hero Card */}
+            <div className={styles.heroCard}>
+                <div
+                    className={styles.coverContainer}
+                    onClick={() => setActiveTab('media')}
+                    title="Click to view or upload cover artwork"
+                >
+                    {book.coverUrl ? (
+                        <img src={book.coverUrl} alt={book.title} className={styles.coverThumb} />
+                    ) : (
+                        <div className={styles.coverPlaceholder}>
+                            <ImageIcon size={26} />
+                            <span>Upload Cover</span>
+                        </div>
+                    )}
+                    <div className={styles.coverOverlay}>
+                        <UploadCloud size={16} />
+                        <span>Change</span>
                     </div>
-                }
-            />
+                </div>
+
+                <div className={styles.heroContent}>
+                    <div className={styles.heroTopRow}>
+                        <div className={styles.heroBadges}>
+                            {series && (
+                                <span
+                                    className={styles.seriesBadge}
+                                    onClick={() => navigate(`/admin/series/${series.id}`)}
+                                    title="View parent series"
+                                >
+                                    📁 {series.title}
+                                </span>
+                            )}
+                            {volume && (
+                                <span className={styles.volumeBadge}>
+                                    Vol. {volume.volumeNumber ?? (volume as any).volume_number}: {volume.title}
+                                </span>
+                            )}
+                            <StatusBadge status={book.status} type={book.status === 'PUBLISHED' ? 'success' : 'warning'} />
+                            {book.is_premium && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.12)', padding: '2px 8px', borderRadius: '4px' }}>
+                                    <Sparkles size={11} /> Premium
+                                </span>
+                            )}
+                        </div>
+
+                        <div className={styles.heroActions}>
+                            {chapters.length > 0 && (
+                                <button
+                                    className={uiStyles.btnSecondary}
+                                    onClick={() => navigate(`/reader/${book.id}/${chapters[0].id}`)}
+                                    title="Preview in Manga Reader"
+                                >
+                                    <ExternalLink size={14} /> Read Book
+                                </button>
+                            )}
+                            <button
+                                className={uiStyles.btnPrimary}
+                                onClick={() => navigate(`/admin/chapters?bookId=${book.id}`)}
+                            >
+                                <FileText size={14} /> Manage Chapter PDFs
+                            </button>
+                            <button
+                                className={uiStyles.btnDanger}
+                                onClick={() => setDeleteTarget('book')}
+                                title="Delete this book"
+                            >
+                                <Trash2 size={14} /> Delete
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className={styles.heroTitleGroup}>
+                        <h1 className={styles.bookTitle}>{book.title}</h1>
+                        {book.japanese_title && (
+                            <div className={styles.japaneseTitle}>{book.japanese_title}</div>
+                        )}
+                    </div>
+
+                    <div className={styles.heroMetaChips}>
+                        <span className={styles.metaChip}>
+                            <Tag size={12} /> {book.category || 'Manga'}
+                        </span>
+                        <span className={styles.metaChip}>
+                            <Globe size={12} /> {book.language || 'English'}
+                        </span>
+                        {(book.author || book.artist) && (
+                            <span className={styles.metaChip}>
+                                By {book.author || 'Unknown'} {book.artist ? `· Art by ${book.artist}` : ''}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
 
             {successMessage && <SuccessBanner message={successMessage} />}
             {errorMessage && <ErrorBanner message={errorMessage} />}
 
-            {/* Quick KPI Banner */}
+            {/* Quick KPI Stat Cards Grid */}
             <div className={styles.kpiBanner}>
-                <div className={styles.kpiItem}>
-                    <div className={styles.kpiLabel}>Status</div>
-                    <div className={styles.kpiValue}>
-                        <StatusBadge status={book.status} type={book.status === 'PUBLISHED' ? 'success' : 'warning'} />
+                <div className={styles.kpiCard}>
+                    <div className={styles.kpiIconWrap} style={{ color: book.status === 'PUBLISHED' ? '#10b981' : '#f59e0b' }}>
+                        <CheckCircle2 size={20} />
+                    </div>
+                    <div className={styles.kpiTextGroup}>
+                        <div className={styles.kpiLabel}>Catalog Status</div>
+                        <div className={styles.kpiValue}>{book.status}</div>
+                        <div className={styles.kpiSub}>
+                            {book.status === 'PUBLISHED' ? 'Live in Reader Storefront' : 'Draft / Unpublished'}
+                        </div>
                     </div>
                 </div>
-                <div className={styles.kpiItem}>
-                    <div className={styles.kpiLabel}>Monetization Model</div>
-                    <div className={styles.kpiValue} style={{ color: '#ffd700', fontWeight: 700 }}>
-                        {book.pricing_model || 'PER_CHAPTER'}
+
+                <div className={styles.kpiCard}>
+                    <div className={styles.kpiIconWrap} style={{ color: '#ffd700' }}>
+                        <Coins size={20} />
+                    </div>
+                    <div className={styles.kpiTextGroup}>
+                        <div className={styles.kpiLabel}>Monetization Model</div>
+                        <div className={styles.kpiValue}>{book.pricing_model || 'PER_CHAPTER'}</div>
+                        <div className={styles.kpiSub}>
+                            {book.pricing_model === 'FREE' ? 'Entire volume free' : 'Chapter coin unlocks'}
+                        </div>
                     </div>
                 </div>
-                <div className={styles.kpiItem}>
-                    <div className={styles.kpiLabel}>Total Chapters</div>
-                    <div className={styles.kpiValue}>{chapters.length}</div>
+
+                <div className={styles.kpiCard}>
+                    <div className={styles.kpiIconWrap} style={{ color: '#38bdf8' }}>
+                        <FileText size={20} />
+                    </div>
+                    <div className={styles.kpiTextGroup}>
+                        <div className={styles.kpiLabel}>Total Chapters</div>
+                        <div className={styles.kpiValue}>{chapters.length} Chapter{chapters.length === 1 ? '' : 's'}</div>
+                        <div className={styles.kpiSub}>
+                            {chapters.filter(c => c.pdfFileName || (c as any).pdf_file_name).length} PDF asset{chapters.filter(c => c.pdfFileName || (c as any).pdf_file_name).length === 1 ? '' : 's'} linked
+                        </div>
+                    </div>
                 </div>
-                <div className={styles.kpiItem}>
-                    <div className={styles.kpiLabel}>Default Chapter Cost</div>
-                    <div className={styles.kpiValue} style={{ color: '#ffd700' }}>
-                        🪙 {formDefaultChapterCoinCost} Coins
+
+                <div className={styles.kpiCard}>
+                    <div className={styles.kpiIconWrap} style={{ color: '#a855f7' }}>
+                        {formDefaultChapterCoinCost > 0 ? <Lock size={20} /> : <Unlock size={20} />}
+                    </div>
+                    <div className={styles.kpiTextGroup}>
+                        <div className={styles.kpiLabel}>Default Chapter Price</div>
+                        <div className={styles.kpiValue}>
+                            {formDefaultChapterCoinCost > 0 ? `🪙 ${formDefaultChapterCoinCost} Coins` : 'FREE (0 Coins)'}
+                        </div>
+                        <div className={styles.kpiSub}>
+                            {formFreeChapters > 0 ? `${formFreeChapters} initial free chapters` : 'All chapters charged'}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -383,7 +515,8 @@ export const AdminBookDetail: React.FC = () => {
                     className={`${styles.tabItem} ${activeTab === 'chapters' ? styles.tabItemActive : ''}`}
                     onClick={() => setActiveTab('chapters')}
                 >
-                    <FileText size={16} /> Chapters & PDFs ({chapters.length})
+                    <FileText size={16} /> Chapters & PDFs
+                    <span className={styles.tabCounter}>{chapters.length}</span>
                 </button>
                 <button
                     className={`${styles.tabItem} ${activeTab === 'pricing' ? styles.tabItemActive : ''}`}
@@ -411,86 +544,115 @@ export const AdminBookDetail: React.FC = () => {
             {activeTab === 'overview' && (
                 <div className={styles.tabContentCard}>
                     <form onSubmit={handleSaveOverview}>
-                        <div className={uiStyles.formGrid}>
-                            <div className={uiStyles.formGroup}>
-                                <label className={uiStyles.formLabel}>Book Title (English / Display) *</label>
-                                <input
-                                    type="text"
-                                    className={uiStyles.formInput}
-                                    value={formTitle}
-                                    onChange={(e) => setFormTitle(e.target.value)}
-                                    required
-                                />
+                        <div className={styles.formSectionCard}>
+                            <div className={styles.sectionHeader}>
+                                <div>
+                                    <h3 className={styles.sectionTitle}>
+                                        <BookOpen size={16} /> Core Book Information
+                                    </h3>
+                                    <p className={styles.sectionSubtitle}>Primary display titles and synopsis</p>
+                                </div>
                             </div>
 
-                            <div className={uiStyles.formGroup}>
-                                <label className={uiStyles.formLabel}>Japanese Title (Romaji / Kanji)</label>
-                                <input
-                                    type="text"
-                                    className={uiStyles.formInput}
-                                    value={formJapaneseTitle}
-                                    onChange={(e) => setFormJapaneseTitle(e.target.value)}
-                                />
-                            </div>
-                        </div>
+                            <div className={uiStyles.formGrid}>
+                                <div className={uiStyles.formGroup}>
+                                    <label className={uiStyles.formLabel}>Book Title (English / Display) *</label>
+                                    <input
+                                        type="text"
+                                        className={uiStyles.formInput}
+                                        value={formTitle}
+                                        onChange={(e) => setFormTitle(e.target.value)}
+                                        required
+                                    />
+                                </div>
 
-                        <div className={uiStyles.formGroup}>
-                            <label className={uiStyles.formLabel}>Summary / Synopsis</label>
-                            <textarea
-                                className={uiStyles.formTextarea}
-                                rows={4}
-                                value={formSummary}
-                                onChange={(e) => setFormSummary(e.target.value)}
-                            />
-                        </div>
-
-                        <div className={uiStyles.formGrid}>
-                            <div className={uiStyles.formGroup}>
-                                <label className={uiStyles.formLabel}>Author (Original Story)</label>
-                                <input
-                                    type="text"
-                                    className={uiStyles.formInput}
-                                    value={formAuthor}
-                                    onChange={(e) => setFormAuthor(e.target.value)}
-                                />
+                                <div className={uiStyles.formGroup}>
+                                    <label className={uiStyles.formLabel}>Japanese Title (Romaji / Kanji)</label>
+                                    <input
+                                        type="text"
+                                        className={uiStyles.formInput}
+                                        placeholder="e.g. 進撃の巨人"
+                                        value={formJapaneseTitle}
+                                        onChange={(e) => setFormJapaneseTitle(e.target.value)}
+                                    />
+                                </div>
                             </div>
 
-                            <div className={uiStyles.formGroup}>
-                                <label className={uiStyles.formLabel}>Artist (Illustration)</label>
-                                <input
-                                    type="text"
-                                    className={uiStyles.formInput}
-                                    value={formArtist}
-                                    onChange={(e) => setFormArtist(e.target.value)}
+                            <div className={uiStyles.formGroup} style={{ marginTop: '12px' }}>
+                                <label className={uiStyles.formLabel}>Summary / Synopsis</label>
+                                <textarea
+                                    className={uiStyles.formTextarea}
+                                    rows={4}
+                                    placeholder="Enter book synopsis or summary..."
+                                    value={formSummary}
+                                    onChange={(e) => setFormSummary(e.target.value)}
                                 />
                             </div>
                         </div>
 
-                        <div className={uiStyles.formGrid}>
-                            <div className={uiStyles.formGroup}>
-                                <label className={uiStyles.formLabel}>Target Demographic / Category</label>
-                                <input
-                                    type="text"
-                                    className={uiStyles.formInput}
-                                    value={formCategory}
-                                    onChange={(e) => setFormCategory(e.target.value)}
-                                />
+                        <div className={styles.formSectionCard}>
+                            <div className={styles.sectionHeader}>
+                                <div>
+                                    <h3 className={styles.sectionTitle}>
+                                        <Tag size={16} /> Credits & Classification
+                                    </h3>
+                                    <p className={styles.sectionSubtitle}>Creator credits, target demographic, and language</p>
+                                </div>
                             </div>
 
-                            <div className={uiStyles.formGroup}>
-                                <label className={uiStyles.formLabel}>Language</label>
-                                <input
-                                    type="text"
-                                    className={uiStyles.formInput}
-                                    value={formLanguage}
-                                    onChange={(e) => setFormLanguage(e.target.value)}
-                                />
+                            <div className={uiStyles.formGrid}>
+                                <div className={uiStyles.formGroup}>
+                                    <label className={uiStyles.formLabel}>Author (Original Story)</label>
+                                    <input
+                                        type="text"
+                                        className={uiStyles.formInput}
+                                        placeholder="e.g. Hajime Isayama"
+                                        value={formAuthor}
+                                        onChange={(e) => setFormAuthor(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className={uiStyles.formGroup}>
+                                    <label className={uiStyles.formLabel}>Artist (Illustration)</label>
+                                    <input
+                                        type="text"
+                                        className={uiStyles.formInput}
+                                        placeholder="e.g. Hajime Isayama"
+                                        value={formArtist}
+                                        onChange={(e) => setFormArtist(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className={uiStyles.formGrid} style={{ marginTop: '12px' }}>
+                                <div className={uiStyles.formGroup}>
+                                    <label className={uiStyles.formLabel}>Target Demographic / Category</label>
+                                    <input
+                                        type="text"
+                                        className={uiStyles.formInput}
+                                        placeholder="e.g. Manga, Shonen, Seinen"
+                                        value={formCategory}
+                                        onChange={(e) => setFormCategory(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className={uiStyles.formGroup}>
+                                    <label className={uiStyles.formLabel}>Language</label>
+                                    <input
+                                        type="text"
+                                        className={uiStyles.formInput}
+                                        value={formLanguage}
+                                        onChange={(e) => setFormLanguage(e.target.value)}
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        <button type="submit" className={uiStyles.btnPrimary} disabled={saving}>
-                            <Save size={14} /> {saving ? 'Saving...' : 'Save Overview Metadata'}
-                        </button>
+                        <div className={styles.formActionRow}>
+                            <button type="submit" className={uiStyles.btnPrimary} disabled={saving}>
+                                <Save size={14} /> {saving ? 'Saving Changes...' : 'Save Overview Metadata'}
+                            </button>
+                        </div>
                     </form>
                 </div>
             )}
@@ -547,15 +709,41 @@ export const AdminBookDetail: React.FC = () => {
                                                 <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{ch.title}</span>
                                             </td>
                                             <td>
-                                                {pdfName ? (
-                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#38bdf8', fontSize: '13px', fontWeight: 600 }}>
-                                                        <FileText size={14} /> {pdfName} ({pdfPages || 0} pgs)
-                                                    </span>
-                                                ) : (
-                                                    <span style={{ color: '#f59e0b', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                                        <AlertCircle size={13} /> No PDF uploaded
-                                                    </span>
-                                                )}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                    {pdfName ? (
+                                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#38bdf8', fontSize: '13px', fontWeight: 600 }}>
+                                                            <FileText size={14} /> {pdfName}
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ color: '#f59e0b', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                            <AlertCircle size={13} /> No PDF file
+                                                        </span>
+                                                    )}
+                                                    <label 
+                                                        style={{ 
+                                                            cursor: 'pointer', 
+                                                            display: 'inline-flex', 
+                                                            alignItems: 'center', 
+                                                            gap: '4px', 
+                                                            fontSize: '11px', 
+                                                            fontWeight: 600,
+                                                            padding: '3px 8px', 
+                                                            borderRadius: '4px', 
+                                                            background: 'var(--color-surface-hover)', 
+                                                            border: '1px solid var(--color-border)',
+                                                            color: 'var(--color-text-primary)'
+                                                        }}
+                                                        title="Attach PDF file to this chapter"
+                                                    >
+                                                        <UploadCloud size={11} /> {pdfName ? 'Replace PDF' : 'Upload PDF'}
+                                                        <input
+                                                            type="file"
+                                                            accept="application/pdf"
+                                                            style={{ display: 'none' }}
+                                                            onChange={(e) => handleChapterPdfUpload(ch, e)}
+                                                        />
+                                                    </label>
+                                                </div>
                                             </td>
                                             <td>
                                                 {isPaid ? (
@@ -697,27 +885,18 @@ export const AdminBookDetail: React.FC = () => {
             {/* ============================================================ */}
             {activeTab === 'media' && (
                 <div className={styles.tabContentCard}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-                        <FileUploadDropzone
-                            label="Cover Artwork"
-                            currentUrl={formCover}
-                            onFileSelected={(url) => setFormCover(url)}
-                        />
-                        <FileUploadDropzone
-                            label="Banner Artwork"
-                            currentUrl={formBanner}
-                            onFileSelected={(url) => setFormBanner(url)}
-                        />
-                        <FileUploadDropzone
-                            label="Thumbnail Image"
-                            currentUrl={formThumbnail}
-                            onFileSelected={(url) => setFormThumbnail(url)}
-                        />
-                    </div>
-
-                    <button className={uiStyles.btnPrimary} onClick={handleSaveMedia} disabled={saving}>
-                        <Save size={14} /> {saving ? 'Saving...' : 'Save Media Artwork'}
-                    </button>
+                    <BookCoverUploader
+                        bookId={book.id}
+                        coverUrl={book.coverUrl}
+                        fileName={book.coverFileName}
+                        fileSize={book.coverFileSize}
+                        onUploaded={(updated) => {
+                            setBook(updated);
+                            setFormCover(updated.coverUrl || '');
+                        }}
+                        onSuccess={(m) => { setErrorMessage(null); setSuccessMessage(m); }}
+                        onError={(m) => { setSuccessMessage(null); setErrorMessage(m); }}
+                    />
                 </div>
             )}
 
@@ -726,25 +905,26 @@ export const AdminBookDetail: React.FC = () => {
             {/* ============================================================ */}
             {activeTab === 'activity' && (
                 <div className={styles.tabContentCard}>
-                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '16px' }}>
-                        Book Audit Timeline
-                    </h3>
+                    <div className={styles.sectionHeader}>
+                        <div>
+                            <h3 className={styles.sectionTitle}>
+                                <Activity size={16} /> Book Audit Timeline
+                            </h3>
+                            <p className={styles.sectionSubtitle}>Lifecycle changes and publication events</p>
+                        </div>
+                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)', marginTop: '6px' }} />
-                            <div>
-                                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>Book Created</div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(book.created_at).toLocaleString()}</div>
-                            </div>
+                    <div className={styles.timeline}>
+                        <div className={styles.timelineItem}>
+                            <div className={styles.timelineDot} />
+                            <div className={styles.timelineTitle}>Book Created & Cataloged</div>
+                            <div className={styles.timelineDate}>{new Date(book.created_at).toLocaleString()}</div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', marginTop: '6px' }} />
-                            <div>
-                                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>Published Status: {book.status}</div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(book.updated_at || book.created_at).toLocaleString()}</div>
-                            </div>
+                        <div className={styles.timelineItem}>
+                            <div className={styles.timelineDot} style={{ background: book.status === 'PUBLISHED' ? '#10b981' : '#f59e0b' }} />
+                            <div className={styles.timelineTitle}>Status: {book.status}</div>
+                            <div className={styles.timelineDate}>{new Date(book.updated_at || book.created_at).toLocaleString()}</div>
                         </div>
                     </div>
                 </div>

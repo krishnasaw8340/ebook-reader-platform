@@ -38,6 +38,18 @@ import { AdminPricing } from './admin/pricing/AdminPricing';
 const AppContent: React.FC = () => {
   const location = useLocation();
 
+  // One-time purge of legacy dummy/mock cache keys from localStorage
+  React.useEffect(() => {
+    try {
+      localStorage.removeItem('ky_books');
+      localStorage.removeItem('ky_book_series');
+      localStorage.removeItem('ky_volumes');
+      localStorage.removeItem('ky_chapters');
+    } catch {
+      // Ignore
+    }
+  }, []);
+
   const isImmersive =
     location.pathname.startsWith('/reader') ||
     location.pathname === '/login' ||

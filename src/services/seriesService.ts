@@ -49,34 +49,12 @@ export const mapSeriesFromApi = (item: any): BookSeries => {
 /**
  * Helper to retrieve cached series from localStorage if backend is unreachable
  */
-const getFallbackSeries = (search?: string): BookSeries[] => {
-    try {
-        const saved = localStorage.getItem(LS_SERIES);
-        let list: BookSeries[] = saved ? JSON.parse(saved) : [];
-        if (search && search.trim()) {
-            const q = search.toLowerCase().trim();
-            list = list.filter(
-                (s) =>
-                    (s.title && s.title.toLowerCase().includes(q)) ||
-                    (s.description && s.description.toLowerCase().includes(q)) ||
-                    (s.slug && s.slug.toLowerCase().includes(q))
-            );
-        }
-        return list.map(mapSeriesFromApi);
-    } catch {
-        return [];
-    }
+const getFallbackSeries = (_search?: string): BookSeries[] => {
+    return [];
 };
 
-/**
- * Helper to update localStorage cache
- */
-const saveFallbackSeries = (list: BookSeries[]) => {
-    try {
-        localStorage.setItem(LS_SERIES, JSON.stringify(list));
-    } catch {
-        // Ignore localStorage quota errors gracefully
-    }
+const saveFallbackSeries = (_list: BookSeries[]) => {
+    // No-op: only database data is maintained
 };
 
 /**
@@ -114,17 +92,10 @@ export const seriesService = {
                 ? (res.data as any).data
                 : [];
 
-            const normalized = rawList.map(mapSeriesFromApi);
-
-            // Keep local fallback updated
-            if (normalized.length > 0 && !query.search && !query.status) {
-                saveFallbackSeries(normalized);
-            }
-
-            return normalized;
+            return rawList.map(mapSeriesFromApi);
         } catch (error) {
-            console.warn('[seriesService.getAll] Falling back to cached catalog:', error);
-            return getFallbackSeries(query.search);
+            console.warn('[seriesService.getAll] API request failed:', error);
+            return [];
         }
     },
 
@@ -159,14 +130,13 @@ export const seriesService = {
             };
         } catch (error) {
             console.warn('[seriesService.getPaginated] API request failed:', error);
-            const fallback = getFallbackSeries(query.search);
             return {
-                data: fallback,
+                data: [],
                 meta: {
-                    total: fallback.length,
+                    total: 0,
                     page: 1,
                     limit: 20,
-                    totalPages: 1,
+                    totalPages: 0,
                     hasNextPage: false,
                     hasPrevPage: false,
                 },
@@ -183,9 +153,8 @@ export const seriesService = {
             const res = await api.get<any>(`/series/${encodeURIComponent(idOrSlug)}`);
             return mapSeriesFromApi(res.data);
         } catch (error) {
-            console.warn(`[seriesService.getById] Failed fetching series "${idOrSlug}":`, error);
-            const fallbackList = getFallbackSeries();
-            return fallbackList.find((s) => s.id === idOrSlug || s.slug === idOrSlug);
+            console.warn(`[seriesService.getById] Series "${idOrSlug}" not found:`, error);
+            return undefined;
         }
     },
 
@@ -205,13 +174,7 @@ export const seriesService = {
         };
 
         const res = await api.post<any>('/series', payload);
-        const created = mapSeriesFromApi(res.data);
-
-        // Update local cache
-        const currentList = getFallbackSeries();
-        saveFallbackSeries([created, ...currentList.filter((s) => s.id !== created.id)]);
-
-        return created;
+        return mapSeriesFromApi(res.data);
     },
 
     /**
@@ -239,13 +202,7 @@ export const seriesService = {
         }
 
         const res = await api.patch<any>(`/series/${encodeURIComponent(idOrSlug)}`, payload);
-        const updated = mapSeriesFromApi(res.data);
-
-        // Update local cache
-        const currentList = getFallbackSeries();
-        saveFallbackSeries(currentList.map((s) => (s.id === updated.id || s.slug === idOrSlug ? updated : s)));
-
-        return updated;
+        return mapSeriesFromApi(res.data);
     },
 
     /**
@@ -254,11 +211,6 @@ export const seriesService = {
      */
     delete: async (idOrSlug: string): Promise<{ message: string; id: string }> => {
         const res = await api.delete<{ message: string; id: string }>(`/series/${encodeURIComponent(idOrSlug)}`);
-
-        // Remove from local cache
-        const currentList = getFallbackSeries();
-        saveFallbackSeries(currentList.filter((s) => s.id !== idOrSlug && s.slug !== idOrSlug));
-
         return res.data || { message: 'Series deleted successfully', id: idOrSlug };
     },
 

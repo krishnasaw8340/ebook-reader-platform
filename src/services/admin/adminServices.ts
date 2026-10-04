@@ -89,67 +89,19 @@ export const adminDashboardService = {
             const res = await api.get<DashboardStats>('/admin/dashboard/stats');
             return res.data;
         } catch {
-            const series = getFromLS<BookSeries[]>(LS_SERIES, []);
-            const volumes = getFromLS<Volume[]>(LS_VOLUMES, []);
-            const books = getFromLS<Book[]>(LS_BOOKS, []);
-            const chapters = getFromLS<Chapter[]>(LS_CHAPTERS, []);
-            const uploads = getFromLS<UploadJob[]>(LS_UPLOADS, []);
-
-            const publishedBooks = books.filter(b => b.status === 'PUBLISHED' || b.status === 'COMPLETED' || b.status === 'ONGOING').length;
-            const draftBooks = books.filter(b => b.status === 'DRAFT' || b.status === 'READY').length;
-            const processingUploads = uploads.filter(u => u.status === 'PROCESSING' || u.status === 'QUEUED').length;
-            const failedUploads = uploads.filter(u => u.status === 'FAILED').length;
-
-            const recentBooks: DashboardRecentBook[] = books.slice(0, 5).map(b => {
-                const s = series.find(ser => ser.id === b.series_id);
-                return {
-                    id: b.id,
-                    title: b.title,
-                    seriesTitle: s?.title || 'Standalone',
-                    coverImage: b.cover_image || null,
-                    status: b.status,
-                    pricingModel: b.pricing_model || (b.coin_price > 0 ? 'PER_BOOK' : 'FREE'),
-                    chapterCount: chapters.filter(c => c.book_id === b.id).length || b.chapter_count || 0,
-                    updatedAt: b.updated_at || b.created_at
-                };
-            });
-
-            const recentUploads: DashboardRecentUpload[] = uploads.slice(0, 5).map(u => ({
-                id: u.id,
-                fileName: u.file_name,
-                bookTitle: u.book_title || 'Untitled Upload',
-                status: u.status,
-                progress: u.progress,
-                stage: u.stage || u.status,
-                startedAt: u.started_at
-            }));
-
-            const recentlyUpdatedChapters: DashboardRecentChapter[] = chapters.slice(0, 5).map(c => {
-                const b = books.find(book => book.id === c.book_id);
-                return {
-                    id: c.id,
-                    chapterNo: c.chapter_no,
-                    title: c.title,
-                    bookTitle: b?.title || 'Unknown Book',
-                    accessType: c.access_type,
-                    coinCost: c.coin_cost,
-                    updatedAt: c.created_at
-                };
-            });
-
             return {
-                totalSeries: series.length,
-                totalVolumes: volumes.length,
-                totalBooks: books.length,
-                totalChapters: chapters.length,
-                totalPages: chapters.reduce((acc, c) => acc + (c.pdf_page_count || 0), 0),
-                publishedBooks,
-                draftBooks,
-                processingUploads,
-                failedUploads,
-                recentBooks,
-                recentUploads,
-                recentlyUpdatedChapters
+                totalSeries: 0,
+                totalVolumes: 0,
+                totalBooks: 0,
+                totalChapters: 0,
+                totalPages: 0,
+                publishedBooks: 0,
+                draftBooks: 0,
+                processingUploads: 0,
+                failedUploads: 0,
+                recentBooks: [],
+                recentUploads: [],
+                recentlyUpdatedChapters: []
             };
         }
     }

@@ -204,6 +204,10 @@ export interface Book {
   tagIds?: string[];
   cover_image: string | null; // String? Cover
   coverImage?: string | null;
+  coverUrl?: string | null; // Short-lived presigned URL provided by the API
+  coverFileName?: string | null;
+  coverFileSize?: number | null;
+  coverContentType?: string | null;
   banner_image?: string | null;
   bannerImage?: string | null;
   thumbnail_image?: string | null;
@@ -548,4 +552,12 @@ export interface PaymentTransaction {
   gateway_txn_id: string; // String Txn Ref
   status: 'PENDING' | 'SUCCESS' | 'FAILED'; // Enum Status
   paid_at: string | null; // DateTime? Paid
+}
+
+export interface BookCoverUploadUrlResponse {
+  bookId: string;
+  objectKey: string;
+  uploadUrl: string;
+  contentType: string;
+  expiresIn: number;
 }

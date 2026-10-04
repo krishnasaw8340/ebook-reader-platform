@@ -113,7 +113,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           bookService.getAll().catch(() => []),
           chapterService.getAll().catch(() => []),
         ]);
-        setBookSeries(seriesData);
+        const enrichedSeries = seriesData.map((s) => {
+          if (!s.cover_image) {
+            const childBook = booksData.find(
+              (b) => (b.series_id === s.id || (b as any).seriesId === s.id) && (b.coverUrl || b.cover_image)
+            );
+            if (childBook) {
+              return { ...s, cover_image: childBook.coverUrl || childBook.cover_image };
+            }
+          }
+          return s;
+        });
+        setBookSeries(enrichedSeries);
         setBooks(booksData);
         setChapters(chaptersData);
       } catch (err) {

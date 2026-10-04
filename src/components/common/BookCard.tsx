@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bookmark } from 'lucide-react';
 import type { BookSeries } from '../../types';
 import { useUser } from '../../contexts/UserContext';
+import { getSeriesCover, getFallbackCoverUrl } from '../../utils/coverUtils';
 import styles from './BookCard.module.css';
 
 interface BookCardProps {
@@ -31,6 +32,8 @@ export const BookCard: React.FC<BookCardProps> = ({ series, progressPercent, com
     : series.status === 'COMPLETED' ? 'var(--color-status-info)' 
     : 'var(--color-text-muted)';
 
+  const coverSrc = getSeriesCover(series, books);
+
   return (
     <div 
       className={`${styles.card} ${compact ? styles.compact : ''}`}
@@ -39,10 +42,14 @@ export const BookCard: React.FC<BookCardProps> = ({ series, progressPercent, com
       {/* Cover */}
       <div className={styles.coverWrapper}>
         <img 
-          src={series.cover_image || ''} 
+          src={coverSrc} 
           alt={series.title} 
           className={styles.cover} 
-          loading="lazy" 
+          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = getFallbackCoverUrl(series.title, 'Manga');
+          }}
         />
         
         {/* Bookmark button — visible on hover */}

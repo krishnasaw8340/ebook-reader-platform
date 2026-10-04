@@ -334,12 +334,16 @@ export const AdminBooks: React.FC = () => {
                                 {paginatedBooks.map((b) => (
                                     <tr key={b.id}>
                                         <td>
-                                            <img
-                                                src={b.cover_image || 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=100'}
-                                                alt={b.title}
-                                                className={styles.tableCoverThumb}
-                                                style={{ width: '40px', height: '56px', objectFit: 'cover', borderRadius: '4px' }}
-                                            />
+                                            {b.cover_image ? (
+                                                <img
+                                                    src={b.cover_image}
+                                                    alt={b.title}
+                                                    className={styles.tableCoverThumb}
+                                                    style={{ width: '40px', height: '56px', objectFit: 'cover', borderRadius: '4px' }}
+                                                />
+                                            ) : (
+                                                <div style={{ width: '40px', height: '56px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'var(--text-muted)' }}>No cover</div>
+                                            )}
                                         </td>
                                         <td>
                                             <div

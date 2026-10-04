@@ -7,7 +7,9 @@ import type {
     PaginatedBookResponse,
     BookStatus,
     PricingModel,
+    BookCoverUploadUrlResponse,
 } from '../types';
+import axios from 'axios';
 import { generateSlug } from './seriesService';
 
 const LS_BOOKS = 'ky_books';
@@ -28,7 +30,7 @@ export const mapBookFromApi = (item: any): Book => {
     const defaultFreeChapters = Number(item.defaultFreeChapters ?? item.default_free_chapters ?? 0);
     const totalChapters = Number(item.totalChapters ?? item.chapter_count ?? 0);
 
-    const coverImage = item.cover_image || item.coverImage || item.mediaAssets?.[0]?.url || null;
+    const coverImage = item.coverUrl || null;
     const bannerImage = item.banner_image || item.bannerImage || coverImage;
     const thumbnailImage = item.thumbnail_image || item.thumbnailImage || coverImage;
 
@@ -58,6 +60,10 @@ export const mapBookFromApi = (item: any): Book => {
         tagIds: Array.isArray(item.tags) ? item.tags.map((t: any) => typeof t === 'string' ? t : t.id) : (item.tagIds || []),
         cover_image: coverImage,
         coverImage: coverImage,
+        coverUrl: item.coverUrl || null,
+        coverFileName: item.coverFileName || null,
+        coverFileSize: item.coverFileSize ?? null,
+        coverContentType: item.coverContentType || null,
         banner_image: bannerImage,
         bannerImage: bannerImage,
         thumbnail_image: thumbnailImage,
@@ -92,48 +98,12 @@ export const mapBookFromApi = (item: any): Book => {
     };
 };
 
-const getFallbackBooks = (params?: QueryBookParams): Book[] => {
-    try {
-        const saved = localStorage.getItem(LS_BOOKS);
-        let list: Book[] = saved ? JSON.parse(saved) : [];
-
-        if (params?.seriesId) {
-            list = list.filter((b) => b.seriesId === params.seriesId || b.series_id === params.seriesId);
-        }
-        if (params?.volumeId !== undefined) {
-            if (params.volumeId === 'none' || params.volumeId === null) {
-                list = list.filter((b) => !b.volumeId && !b.volume_id);
-            } else if (params.volumeId) {
-                list = list.filter((b) => b.volumeId === params.volumeId || b.volume_id === params.volumeId);
-            }
-        }
-        if (params?.status) {
-            list = list.filter((b) => b.status === params.status);
-        }
-        if (params?.pricingModel) {
-            list = list.filter((b) => (b.pricingModel === params.pricingModel || b.pricing_model === params.pricingModel));
-        }
-        if (params?.search && params.search.trim()) {
-            const q = params.search.toLowerCase().trim();
-            list = list.filter(
-                (b) =>
-                    (b.title && b.title.toLowerCase().includes(q)) ||
-                    (b.summary && b.summary.toLowerCase().includes(q)) ||
-                    (b.author && b.author.toLowerCase().includes(q))
-            );
-        }
-        return list.map(mapBookFromApi);
-    } catch {
-        return [];
-    }
+const getFallbackBooks = (_params?: QueryBookParams): Book[] => {
+    return [];
 };
 
-const saveFallbackBooks = (list: Book[]) => {
-    try {
-        localStorage.setItem(LS_BOOKS, JSON.stringify(list));
-    } catch {
-        // Ignore quota
-    }
+const saveFallbackBooks = (_list: Book[]) => {
+    // No-op: only real database data is maintained
 };
 
 /**
@@ -233,15 +203,10 @@ export const bookService = {
                 : [];
 
             const normalized = rawList.map(mapBookFromApi);
-
-            if (normalized.length > 0 && !query.search && !query.seriesId && !query.status) {
-                saveFallbackBooks(normalized);
-            }
-
             return normalized;
         } catch (error) {
-            console.warn('[bookService.getAll] Falling back to cached books:', error);
-            return getFallbackBooks(query);
+            console.warn('[bookService.getAll] API request failed:', error);
+            return [];
         }
     },
 
@@ -286,14 +251,13 @@ export const bookService = {
             };
         } catch (error) {
             console.warn('[bookService.getPaginated] API request failed:', error);
-            const fallback = getFallbackBooks(query);
             return {
-                data: fallback,
+                data: [],
                 meta: {
-                    total: fallback.length,
+                    total: 0,
                     page: 1,
                     limit: 20,
-                    totalPages: 1,
+                    totalPages: 0,
                     hasNextPage: false,
                     hasPrevPage: false,
                 },
@@ -310,9 +274,8 @@ export const bookService = {
             const res = await api.get<any>(`/books/${encodeURIComponent(idOrSlug)}`);
             return mapBookFromApi(res.data);
         } catch (error) {
-            console.warn(`[bookService.getById] Failed fetching book "${idOrSlug}":`, error);
-            const fallbackList = getFallbackBooks();
-            return fallbackList.find((b) => b.id === idOrSlug || b.slug === idOrSlug);
+            console.warn(`[bookService.getById] Book "${idOrSlug}" not found in database:`, error);
+            return undefined;
         }
     },
 
@@ -395,13 +358,7 @@ export const bookService = {
         };
 
         const res = await api.post<any>('/books', payload);
-        const created = mapBookFromApi(res.data);
-
-        // Update local cache
-        const currentList = getFallbackBooks();
-        saveFallbackBooks([created, ...currentList.filter((b) => b.id !== created.id)]);
-
-        return created;
+        return mapBookFromApi(res.data);
     },
 
     /**
@@ -432,13 +389,48 @@ export const bookService = {
         if (data.publishedAt !== undefined) payload.publishedAt = data.publishedAt;
 
         const res = await api.patch<any>(`/books/${encodeURIComponent(id)}`, payload);
-        const updated = mapBookFromApi(res.data);
+        return mapBookFromApi(res.data);
+    },
 
-        // Update local cache
-        const currentList = getFallbackBooks();
-        saveFallbackBooks(currentList.map((b) => (b.id === id ? updated : b)));
+    /**
+     * POST /books/:bookId/cover/upload-url (ADMIN)
+     * Backend validates type/size and generates the object key.
+     */
+    getCoverUploadUrl: async (
+        bookId: string,
+        data: { fileName: string; fileSize: number; contentType: string }
+    ): Promise<BookCoverUploadUrlResponse> => {
+        const res = await api.post<BookCoverUploadUrlResponse>(
+            `/books/${encodeURIComponent(bookId)}/cover/upload-url`,
+            data
+        );
+        return res.data;
+    },
 
-        return updated;
+    /**
+     * Uploads the image DIRECTLY to S3 (no Authorization header; same Content-Type as signed).
+     * Reports real progress.
+     */
+    uploadCoverToS3: async (
+        uploadUrl: string,
+        file: File,
+        contentType: string,
+        onProgress?: (percentage: number) => void
+    ): Promise<void> => {
+        await axios.put(uploadUrl, file, {
+            headers: { 'Content-Type': contentType },
+            onUploadProgress: (e) => {
+                if (e.total && onProgress) onProgress(Math.round((e.loaded * 100) / e.total));
+            },
+        });
+    },
+
+    /**
+     * POST /books/:bookId/cover/complete (ADMIN)
+     */
+    completeCoverUpload: async (bookId: string, fileName: string): Promise<Book> => {
+        const res = await api.post<any>(`/books/${encodeURIComponent(bookId)}/cover/complete`, { fileName });
+        return mapBookFromApi(res.data);
     },
 
     /**
@@ -463,9 +455,5 @@ export const bookService = {
      */
     delete: async (id: string): Promise<void> => {
         await api.delete(`/books/${encodeURIComponent(id)}`);
-
-        // Update local cache
-        const currentList = getFallbackBooks();
-        saveFallbackBooks(currentList.filter((b) => b.id !== id));
     }
 };
