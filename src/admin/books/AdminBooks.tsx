@@ -334,13 +334,18 @@ export const AdminBooks: React.FC = () => {
                                 {paginatedBooks.map((b) => (
                                     <tr key={b.id}>
                                         <td>
-                                            {b.cover_image ? (
-                                                <img
-                                                    src={b.cover_image}
-                                                    alt={b.title}
-                                                    className={styles.tableCoverThumb}
-                                                    style={{ width: '40px', height: '56px', objectFit: 'cover', borderRadius: '4px' }}
-                                                />
+                                            {b.coverUrl || b.cover_image || b.coverImage ? (
+                                                <div style={{ width: '40px', height: '56px', borderRadius: '4px', overflow: 'hidden', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <img
+                                                        src={b.coverUrl || b.cover_image || b.coverImage || ''}
+                                                        alt={b.title}
+                                                        className={styles.tableCoverThumb}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        onError={(e) => {
+                                                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
+                                                </div>
                                             ) : (
                                                 <div style={{ width: '40px', height: '56px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'var(--text-muted)' }}>No cover</div>
                                             )}

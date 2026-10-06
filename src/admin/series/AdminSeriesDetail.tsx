@@ -119,11 +119,21 @@ export const AdminSeriesDetail: React.FC = () => {
 
             {/* Franchise Header Card */}
             <div className={styles.headerCard}>
-                <img
-                    src={series.cover_image || 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=200'}
-                    alt={series.title}
-                    className={styles.coverThumb}
-                />
+                <div style={{ width: '120px', height: '170px', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--glass-border)', flexShrink: 0 }}>
+                    {series.cover_image || books[0]?.coverUrl || books[0]?.cover_image ? (
+                        <img
+                            src={series.cover_image || books[0]?.coverUrl || books[0]?.cover_image || ''}
+                            alt={series.title}
+                            className={styles.coverThumb}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                        />
+                    ) : (
+                        <div style={{ color: 'var(--text-muted)', fontSize: '11px', textAlign: 'center' }}>No cover</div>
+                    )}
+                </div>
 
                 <div className={styles.headerInfo}>
                     <div className={styles.headerTitleRow}>
@@ -142,10 +152,8 @@ export const AdminSeriesDetail: React.FC = () => {
                     </p>
 
                     {/* Metric Counts */}
+                    {/* Metric Counts */}
                     <div className={styles.metaRow}>
-                        <div className={styles.metaItem}>
-                            <span>Volumes:</span> <strong>{volumes.length}</strong>
-                        </div>
                         <div className={styles.metaItem}>
                             <span>Total Books:</span> <strong>{books.length}</strong>
                         </div>
@@ -153,7 +161,7 @@ export const AdminSeriesDetail: React.FC = () => {
                             <span>Total Chapters:</span> <strong>{seriesChapters.length}</strong>
                         </div>
                         <div className={styles.metaItem}>
-                            <span>Direct Books (No Vol):</span> <strong>{directBooksWithoutVolume.length}</strong>
+                            <span>Status:</span> <strong>{series.status}</strong>
                         </div>
                     </div>
                 </div>
@@ -161,72 +169,19 @@ export const AdminSeriesDetail: React.FC = () => {
 
             {/* Content Structure Breakdown */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 450px), 1fr))', gap: '20px' }}>
-                {/* 1. Volumes Section */}
+                {/* 1. Books / Releases Section */}
                 <div className={uiStyles.tableCard}>
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Volumes ({volumes.length})</h3>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Structured book compilations</p>
-                        </div>
-                        <button
-                            className={uiStyles.btnSecondary}
-                            style={{ padding: '4px 10px', fontSize: '11px' }}
-                            onClick={() => navigate('/admin/volumes')}
-                        >
-                            Manage Volumes
-                        </button>
-                    </div>
-
-                    <div className={uiStyles.tableWrapper}>
-                        <table className={uiStyles.dataTable}>
-                            <thead>
-                                <tr>
-                                    <th>Vol #</th>
-                                    <th>Title</th>
-                                    <th>Books</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {volumes.length > 0 ? (
-                                    volumes.map(v => {
-                                        const booksInVol = books.filter(b => b.volume_id === v.id);
-                                        return (
-                                            <tr key={v.id}>
-                                                <td style={{ fontWeight: 800, color: 'var(--primary)' }}>Vol. {v.volume_no}</td>
-                                                <td>
-                                                    <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{v.title}</span>
-                                                </td>
-                                                <td>{booksInVol.length} Book(s)</td>
-                                                <td><StatusBadge status={v.status} /></td>
-                                            </tr>
-                                        );
-                                    })
-                                ) : (
-                                    <tr>
-                                        <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                                            No volumes created for this series.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* 2. Direct Books (Without Volume) */}
-                <div className={uiStyles.tableCard}>
-                    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Direct Books ({directBooksWithoutVolume.length})</h3>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Books attached directly to series without volume</p>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Books & Releases ({books.length})</h3>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Manga book releases attached to this series</p>
                         </div>
                         <button
                             className={uiStyles.btnSecondary}
                             style={{ padding: '4px 10px', fontSize: '11px' }}
                             onClick={() => navigate('/admin/books/new')}
                         >
-                            + Add Direct Book
+                            + Add Book
                         </button>
                     </div>
 
@@ -241,8 +196,8 @@ export const AdminSeriesDetail: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {directBooksWithoutVolume.length > 0 ? (
-                                    directBooksWithoutVolume.map(b => (
+                                {books.length > 0 ? (
+                                    books.map(b => (
                                         <tr key={b.id}>
                                             <td>
                                                 <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{b.title}</div>
@@ -264,7 +219,61 @@ export const AdminSeriesDetail: React.FC = () => {
                                 ) : (
                                     <tr>
                                         <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                                            No direct standalone books. All books belong to volumes.
+                                            No books created for this series.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* 2. Chapters Section */}
+                <div className={uiStyles.tableCard}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Chapters ({seriesChapters.length})</h3>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Published and draft chapters</p>
+                        </div>
+                        <button
+                            className={uiStyles.btnSecondary}
+                            style={{ padding: '4px 10px', fontSize: '11px' }}
+                            onClick={() => navigate('/admin/chapters')}
+                        >
+                            Manage Chapters
+                        </button>
+                    </div>
+
+                    <div className={uiStyles.tableWrapper}>
+                        <table className={uiStyles.dataTable}>
+                            <thead>
+                                <tr>
+                                    <th>Ch #</th>
+                                    <th>Title</th>
+                                    <th>Type</th>
+                                    <th>Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {seriesChapters.length > 0 ? (
+                                    seriesChapters.slice(0, 10).map(c => (
+                                        <tr key={c.id}>
+                                            <td style={{ fontWeight: 800, color: 'var(--primary)' }}>#{c.chapter_no}</td>
+                                            <td>
+                                                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{c.title}</span>
+                                            </td>
+                                            <td>
+                                                <span style={{ fontSize: '11px', fontWeight: 700, color: c.access_type === 'FREE' ? '#10b981' : '#f59e0b' }}>
+                                                    {c.access_type}
+                                                </span>
+                                            </td>
+                                            <td>{c.access_type === 'FREE' ? '0 Coins' : `${c.coin_cost} Coins`}</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                                            No chapters found for this series.
                                         </td>
                                     </tr>
                                 )}

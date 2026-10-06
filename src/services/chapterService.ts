@@ -265,7 +265,7 @@ export const chapterService = {
 
     /**
      * Uploads the PDF file DIRECTLY to AWS S3 via presigned PUT URL.
-     * CRITICAL: Uses standard axios without Authorization header so S3 presigned signature is not invalidated.
+     * CRITICAL: Uses native XMLHttpRequest without Authorization header so S3 presigned signature is not invalidated.
      * Reports live upload progress.
      */
     uploadPdfToS3: async (
@@ -273,20 +273,55 @@ export const chapterService = {
         file: File,
         onProgress?: (progress: { loaded: number; total: number; percentage: number }) => void
     ): Promise<void> => {
-        await axios.put(uploadUrl, file, {
-            headers: {
-                'Content-Type': 'application/pdf',
-            },
-            onUploadProgress: (progressEvent) => {
-                if (progressEvent.total && onProgress) {
-                    const percentage = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                    onProgress({
-                        loaded: progressEvent.loaded,
-                        total: progressEvent.total,
-                        percentage,
+        if (!uploadUrl) {
+            throw new Error('Chapter storage upload URL is missing or empty.');
+        }
+
+        return new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', uploadUrl, true);
+            xhr.setRequestHeader('Content-Type', file.type || 'application/pdf');
+
+            if (onProgress && xhr.upload) {
+                xhr.upload.onprogress = (progressEvent) => {
+                    if (progressEvent.lengthComputable && progressEvent.total > 0) {
+                        const percentage = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        onProgress({
+                            loaded: progressEvent.loaded,
+                            total: progressEvent.total,
+                            percentage,
+                        });
+                    }
+                };
+            }
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    if (onProgress) {
+                        onProgress({
+                            loaded: file.size,
+                            total: file.size,
+                            percentage: 100,
+                        });
+                    }
+                    resolve();
+                } else {
+                    reject({
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        message: `PDF storage upload rejected with status ${xhr.status}: ${xhr.statusText || 'Forbidden / Bad Request'}`,
                     });
                 }
-            },
+            };
+
+            xhr.onerror = () => {
+                reject({
+                    status: 0,
+                    message: 'Network error occurred during PDF storage upload. Please check S3 CORS and network connection.',
+                });
+            };
+
+            xhr.send(file);
         });
     },
 

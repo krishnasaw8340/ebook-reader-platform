@@ -29,6 +29,8 @@ export const mapSeriesFromApi = (item: any): BookSeries => {
     const name = item.name || item.title || 'Untitled Series';
     const createdAt = item.createdAt || item.created_at || new Date().toISOString();
     const updatedAt = item.updatedAt || item.updated_at;
+    const primaryBookCover = item.books?.[0]?.coverUrl || item.books?.[0]?.cover_image || item.books?.[0]?.coverImage || null;
+    const coverImage = item.cover_image || item.coverImage || item.coverUrl || item.mediaAssets?.[0]?.url || primaryBookCover || null;
 
     return {
         id: item.id,
@@ -36,7 +38,7 @@ export const mapSeriesFromApi = (item: any): BookSeries => {
         title: name,
         slug: item.slug || generateSlug(name),
         description: item.description ?? null,
-        cover_image: item.cover_image || item.coverImage || item.mediaAssets?.[0]?.url || null,
+        cover_image: coverImage,
         status: (item.status as SeriesStatus) || 'DRAFT',
         created_at: createdAt,
         updated_at: updatedAt,

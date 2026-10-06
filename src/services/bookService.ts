@@ -400,16 +400,23 @@ export const bookService = {
         bookId: string,
         data: { fileName: string; fileSize: number; contentType: string }
     ): Promise<BookCoverUploadUrlResponse> => {
-        const res = await api.post<BookCoverUploadUrlResponse>(
+        const res = await api.post<any>(
             `/books/${encodeURIComponent(bookId)}/cover/upload-url`,
             data
         );
-        return res.data;
+        const raw = res.data?.data || res.data || {};
+        return {
+            bookId: raw.bookId || raw.book_id || bookId,
+            objectKey: raw.objectKey || raw.object_key || raw.key || '',
+            uploadUrl: raw.uploadUrl || raw.upload_url || raw.url || '',
+            contentType: raw.contentType || raw.content_type || data.contentType || 'image/jpeg',
+            expiresIn: Number(raw.expiresIn || raw.expires_in || 3600),
+        };
     },
 
     /**
-     * Uploads the image DIRECTLY to S3 (no Authorization header; same Content-Type as signed).
-     * Reports real progress.
+     * Uploads the image DIRECTLY to S3 (no Authorization headers; exact Content-Type as signed).
+     * Uses native XMLHttpRequest to avoid Axios interceptor pollution and track real upload progress.
      */
     uploadCoverToS3: async (
         uploadUrl: string,
@@ -417,11 +424,44 @@ export const bookService = {
         contentType: string,
         onProgress?: (percentage: number) => void
     ): Promise<void> => {
-        await axios.put(uploadUrl, file, {
-            headers: { 'Content-Type': contentType },
-            onUploadProgress: (e) => {
-                if (e.total && onProgress) onProgress(Math.round((e.loaded * 100) / e.total));
-            },
+        if (!uploadUrl) {
+            throw new Error('Storage upload URL is missing or empty.');
+        }
+
+        return new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', uploadUrl, true);
+            xhr.setRequestHeader('Content-Type', contentType || file.type || 'image/jpeg');
+
+            if (onProgress && xhr.upload) {
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable && e.total > 0) {
+                        onProgress(Math.round((e.loaded * 100) / e.total));
+                    }
+                };
+            }
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    if (onProgress) onProgress(100);
+                    resolve();
+                } else {
+                    reject({
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        message: `S3 storage upload rejected with status ${xhr.status}: ${xhr.statusText || 'Forbidden / Bad Request'}`,
+                    });
+                }
+            };
+
+            xhr.onerror = () => {
+                reject({
+                    status: 0,
+                    message: 'Network error occurred while uploading cover to storage. Check S3 CORS and network connection.',
+                });
+            };
+
+            xhr.send(file);
         });
     },
 

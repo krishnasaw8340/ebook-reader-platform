@@ -53,11 +53,8 @@ export const AdminUploads: React.FC = () => {
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    // Ingestion Modal State
     const [uploadModalOpen, setUploadModalOpen] = useState(initialAction === 'new');
     const [selectedSeriesId, setSelectedSeriesId] = useState('');
-    const [volumeOption, setVolumeOption] = useState<'none' | 'existing'>('none');
-    const [selectedVolumeId, setSelectedVolumeId] = useState('');
     const [bookTitle, setBookTitle] = useState('');
     const [language, setLanguage] = useState('English');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -118,15 +115,14 @@ export const AdminUploads: React.FC = () => {
         }
 
         const seriesObj = seriesList.find(s => s.id === selectedSeriesId);
-        const volumeObj = volumesList.find(v => v.id === selectedVolumeId);
 
         try {
             const created = await adminUploadService.createJob({
                 file: { name: selectedFile.name, size: selectedFile.size },
                 seriesId: selectedSeriesId,
                 seriesTitle: seriesObj?.title || 'Franchise',
-                volumeId: volumeOption === 'existing' ? selectedVolumeId : null,
-                volumeTitle: volumeOption === 'existing' ? volumeObj?.title : null,
+                volumeId: null,
+                volumeTitle: null,
                 bookTitle,
                 language
             });
@@ -217,8 +213,6 @@ export const AdminUploads: React.FC = () => {
         const matchesStatus = !statusFilter || j.status === statusFilter;
         return matchesQuery && matchesStatus;
     });
-
-    const seriesVolumes = volumesList.filter(v => v.series_id === selectedSeriesId);
 
     return (
         <div className={styles.container}>
@@ -436,40 +430,6 @@ export const AdminUploads: React.FC = () => {
                             options={seriesList.map(s => ({ value: s.id, label: s.title }))}
                             placeholder="Select Target Series"
                         />
-                    </div>
-
-                    <div className={uiStyles.formGroup}>
-                        <label className={uiStyles.formLabel}>Volume Assignment (Optional)</label>
-                        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                            <button
-                                type="button"
-                                className={`${uiStyles.btnSecondary} ${volumeOption === 'none' ? uiStyles.btnPrimary : ''}`}
-                                style={{ flex: 1, padding: '8px 12px', fontSize: '12px' }}
-                                onClick={() => setVolumeOption('none')}
-                            >
-                                Direct Series (No Volume)
-                            </button>
-                            <button
-                                type="button"
-                                className={`${uiStyles.btnSecondary} ${volumeOption === 'existing' ? uiStyles.btnPrimary : ''}`}
-                                style={{ flex: 1, padding: '8px 12px', fontSize: '12px' }}
-                                onClick={() => setVolumeOption('existing')}
-                            >
-                                Select Volume
-                            </button>
-                        </div>
-
-                        {volumeOption === 'existing' && (
-                            <CustomSelect
-                                value={selectedVolumeId}
-                                onChange={(val) => setSelectedVolumeId(val)}
-                                options={[
-                                    { value: '', label: '-- Choose Volume --' },
-                                    ...seriesVolumes.map(v => ({ value: v.id, label: `Vol. ${v.volume_no}: ${v.title}` }))
-                                ]}
-                                placeholder="Choose Volume"
-                            />
-                        )}
                     </div>
 
                     <div className={uiStyles.formGrid}>

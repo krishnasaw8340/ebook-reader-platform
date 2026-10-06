@@ -355,8 +355,15 @@ export const AdminBookDetail: React.FC = () => {
                     onClick={() => setActiveTab('media')}
                     title="Click to view or upload cover artwork"
                 >
-                    {book.coverUrl ? (
-                        <img src={book.coverUrl} alt={book.title} className={styles.coverThumb} />
+                    {book.coverUrl || book.cover_image || book.coverImage ? (
+                        <img
+                            src={book.coverUrl || book.cover_image || book.coverImage || ''}
+                            alt={book.title}
+                            className={styles.coverThumb}
+                            onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                        />
                     ) : (
                         <div className={styles.coverPlaceholder}>
                             <ImageIcon size={26} />
@@ -887,12 +894,12 @@ export const AdminBookDetail: React.FC = () => {
                 <div className={styles.tabContentCard}>
                     <BookCoverUploader
                         bookId={book.id}
-                        coverUrl={book.coverUrl}
+                        coverUrl={book.coverUrl || book.cover_image || (book as any).coverImage}
                         fileName={book.coverFileName}
                         fileSize={book.coverFileSize}
                         onUploaded={(updated) => {
                             setBook(updated);
-                            setFormCover(updated.coverUrl || '');
+                            setFormCover(updated.coverUrl || updated.cover_image || '');
                         }}
                         onSuccess={(m) => { setErrorMessage(null); setSuccessMessage(m); }}
                         onError={(m) => { setSuccessMessage(null); setErrorMessage(m); }}

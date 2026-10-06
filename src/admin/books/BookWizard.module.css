@@ -1,7 +1,7 @@
 .wizardContainer {
-    max-width: 960px;
+    max-width: 1040px;
     margin: 0 auto;
-    padding-bottom: 40px;
+    padding-bottom: 60px;
 }
 
 /* Stepper Header */
@@ -57,49 +57,39 @@
     padding-bottom: 4px;
 }
 
-/* ─── Step Pill (inactive default) ───────────────────────────────────────── */
+/* ─── Step Pill ───────────────────────────────────────── */
 .stepPill {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 12px;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
     font-weight: 600;
-    /* Use text-muted so it reads in both dark (#666) and light (#6B7280) */
     color: var(--color-text-muted);
     background: var(--color-interaction-hover);
     border: 1px solid transparent;
     cursor: pointer;
     white-space: nowrap;
     transition: var(--transition-fast, all 0.15s ease);
-    /* Ensure all child text inherits the pill's color */
-    -webkit-text-fill-color: currentColor;
 }
 
-.stepPill * {
-    color: inherit;
-}
-
-/* Hover — visible in BOTH dark and light mode */
 .stepPill:hover {
     color: var(--color-text-primary);
     background: var(--color-surface-hover);
     border-color: var(--color-border-hover);
 }
 
-/* ─── Step number dot badge (inactive pills) ─────────────────────────────── */
 .stepPillDot {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
-    /* Neutral surface that shows in both modes */
     background: var(--color-border);
     color: var(--color-text-secondary);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     flex-shrink: 0;
     transition: var(--transition-fast, all 0.15s ease);
@@ -110,7 +100,6 @@
     color: var(--color-text-primary);
 }
 
-/* ─── Active step ────────────────────────────────────────────────────────── */
 .stepPillActive {
     background: var(--color-brand-primary-subtle);
     border-color: rgba(230, 57, 70, 0.4);
@@ -119,13 +108,17 @@
 
 .stepPillActive .stepPillDot {
     background: var(--color-brand-primary);
-    color: #ffffff; /* Always white — sits on crimson red dot */
+    color: #ffffff;
 }
 
-/* ─── Completed step ─────────────────────────────────────────────────────── */
 .stepPillCompleted {
     color: var(--color-status-success);
     background: var(--color-status-success-subtle);
+}
+
+.stepPillCompleted .stepPillDot {
+    background: var(--color-status-success);
+    color: #ffffff;
 }
 
 /* ─── Step Card ──────────────────────────────────────────────────────────── */
@@ -145,7 +138,7 @@
 
 .stepCardTitle {
     font-size: 18px;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--color-text-primary);
     margin-bottom: 4px;
 }
@@ -153,6 +146,439 @@
 .stepCardSubtitle {
     font-size: 13px;
     color: var(--color-text-secondary);
+    line-height: 1.5;
+}
+
+/* ─── Mode Cards (Option A vs Option B) ─────────────────────────────────── */
+.modeGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+@media (min-width: 700px) {
+    .modeGrid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.modeCard {
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 12px;
+    border: 2px solid var(--color-border);
+    background: var(--color-surface-hover);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    align-items: flex-start;
+}
+
+.modeCard:hover {
+    border-color: var(--color-border-hover);
+    transform: translateY(-2px);
+    background: var(--color-surface-active);
+}
+
+.modeCardActive {
+    border-color: var(--color-brand-primary) !important;
+    background: var(--color-brand-primary-subtle) !important;
+    box-shadow: 0 0 16px rgba(230, 57, 70, 0.12);
+}
+
+.modeIconA {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modeIconB {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modeContent {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.modeHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.modeTitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.modeBadgeRecommended {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.modeBadgeFranchise {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.modeDesc {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    line-height: 1.45;
+}
+
+/* ─── 2-Option Pricing Toggle ────────────────────────────────────────────── */
+.pricingToggleGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.pricingToggleCard {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 2px solid var(--color-border);
+    background: var(--color-surface);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pricingToggleCard:hover {
+    border-color: var(--color-border-hover);
+    background: var(--color-surface-hover);
+}
+
+.pricingToggleActiveFree {
+    border-color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.1) !important;
+}
+
+.pricingToggleActivePaid {
+    border-color: #fbbf24 !important;
+    background: rgba(251, 191, 36, 0.1) !important;
+}
+
+.pricingIconFree {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pricingIconPaid {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pricingToggleTitle {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.pricingToggleDesc {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+/* ─── Bulk PDF Dropzone (Step 2) ────────────────────────────────────────── */
+.bulkDropzone {
+    border: 2px dashed var(--color-border);
+    border-radius: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.015);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.bulkDropzone:hover,
+.bulkDropzoneActive {
+    border-color: var(--color-brand-primary);
+    background: var(--color-brand-primary-subtle);
+}
+
+.dropzoneIconCircle {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(230, 57, 70, 0.12);
+    color: var(--color-brand-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.dropzoneTitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: 4px;
+}
+
+.dropzoneSubtitle {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    max-width: 480px;
+    line-height: 1.4;
+    margin-bottom: 12px;
+}
+
+.dropzoneBrowseBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+/* ─── Batch Controls & Toolbar ─────────────────────────────────────────── */
+.chapterToolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+}
+
+.batchControls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.batchGroup {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.batchInput {
+    width: 54px;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    text-align: center;
+}
+
+/* ─── Chapter Card Item ─────────────────────────────────────────────────── */
+.chapterCardItem {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.15s ease;
+}
+
+.chapterCardItem:hover {
+    border-color: var(--color-border-hover);
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.chapterRowMain {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.chapterInfoGroup {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 240px;
+}
+
+.chapterNumBadge {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--color-brand-primary);
+    min-width: 32px;
+}
+
+.chapterTitleInput {
+    flex: 1;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+}
+
+.chapterPricingGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chapterActionsGroup {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ─── Multiple PDFs per Chapter ─────────────────────────────────────────── */
+.chapterPdfSection {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+
+.chapterPdfSectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.pdfFileList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pdfFileItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.pdfFileNameGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-primary);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.pdfFileMetaGroup {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.pdfMetaText {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.btnAddPdfToChapter {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    align-self: flex-start;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: 2px;
+}
+
+.btnAddPdfToChapter:hover {
+    background: rgba(230, 57, 70, 0.15);
+    border-color: rgba(230, 57, 70, 0.4);
+    color: var(--color-brand-primary);
 }
 
 /* ─── Chip Selectors ─────────────────────────────────────────────────────── */
@@ -167,13 +593,13 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 5px 10px;
-    border-radius: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
     background: var(--color-surface-hover);
     border: 1px solid var(--color-border);
-    color: var(--color-text-primary);
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: var(--transition-fast, all 0.15s ease);
 }
@@ -181,30 +607,14 @@
 .chip:hover {
     background: var(--color-surface-active);
     border-color: var(--color-border-hover);
+    color: var(--color-text-primary);
 }
 
 .chipSelected {
     background: var(--color-brand-primary-subtle);
     border-color: var(--color-brand-primary);
     color: var(--color-brand-primary);
-}
-
-.chipRemoveBtn {
-    background: none;
-    border: none;
-    color: inherit;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    padding: 0;
-}
-
-/* ─── Media Previews Row ─────────────────────────────────────────────────── */
-.mediaRow {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-top: 14px;
+    font-weight: 700;
 }
 
 /* ─── Wizard Footer Controls ─────────────────────────────────────────────── */
@@ -213,118 +623,63 @@
     justify-content: space-between;
     align-items: center;
     gap: 12px;
+    margin-top: 10px;
 }
 
-/* ─── Stepper (horizontal, connected) ────────────────────────────────────── */
-.stepperContainer {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
-    padding: 20px 24px;
-    margin-bottom: 24px;
-    overflow-x: auto;
-}
-
-.stepNode {
-    flex: 1;
-    min-width: 72px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    position: relative;
-    color: var(--color-text-muted);
-    cursor: default;
-}
-
-.stepNode:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    top: 15px;
-    left: calc(50% + 20px);
-    width: calc(100% - 40px);
-    height: 2px;
-    background: var(--color-border);
-}
-
-.stepNodeCompleted:not(:last-child)::after { background: var(--color-status-success); }
-.stepNodeCompleted { cursor: pointer; color: var(--color-status-success); }
-
-.stepCircle {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
+/* ─── Submission Progress Modal ─────────────────────────────────────────── */
+.progressModalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
-    font-weight: 700;
-    background: var(--color-border-subtle);
-    border: 2px solid var(--color-border);
-    color: var(--color-text-muted);
-    transition: all 0.2s ease;
-    z-index: 1;
+    z-index: 500;
+    padding: 20px;
 }
 
-.stepNodeCompleted .stepCircle {
-    background: var(--color-status-success);
-    border-color: var(--color-status-success);
-    color: #fff;
-}
-
-.stepNodeActive { color: var(--color-text-primary); }
-.stepNodeActive .stepCircle {
-    background: var(--color-brand-primary);
-    border-color: var(--color-brand-primary);
-    color: #fff;
-    box-shadow: 0 0 0 4px var(--color-brand-primary-subtle);
-}
-
-.stepTitle {
-    font-size: 11px;
-    font-weight: 600;
+.progressModalCard {
+    width: 100%;
+    max-width: 480px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 32px 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
     text-align: center;
-    white-space: nowrap;
 }
 
-@media (max-width: 720px) {
-    .stepTitle { display: none; }
-    .stepNode { min-width: 40px; }
-}
-
-/* ─── Choice cards (Step 2) ──────────────────────────────────────────────── */
-.choiceGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 14px;
-    margin-bottom: 20px;
-}
-
-.choiceCard {
+.progressList {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 20px 16px;
-    text-align: center;
-    border-radius: 10px;
-    border: 2px solid var(--color-border);
-    background: var(--color-surface);
-    color: var(--color-text-muted);
-    cursor: pointer;
-    transition: all 0.15s ease;
+    gap: 12px;
+    margin: 24px 0;
+    text-align: left;
 }
 
-.choiceCard:hover { border-color: var(--color-border-hover); transform: translateY(-1px); }
+.progressItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--color-border-subtle);
+    font-size: 13px;
+}
 
-.choiceCardActive {
+.progressItemActive {
     border-color: var(--color-brand-primary);
     background: var(--color-brand-primary-subtle);
-    color: var(--color-brand-primary);
+    font-weight: 600;
 }
 
-.choiceTitle { font-weight: 700; font-size: 14px; color: var(--color-text-primary); }
-.choiceDesc { font-size: 12px; color: var(--color-text-muted); }
+.progressItemDone {
+    color: var(--color-status-success);
+    border-color: rgba(16, 185, 129, 0.3);
+}

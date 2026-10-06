@@ -5,11 +5,12 @@ import {
     Edit2,
     Trash2,
     RefreshCw,
-    ExternalLink
+    ExternalLink,
+    Image as ImageIcon
 } from 'lucide-react';
-import { adminSeriesService, seriesService } from '../../services/admin/adminServices';
+import { adminSeriesService, adminBookService } from '../../services/admin/adminServices';
 import { generateSlug } from '../../services/seriesService';
-import type { BookSeries, SeriesStatus } from '../../types';
+import type { Book, BookSeries, SeriesStatus } from '../../types';
 import {
     PageHeader,
     SearchBar,
@@ -22,11 +23,13 @@ import {
     SuccessBanner,
     ErrorBanner
 } from '../components/AdminUI';
+import { BookCoverUploader } from '../books/BookCoverUploader';
 import styles from '../components/AdminUI.module.css';
 
 export const AdminSeries: React.FC = () => {
     const navigate = useNavigate();
     const [seriesList, setSeriesList] = useState<BookSeries[]>([]);
+    const [booksList, setBooksList] = useState<Book[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -36,6 +39,7 @@ export const AdminSeries: React.FC = () => {
     // Create / Edit modal
     const [modalOpen, setModalOpen] = useState(false);
     const [editingSeries, setEditingSeries] = useState<BookSeries | null>(null);
+    const [primaryBookForEditing, setPrimaryBookForEditing] = useState<Book | null>(null);
     const [formTitle, setFormTitle] = useState('');
     const [formSlug, setFormSlug] = useState('');
     const [formDesc, setFormDesc] = useState('');
@@ -48,8 +52,12 @@ export const AdminSeries: React.FC = () => {
     const loadSeries = async () => {
         setLoading(true);
         try {
-            const data = await adminSeriesService.getAll(searchQuery);
-            setSeriesList(data);
+            const [sData, bData] = await Promise.all([
+                adminSeriesService.getAll(searchQuery),
+                adminBookService.getAll()
+            ]);
+            setSeriesList(sData);
+            setBooksList(bData);
         } catch (err: any) {
             const msg = err.response?.data?.message || err.message || 'Unable to load series catalog.';
             setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
@@ -64,20 +72,23 @@ export const AdminSeries: React.FC = () => {
 
     const openCreateModal = () => {
         setEditingSeries(null);
+        setPrimaryBookForEditing(null);
         setFormTitle('');
         setFormSlug('');
         setFormDesc('');
-        setFormCover('https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&width=400');
+        setFormCover('');
         setFormStatus('DRAFT');
         setModalOpen(true);
     };
 
     const openEditModal = (series: BookSeries) => {
         setEditingSeries(series);
+        const matchedBook = booksList.find(b => b.series_id === series.id || b.seriesId === series.id) || null;
+        setPrimaryBookForEditing(matchedBook);
         setFormTitle(series.title || series.name || '');
         setFormSlug(series.slug || generateSlug(series.title || ''));
         setFormDesc(series.description || '');
-        setFormCover(series.cover_image || '');
+        setFormCover(series.cover_image || matchedBook?.coverUrl || matchedBook?.cover_image || '');
         setFormStatus(series.status || 'ONGOING');
         setModalOpen(true);
     };
@@ -205,43 +216,71 @@ export const AdminSeries: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {seriesList.map((s) => (
-                                    <tr key={s.id}>
-                                        <td>
-                                            <img src={s.cover_image || ''} alt={s.title} className={styles.tableCoverThumb} />
-                                        </td>
-                                        <td>
-                                            <div
-                                                style={{ fontWeight: 700, color: 'var(--color-text-primary)', cursor: 'pointer' }}
-                                                onClick={() => navigate(`/admin/series/${s.id}`)}
-                                            >
-                                                {s.title}
-                                            </div>
-                                            {s.slug && (
-                                                <div style={{ fontSize: '11px', color: 'var(--color-brand-primary)', fontFamily: 'monospace', marginTop: '2px' }}>
-                                                    /{s.slug}
+                                {seriesList.map((s) => {
+                                    const primaryBook = booksList.find(b => b.series_id === s.id || b.seriesId === s.id);
+                                    const coverSrc = s.cover_image || primaryBook?.coverUrl || primaryBook?.cover_image || primaryBook?.coverImage;
+
+                                    return (
+                                        <tr key={s.id}>
+                                            <td>
+                                                <div style={{ width: '42px', height: '60px', borderRadius: '4px', overflow: 'hidden', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--glass-border)', flexShrink: 0 }}>
+                                                    {coverSrc ? (
+                                                        <img
+                                                            src={coverSrc}
+                                                            alt={s.title}
+                                                            className={styles.tableCoverThumb}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                            onError={(e) => {
+                                                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div style={{ color: 'var(--text-muted)', fontSize: '9px', textAlign: 'center', padding: '2px' }}>No cover</div>
+                                                    )}
                                                 </div>
-                                            )}
-                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
-                                                {s.description || 'No description'}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <StatusBadge status={s.status} />
-                                        </td>
-                                        <td style={{ fontSize: '12px' }}>
-                                            {new Date(s.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td style={{ textAlign: 'right' }}>
-                                            <div style={{ display: 'inline-flex', gap: '6px' }}>
-                                                <button
-                                                    className={styles.btnSecondary}
-                                                    style={{ padding: '4px 8px', fontSize: '11px' }}
-                                                    title="View Volumes & Books"
+                                            </td>
+                                            <td>
+                                                <div
+                                                    style={{ fontWeight: 700, color: 'var(--color-text-primary)', cursor: 'pointer' }}
                                                     onClick={() => navigate(`/admin/series/${s.id}`)}
                                                 >
-                                                    Overview
-                                                </button>
+                                                    {s.title}
+                                                </div>
+                                                {s.slug && (
+                                                    <div style={{ fontSize: '11px', color: 'var(--color-brand-primary)', fontFamily: 'monospace', marginTop: '2px' }}>
+                                                        /{s.slug}
+                                                    </div>
+                                                )}
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
+                                                    {s.description || 'No description'}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <StatusBadge status={s.status} />
+                                            </td>
+                                            <td style={{ fontSize: '12px' }}>
+                                                {new Date(s.created_at).toLocaleDateString()}
+                                            </td>
+                                            <td style={{ textAlign: 'right' }}>
+                                                <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                                    {primaryBook && (
+                                                        <button
+                                                            className={styles.btnSecondary}
+                                                            style={{ padding: '4px 8px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                                            title="Manage Book & Upload Cover"
+                                                            onClick={() => navigate(`/admin/books/${primaryBook.id}`)}
+                                                        >
+                                                            <ImageIcon size={12} /> Book & Cover
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        className={styles.btnSecondary}
+                                                        style={{ padding: '4px 8px', fontSize: '11px' }}
+                                                        title="View Volumes & Books"
+                                                        onClick={() => navigate(`/admin/series/${s.id}`)}
+                                                    >
+                                                        Overview
+                                                    </button>
                                                 <button
                                                     className={styles.btnIcon}
                                                     title="Toggle Status"
@@ -274,7 +313,8 @@ export const AdminSeries: React.FC = () => {
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
+                                );
+                            })}
                             </tbody>
                         </table>
                     </div>
@@ -351,11 +391,29 @@ export const AdminSeries: React.FC = () => {
                         />
                     </div>
 
-                    <FileUploadDropzone
-                        label="Series Main Banner / Poster"
-                        currentUrl={formCover}
-                        onFileSelected={(url) => setFormCover(url)}
-                    />
+                    {editingSeries && primaryBookForEditing ? (
+                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--glass-border)' }}>
+                            <BookCoverUploader
+                                bookId={primaryBookForEditing.id}
+                                coverUrl={primaryBookForEditing.coverUrl || primaryBookForEditing.cover_image || formCover}
+                                fileName={primaryBookForEditing.coverFileName}
+                                fileSize={primaryBookForEditing.coverFileSize}
+                                onUploaded={(updatedBook) => {
+                                    setSuccessMessage('Cover image uploaded and updated successfully.');
+                                    setFormCover(updatedBook.coverUrl || updatedBook.cover_image || '');
+                                    loadSeries();
+                                }}
+                                onError={(err) => setErrorMessage(err)}
+                                onSuccess={(msg) => setSuccessMessage(msg)}
+                            />
+                        </div>
+                    ) : (
+                        <FileUploadDropzone
+                            label="Series Main Banner / Poster"
+                            currentUrl={formCover}
+                            onFileSelected={(url) => setFormCover(url)}
+                        />
+                    )}
                 </form>
             </Modal>
 

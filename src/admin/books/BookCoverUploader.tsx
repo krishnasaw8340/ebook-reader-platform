@@ -41,18 +41,22 @@ export const uploadBookCover = async (
     const { uploadUrl, contentType } = await bookService.getCoverUploadUrl(bookId, {
         fileName: file.name,
         fileSize: file.size,
-        contentType: file.type,
+        contentType: file.type || 'image/jpeg',
     });
 
+    if (!uploadUrl) {
+        throw new Error('Failed to retrieve upload URL from storage server.');
+    }
+
     try {
-        await bookService.uploadCoverToS3(uploadUrl, file, contentType, onProgress);
+        await bookService.uploadCoverToS3(uploadUrl, file, contentType || file.type || 'image/jpeg', onProgress);
     } catch (err: any) {
-        const status = err?.response?.status;
-        throw new Error(
-            status === 403
-                ? 'Upload link expired or was rejected by storage. Please try again.'
-                : 'Upload to storage failed. Please check your connection and try again.'
-        );
+        console.error('[uploadBookCover] Storage PUT error:', err);
+        const status = err?.status ?? err?.response?.status;
+        if (status === 403 || String(err?.message || '').includes('403') || String(err?.message || '').includes('rejected')) {
+            throw new Error('Upload link expired or was rejected by storage (403). Please verify storage permissions or try again.');
+        }
+        throw new Error(err?.message || 'Upload to storage failed. Please check your connection and try again.');
     }
 
     return bookService.completeCoverUpload(bookId, file.name);
