@@ -1,29 +1,31 @@
 /* ============================================================ */
-/* BROWSE PAGE — Clean catalog discovery                         */
+/* BROWSE PAGE — MythToons Manhwa & Novel Catalog Explorer      */
 /* ============================================================ */
 .browse {
   padding-top: 24px;
-  padding-bottom: 60px;
+  padding-bottom: 80px;
 }
 
 .pageHeader {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .pageHeader h1 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  color: var(--color-text-primary);
 }
 
 .subtitle {
   font-size: 13px;
   color: var(--color-text-secondary);
+  line-height: 1.5;
 }
 
 @media (min-width: 768px) {
   .pageHeader h1 {
-    font-size: 26px;
+    font-size: 28px;
   }
 }
 
@@ -31,13 +33,13 @@
 .searchBar {
   position: relative;
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
   margin-bottom: 16px;
 }
 
 .searchIcon {
   position: absolute;
-  left: 12px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-text-muted);
@@ -49,10 +51,10 @@
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
-  padding: 9px 36px 9px 36px;
+  padding: 10px 38px 10px 38px;
   font-size: 13px;
   color: var(--color-text-primary);
-  transition: var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .searchInput::placeholder {
@@ -61,11 +63,13 @@
 
 .searchInput:focus {
   border-color: var(--color-brand-primary);
+  background-color: var(--color-surface-elevated);
+  box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.15);
 }
 
 .searchClear {
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
@@ -76,13 +80,49 @@
   line-height: 1;
 }
 
-/* Genre Tabs */
+/* Format Selector Tabs */
+.formatTabsRow {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+}
+
+.formatTab {
+  flex: 0 0 auto;
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.formatTab:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.formatTabActive {
+  background-color: var(--color-brand-primary) !important;
+  border-color: var(--color-brand-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(230, 57, 70, 0.35);
+}
+
+/* Genre Pills */
 .genresRow {
   display: flex;
   gap: 6px;
   overflow-x: auto;
   padding-bottom: 4px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .genreTab {
@@ -95,7 +135,7 @@
   font-weight: 600;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: all var(--transition-fast);
   white-space: nowrap;
 }
 
@@ -105,18 +145,21 @@
 }
 
 .genreActive {
-  background-color: var(--color-brand-primary) !important;
+  background-color: var(--color-surface-elevated) !important;
   border-color: var(--color-brand-primary) !important;
-  color: #ffffff !important;
+  color: var(--color-brand-primary) !important;
+  box-shadow: 0 2px 8px rgba(230, 57, 70, 0.15);
 }
 
-/* Controls Row */
+/* Controls Bar */
 .controlsRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
   flex-wrap: wrap;
 }
 
@@ -131,7 +174,7 @@
   background: transparent;
   border: 1px solid var(--color-border);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: var(--transition-fast);
@@ -148,6 +191,12 @@
   color: var(--color-text-inverse) !important;
 }
 
+.rightControls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 /* Sort */
 .sortWrapper {
   display: flex;
@@ -161,21 +210,53 @@
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  padding: 5px 8px;
+  padding: 6px 10px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text-primary);
   cursor: pointer;
 }
 
-/* Results Info */
-.resultsInfo {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  margin-bottom: 14px;
+/* View Toggle */
+.viewToggleGroup {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
 }
 
-/* Grid */
+.viewBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.viewBtn:hover {
+  color: var(--color-text-primary);
+}
+
+.viewBtnActive {
+  background-color: var(--color-brand-primary);
+  color: #ffffff !important;
+}
+
+/* Results Info */
+.resultsInfo {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 16px;
+}
+
+/* Grid Mode */
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -207,48 +288,69 @@
   }
 }
 
+/* Detailed Chapter Feed Mode */
+.detailedGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .detailedGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .detailedGrid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+  }
+}
+
 /* Empty State */
 .emptyBox {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  padding: 48px 24px;
-  border-radius: var(--radius-md);
+  padding: 56px 24px;
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .emptyIcon {
-  color: var(--color-text-muted);
+  color: var(--color-brand-primary);
 }
 
 .emptyBox h4 {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text-primary);
 }
 
 .emptyBox p {
   font-size: 13px;
   color: var(--color-text-secondary);
-  max-width: 340px;
+  max-width: 360px;
 }
 
 .btnClear {
-  background: none;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-  padding: 6px 16px;
+  background: var(--color-brand-primary);
+  border: none;
+  color: #ffffff;
+  padding: 8px 20px;
   border-radius: var(--radius-sm);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  margin-top: 4px;
+  margin-top: 6px;
   transition: var(--transition-fast);
 }
 
 .btnClear:hover {
-  border-color: var(--color-brand-primary);
-  color: var(--color-brand-primary);
+  background: var(--color-brand-primary-hover);
 }
+

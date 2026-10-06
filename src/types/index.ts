@@ -434,13 +434,14 @@ export interface ChapterPdfUploadUrlPayload {
 export type ChapterPdfUploadInitPayload = ChapterPdfUploadUrlPayload;
 
 export interface ChapterPdfUploadUrlResponse {
-  uploadId: string;
-  chapterId: string;
-  versionId: string;
-  objectKey: string;
+  uploadId?: string;
+  chapterId?: string;
+  versionId?: string;
+  objectKey?: string;
+  key?: string;
   storageKey?: string;
   uploadUrl: string;
-  expiresIn: number;
+  expiresIn?: number;
   expiresInSeconds?: number;
 }
 
@@ -450,9 +451,10 @@ export interface ChapterPdfUploadCompletePayload {
   uploadId?: string;
   versionId?: string;
   objectKey?: string;
+  key?: string;
   storageKey?: string;
-  fileName: string;
-  fileSize: number;
+  fileName?: string;
+  fileSize?: number;
   pageCount?: number;
   checksum?: string;
 }

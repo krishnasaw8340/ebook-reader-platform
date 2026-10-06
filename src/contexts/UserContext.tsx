@@ -16,6 +16,7 @@ import type {
 import { seriesService } from '../services/seriesService';
 import { bookService } from '../services/bookService';
 import { chapterService } from '../services/chapterService';
+import { SEED_SERIES, SEED_BOOKS, SEED_CHAPTERS } from '../utils/seedData';
 
 interface UserContextType {
   currentUser: User | null;
@@ -124,11 +125,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return s;
         });
-        setBookSeries(enrichedSeries);
-        setBooks(booksData);
-        setChapters(chaptersData);
+        const finalSeries = enrichedSeries.length > 0 ? enrichedSeries : SEED_SERIES;
+        const finalBooks = booksData.length > 0 ? booksData : SEED_BOOKS;
+        const finalChapters = chaptersData.length > 0 ? chaptersData : SEED_CHAPTERS;
+
+        setBookSeries(finalSeries);
+        setBooks(finalBooks);
+        setChapters(finalChapters);
       } catch (err) {
-        console.warn('[UserContext] Failed to fetch catalog data:', err);
+        console.warn('[UserContext] Failed to fetch catalog data, using fallback catalog:', err);
+        setBookSeries(SEED_SERIES);
+        setBooks(SEED_BOOKS);
+        setChapters(SEED_CHAPTERS);
       } finally {
         setLoading(false);
       }

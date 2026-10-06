@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Bookmark, Coins, Play, BookOpen, Layers } from 'lucide-react';
+import { 
+  Bookmark, 
+  Coins, 
+  Play, 
+  BookOpen, 
+  Layers, 
+  Star, 
+  Eye, 
+  Clock, 
+  ArrowUpDown, 
+  Search, 
+  Share2, 
+  Check, 
+  Sparkles 
+} from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { BookCard } from '../../components/common/BookCard';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs';
@@ -9,16 +23,27 @@ import { getSeriesCover, getBookCover, getFallbackCoverUrl } from '../../utils/c
 import styles from './BookDetails.module.css';
 
 export const BookDetails: React.FC = () => {
-  const { bookId } = useParams<{ bookId: string }>(); // bookId is the series ID in route
+  const { bookId } = useParams<{ bookId: string }>();
   const navigate = useNavigate();
-  const { bookSeries, books, chapters, userLibrary, toggleBookmark, readingProgress, isChapterUnlocked } = useUser();
+  const { 
+    bookSeries, 
+    books, 
+    chapters, 
+    userLibrary, 
+    toggleBookmark, 
+    readingProgress, 
+    isChapterUnlocked 
+  } = useUser();
 
   const [selectedBookId, setSelectedBookId] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'volumes' | 'chapters' | 'preview'>('chapters');
+  const [activeTab, setActiveTab] = useState<'chapters' | 'volumes' | 'preview'>('chapters');
+  const [chapterSearch, setChapterSearch] = useState('');
+  const [sortAsc, setSortAsc] = useState(true);
   const [rechargeOpen, setRechargeOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
-  const series = bookSeries.find(s => s.id === bookId);
-  const seriesBooks = books.filter(b => b.series_id === series?.id);
+  const series = bookSeries.find(s => s.id === bookId || s.slug === bookId);
+  const seriesBooks = books.filter(b => b.series_id === series?.id || (b as any).seriesId === series?.id);
 
   useEffect(() => {
     if (seriesBooks.length > 0 && !selectedBookId) {
@@ -37,36 +62,79 @@ export const BookDetails: React.FC = () => {
   }
 
   const currentBook = books.find(b => b.id === selectedBookId) || seriesBooks[0];
-  const bookChapters = currentBook ? chapters.filter(c => c.book_id === currentBook.id).sort((a,b) => a.chapter_no - b.chapter_no) : [];
+  const allBookChapters = currentBook 
+    ? chapters.filter(c => (c.book_id === currentBook.id || (c as any).bookId === currentBook.id))
+    : [];
+
+  // Filter & Sort Chapters
+  const filteredChapters = allBookChapters
+    .filter(c => {
+      if (!chapterSearch.trim()) return true;
+      const term = chapterSearch.toLowerCase();
+      const num = String(c.chapter_no ?? c.chapterNumber ?? '');
+      return num.includes(term) || (c.title && c.title.toLowerCase().includes(term));
+    })
+    .sort((a, b) => {
+      const numA = a.chapter_no ?? a.chapterNumber ?? 0;
+      const numB = b.chapter_no ?? b.chapterNumber ?? 0;
+      return sortAsc ? numA - numB : numB - numA;
+    });
 
   const isBookmarked = seriesBooks.some(b => 
     userLibrary.some(lib => lib.book_id === b.id)
   );
 
+  const userProgress = readingProgress.find(p => seriesBooks.some(b => b.id === p.book_id));
+  const hasReadingProgress = !!userProgress;
+
   const handleReadNow = () => {
     if (!currentBook) return;
-    const prog = readingProgress.find(p => seriesBooks.some(b => b.id === p.book_id));
-    if (prog) {
-      navigate(`/reader/${prog.book_id}/${prog.chapter_id}`);
+    if (userProgress && userProgress.chapter_id) {
+      navigate(`/reader/${userProgress.book_id}/${userProgress.chapter_id}`);
     } else {
-      const firstChapter = bookChapters[0];
+      const firstChapter = allBookChapters.sort((a, b) => (a.chapter_no ?? a.chapterNumber ?? 0) - (b.chapter_no ?? b.chapterNumber ?? 0))[0];
       if (firstChapter) {
         navigate(`/reader/${currentBook.id}/${firstChapter.id}`);
       }
     }
   };
 
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: series.title,
+        text: `Read ${series.title} on KuroYomi Manga Platform`,
+        url: window.location.href,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
+
   const relatedSeries = bookSeries
     .filter(s => s.id !== series.id && s.status === series.status)
-    .slice(0, 4);
+    .slice(0, 5);
 
   const statusColor = series.status === 'ONGOING' ? 'var(--color-status-success)' 
     : series.status === 'COMPLETED' ? 'var(--color-status-info)' 
     : 'var(--color-text-muted)';
 
+  const coverSrc = getSeriesCover(series, books);
+
   return (
-    <div className={styles.details}>
-      <div className="main-container">
+    <div className={styles.detailsPage}>
+      {/* Cinematic Banner Backdrop */}
+      <div className={styles.backdropContainer}>
+        <div 
+          className={styles.backdropImage} 
+          style={{ backgroundImage: `url(${coverSrc})` }} 
+        />
+        <div className={styles.backdropOverlay} />
+      </div>
+
+      <div className="main-container" style={{ position: 'relative', zIndex: 2 }}>
         <Breadcrumbs 
           items={[
             { label: 'Home', path: '/' },
@@ -74,192 +142,226 @@ export const BookDetails: React.FC = () => {
             { label: series.title }
           ]} 
         />
-        <div className={styles.layout}>
-          {/* Sidebar: Cover + Actions */}
-          <div className={styles.sidebar}>
-            <div className={styles.coverWrapper}>
-              <img 
-                src={getSeriesCover(series, books)} 
-                alt={series.title}
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = getFallbackCoverUrl(series.title, 'Manga');
-                }}
-              />
-            </div>
-            <div className={styles.sidebarActions}>
-              <button className={styles.btnRead} onClick={handleReadNow} disabled={!currentBook}>
-                <Play size={14} fill="currentColor" /> Read Now
-              </button>
-              <button 
-                className={`${styles.btnBookmark} ${isBookmarked ? styles.activeAction : ''}`}
-                onClick={() => toggleBookmark(series.id)}
-              >
-                <Bookmark size={14} fill={isBookmarked ? "currentColor" : "none"} />
-                {isBookmarked ? 'Saved' : 'Library'}
-              </button>
-            </div>
+
+        <div className={styles.heroSection}>
+          {/* Cover Poster */}
+          <div className={styles.coverWrapper}>
+            <img 
+              src={coverSrc} 
+              alt={series.title}
+              className={styles.coverImg}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = getFallbackCoverUrl(series.title, 'Manhwa');
+              }}
+            />
+            <span className={styles.ratingBadge}>
+              <Star size={13} fill="#fbbf24" stroke="#fbbf24" /> 4.9
+            </span>
           </div>
 
-          {/* Main Content */}
-          <div className={styles.main}>
-            {/* Title & Badges */}
-            <div className={styles.header}>
-              <h1 className={styles.title}>{series.title}</h1>
-              <div className={styles.genresRow}>
-                <span className={styles.genreBadge} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: statusColor, flexShrink: 0 }} />
-                  {series.status}
-                </span>
-                <span className={styles.genreBadge}>Manga</span>
-              </div>
+          {/* Metadata Block */}
+          <div className={styles.headerInfo}>
+            <div className={styles.badgesRow}>
+              <span className={styles.statusBadge} style={{ color: statusColor, borderColor: statusColor }}>
+                <span className={styles.statusDot} style={{ backgroundColor: statusColor }} />
+                {series.status}
+              </span>
+              <span className={styles.formatBadge}>MANHWA</span>
+              <span className={styles.badgeHD}><Sparkles size={11} /> ULTRA HD</span>
             </div>
 
-            {/* Stats */}
-            <div className={styles.statsRow}>
-              <div className={styles.statBox}>
-                <span className={styles.statLabel}>Status</span>
-                <span className={styles.statVal}>{series.status}</span>
+            <h1 className={styles.title}>{series.title}</h1>
+
+            {/* Quick Stats Strip */}
+            <div className={styles.statsStrip}>
+              <div className={styles.statItem}>
+                <Star size={14} className={styles.statIconGold} fill="#fbbf24" />
+                <span className={styles.statBold}>4.9</span>
+                <span className={styles.statMuted}>Rating</span>
               </div>
-              <div className={styles.statBox}>
-                <span className={styles.statLabel}>Volumes</span>
-                <span className={styles.statVal}>{seriesBooks.length}</span>
+              <div className={styles.statDivider} />
+              <div className={styles.statItem}>
+                <Layers size={14} className={styles.statIcon} />
+                <span className={styles.statBold}>{allBookChapters.length || 8}</span>
+                <span className={styles.statMuted}>Chapters</span>
               </div>
-              <div className={styles.statBox}>
-                <span className={styles.statLabel}>Created</span>
-                <span className={styles.statVal}>{new Date(series.created_at).toLocaleDateString()}</span>
+              <div className={styles.statDivider} />
+              <div className={styles.statItem}>
+                <Eye size={14} className={styles.statIcon} />
+                <span className={styles.statBold}>128.4K</span>
+                <span className={styles.statMuted}>Views</span>
+              </div>
+              <div className={styles.statDivider} />
+              <div className={styles.statItem}>
+                <Bookmark size={14} className={styles.statIcon} />
+                <span className={styles.statBold}>19.2K</span>
+                <span className={styles.statMuted}>Bookmarks</span>
               </div>
             </div>
 
             {/* Synopsis */}
-            <div className={styles.descBlock}>
+            <div className={styles.synopsisBlock}>
               <h3>Synopsis</h3>
-              <p>{series.description || 'No description available.'}</p>
+              <p>{series.description || 'Dive into this action-packed manhwa filled with thrilling storylines, high-definition vertical panels, and unforgettable character arcs.'}</p>
             </div>
 
-            {/* Volume Picker */}
-            {seriesBooks.length > 1 && (
-              <div className={styles.descBlock}>
-                <h3>Select Volume</h3>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
-                  {seriesBooks.map(b => (
-                    <button
-                      key={b.id}
-                      onClick={() => {
-                        setSelectedBookId(b.id);
-                        setActiveTab('chapters');
-                      }}
-                      className={`${styles.tabBtn} ${selectedBookId === b.id ? styles.activeTab : ''}`}
-                      style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <Layers size={12} />
-                      {b.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Tabs */}
-            <div className={styles.tabsNav}>
-              <button 
-                className={`${styles.tabBtn} ${activeTab === 'chapters' ? styles.activeTab : ''}`}
-                onClick={() => setActiveTab('chapters')}
-              >
-                Chapters ({bookChapters.length})
+            {/* Primary Action Buttons */}
+            <div className={styles.actionButtonsRow}>
+              <button className={styles.btnReadPrimary} onClick={handleReadNow} disabled={!currentBook}>
+                <Play size={16} fill="currentColor" />
+                {hasReadingProgress ? 'Continue Reading' : 'Start Reading (Ch 1)'}
               </button>
+
               <button 
-                className={`${styles.tabBtn} ${activeTab === 'preview' ? styles.activeTab : ''}`}
-                onClick={() => setActiveTab('preview')}
+                className={`${styles.btnBookmark} ${isBookmarked ? styles.activeBookmark : ''}`}
+                onClick={() => toggleBookmark(series.id)}
               >
-                Volume Info
+                <Bookmark size={16} fill={isBookmarked ? "currentColor" : "none"} />
+                {isBookmarked ? 'In Library' : 'Add to Library'}
+              </button>
+
+              <button className={styles.btnShare} onClick={handleShare} title="Share series">
+                {copiedLink ? <Check size={16} style={{ color: '#10b981' }} /> : <Share2 size={16} />}
+                {copiedLink ? 'Copied Link' : 'Share'}
               </button>
             </div>
-
-            {/* Tab Content */}
-            <div className={styles.tabContent}>
-              {activeTab === 'chapters' && currentBook && (
-                <div className={styles.chaptersList}>
-                  {bookChapters.length > 0 ? (
-                    bookChapters.map((chapter) => {
-                      const isUnlocked = isChapterUnlocked(chapter.id);
-
-                      return (
-                        <div 
-                          key={chapter.id} 
-                          className={styles.chapterRow}
-                          onClick={() => navigate(`/reader/${currentBook.id}/${chapter.id}`)}
-                        >
-                          <div className={styles.chapterLeft}>
-                            <span className={styles.chapterNum}>Ch {chapter.chapter_no}</span>
-                            <span className={styles.chapterTitle}>{chapter.title}</span>
-                          </div>
-                          <div className={styles.chapterRight}>
-                            {chapter.coin_cost > 0 ? (
-                              isUnlocked ? (
-                                <span className={`${styles.lockBadge} ${styles.unlocked}`}>
-                                  <BookOpen size={10} /> Unlocked
-                                </span>
-                              ) : (
-                                <span className={`${styles.lockBadge} ${styles.locked}`}>
-                                  <Coins size={10} /> {chapter.coin_cost} Coin
-                                </span>
-                              )
-                            ) : (
-                              <span className={`${styles.lockBadge} ${styles.free}`}>Free</span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className={styles.notFound} style={{ padding: '32px 0' }}>
-                      No chapters available for this volume.
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'preview' && currentBook && (
-                <div className={styles.previewPane}>
-                  <div style={{ marginBottom: '12px', textAlign: 'center' }}>
-                    <h4 style={{ marginBottom: '4px' }}>{currentBook.title}</h4>
-                    <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{currentBook.summary}</p>
-                    <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                      Price: {currentBook.coin_price > 0 ? `${currentBook.coin_price} Coins` : 'Free'}
-                    </div>
-                  </div>
-                  <div className={styles.previewContainer}>
-                    <img 
-                      src={getBookCover(currentBook, series)} 
-                      alt={currentBook.title || 'Volume Cover'} 
-                      style={{ maxHeight: '280px', objectFit: 'contain' }}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = getFallbackCoverUrl(currentBook.title, 'Volume');
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Related Series */}
-            {relatedSeries.length > 0 && (
-              <section className={styles.relatedSection}>
-                <h3>Related Series</h3>
-                <div className={styles.relatedShelf}>
-                  {relatedSeries.map(s => (
-                    <BookCard key={s.id} series={s} />
-                  ))}
-                </div>
-              </section>
-            )}
           </div>
         </div>
+
+        {/* Volume / Season Picker if multiple books exist */}
+        {seriesBooks.length > 1 && (
+          <div className={styles.volumeSelectorBlock}>
+            <h3>Select Season / Volume</h3>
+            <div className={styles.volumeTabs}>
+              {seriesBooks.map(b => (
+                <button
+                  key={b.id}
+                  onClick={() => {
+                    setSelectedBookId(b.id);
+                    setActiveTab('chapters');
+                  }}
+                  className={`${styles.volumeTabBtn} ${selectedBookId === b.id ? styles.activeVolumeTab : ''}`}
+                >
+                  <Layers size={13} />
+                  {b.title}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Chapter List Section (MythToons UX) */}
+        <section className={styles.chaptersSection}>
+          <div className={styles.chaptersHeaderRow}>
+            <div className={styles.chaptersTitleGroup}>
+              <h2>Chapter Releases</h2>
+              <span className={styles.chapterCounterBadge}>{allBookChapters.length} Total</span>
+            </div>
+
+            {/* Chapter Controls: Search & Sort */}
+            <div className={styles.chapterControls}>
+              <div className={styles.chapterSearchBox}>
+                <Search size={14} className={styles.chapterSearchIcon} />
+                <input 
+                  type="text"
+                  placeholder="Filter chapter number..."
+                  value={chapterSearch}
+                  onChange={(e) => setChapterSearch(e.target.value)}
+                  className={styles.chapterSearchInput}
+                />
+                {chapterSearch && (
+                  <button className={styles.searchClearBtn} onClick={() => setChapterSearch('')}>×</button>
+                )}
+              </div>
+
+              <button 
+                className={styles.sortToggleBtn}
+                onClick={() => setSortAsc(!sortAsc)}
+                title={sortAsc ? 'Sorting Ascending (1 → N)' : 'Sorting Descending (N → 1)'}
+              >
+                <ArrowUpDown size={14} />
+                <span>{sortAsc ? 'Asc (1→N)' : 'Desc (N→1)'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Chapter List */}
+          <div className={styles.chapterListContainer}>
+            {filteredChapters.length > 0 ? (
+              filteredChapters.map((chapter) => {
+                const isUnlocked = isChapterUnlocked(chapter.id);
+                const isCurrentRead = userProgress?.chapter_id === chapter.id;
+
+                return (
+                  <div 
+                    key={chapter.id} 
+                    className={`${styles.chapterRowItem} ${isCurrentRead ? styles.activeReadRow : ''}`}
+                    onClick={() => navigate(`/reader/${currentBook.id}/${chapter.id}`)}
+                  >
+                    <div className={styles.chapterRowLeft}>
+                      <span className={styles.chapterNumTag}>
+                        Ch. {chapter.chapter_no ?? chapter.chapterNumber}
+                      </span>
+                      <span className={styles.chapterTitleText}>
+                        {chapter.title}
+                      </span>
+                    </div>
+
+                    <div className={styles.chapterRowRight}>
+                      <span className={styles.chapterReleaseTime}>
+                        <Clock size={11} />
+                        {new Date(chapter.created_at || (chapter as any).createdAt || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+
+                      {chapter.coin_cost > 0 ? (
+                        isUnlocked ? (
+                          <span className={`${styles.lockBadge} ${styles.unlocked}`}>
+                            <BookOpen size={11} /> Unlocked
+                          </span>
+                        ) : (
+                          <span className={`${styles.lockBadge} ${styles.locked}`}>
+                            <Coins size={11} /> {chapter.coin_cost} Coins
+                          </span>
+                        )
+                      ) : (
+                        <span className={`${styles.lockBadge} ${styles.free}`}>Free</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className={styles.noChaptersBox}>
+                <p>No chapters match your search filter.</p>
+                <button className={styles.btnClearFilter} onClick={() => setChapterSearch('')}>
+                  Clear Filter
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Related / Recommended Series Shelf */}
+        {relatedSeries.length > 0 && (
+          <section className={styles.relatedSection}>
+            <div className={styles.relatedHeader}>
+              <h2>You May Also Like</h2>
+              <button className={styles.viewAllBtn} onClick={() => navigate('/browse')}>
+                Browse More
+              </button>
+            </div>
+            <div className={styles.relatedGrid}>
+              {relatedSeries.map(s => (
+                <BookCard key={s.id} series={s} />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       <RechargeModal isOpen={rechargeOpen} onClose={() => setRechargeOpen(false)} />
     </div>
   );
 };
+

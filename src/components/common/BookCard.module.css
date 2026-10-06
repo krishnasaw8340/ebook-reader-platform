@@ -1,5 +1,5 @@
 /* ============================================================ */
-/* BOOK CARD — Clean, lightweight, content-first                 */
+/* BOOK CARD — MythToons & Modern Manhwa/Webtoon Aesthetic       */
 /* ============================================================ */
 .card {
   width: 100%;
@@ -7,48 +7,157 @@
   flex-direction: column;
   cursor: pointer;
   user-select: none;
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Cover */
+.card:hover {
+  transform: translateY(-4px);
+}
+
+/* Cover Wrapper */
 .coverWrapper {
   position: relative;
   width: 100%;
   aspect-ratio: 2 / 3;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg, 12px);
   overflow: hidden;
   border: 1px solid var(--color-border);
   background-color: var(--color-surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover .coverWrapper {
+  border-color: rgba(230, 57, 70, 0.45);
+  box-shadow: 0 8px 24px rgba(230, 57, 70, 0.15), 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
 .cover {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .card:hover .cover {
-  transform: scale(1.02);
+  transform: scale(1.05);
 }
 
-/* Bookmark button — top-right, hidden until hover */
+/* Dark gradient overlay on bottom of cover for text contrast */
+.coverGradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.85) 100%);
+  pointer-events: none;
+}
+
+/* Ranking Badge (#1, #2, #3...) */
+.rankingBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(15, 15, 18, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 3;
+}
+
+.topThree {
+  background: linear-gradient(135deg, #e63946, #b91c1c);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(230, 57, 70, 0.4);
+}
+
+.rankingFlame {
+  color: #ffd700;
+}
+
+/* Top Badges (Format / Hot) */
+.badgeTopRow {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+
+/* If ranking badge is present, shift top badges */
+.rankingBadge ~ .badgeTopRow {
+  left: auto;
+  right: 42px;
+}
+
+.formatBadge {
+  background: rgba(15, 15, 18, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #e2e8f0;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hotBadge {
+  background: linear-gradient(135deg, #ff416c, #ff4b2b);
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 6px rgba(255, 65, 108, 0.35);
+}
+
+.premiumTag {
+  background: rgba(245, 158, 11, 0.9);
+  color: #000000;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Bookmark button */
 .bookmarkBtn {
   position: absolute;
   top: 8px;
   right: 8px;
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-sm);
-  background-color: rgba(0, 0, 0, 0.55);
+  border-radius: 6px;
+  background-color: rgba(15, 15, 18, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #ffffff;
-  border: none;
+  color: #cbd5e1;
   opacity: 0;
-  transition: opacity var(--transition-fast);
-  z-index: 2;
+  transition: all var(--transition-fast, 0.15s ease);
+  z-index: 3;
 }
 
 .card:hover .bookmarkBtn {
@@ -57,71 +166,101 @@
 
 .bookmarked {
   opacity: 1 !important;
-  color: var(--color-brand-primary);
-  background-color: rgba(0, 0, 0, 0.65);
+  color: #ffffff !important;
+  background-color: var(--color-brand-primary, #e63946) !important;
+  border-color: transparent !important;
+  box-shadow: 0 2px 8px rgba(230, 57, 70, 0.4);
 }
 
 .bookmarkBtn:hover {
-  background-color: var(--color-brand-primary);
+  background-color: var(--color-brand-primary, #e63946);
   color: #ffffff;
+  transform: scale(1.08);
 }
 
-/* Premium tag — small, top-left */
-.premiumTag {
+/* Bottom cover info pill (Ch. X & Rating) */
+.coverBottomInfo {
   position: absolute;
-  top: 8px;
+  bottom: 8px;
   left: 8px;
-  background-color: var(--color-brand-coin-subtle);
-  color: var(--coin);
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   z-index: 2;
+  pointer-events: none;
 }
 
-/* Progress bar — bottom of cover */
+.latestChapterPill {
+  background: rgba(15, 15, 18, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ratingBadge {
+  background: rgba(15, 15, 18, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Progress bar */
 .progressWrapper {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   height: 3px;
-  background-color: rgba(0, 0, 0, 0.3);
-  z-index: 2;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 3;
 }
 
 .progressBar {
   height: 100%;
-  background-color: var(--color-brand-primary);
+  background-color: var(--color-brand-primary, #e63946);
   transition: width 0.3s ease;
 }
 
-/* Info section */
+/* Info Section */
 .info {
-  margin-top: 8px;
+  margin-top: 10px;
   padding: 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .title {
   font-size: 13px;
-  font-weight: 600;
-  line-height: 1.3;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 700;
+  line-height: 1.35;
   color: var(--color-text-primary);
-  transition: color var(--transition-fast);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color var(--transition-fast, 0.15s ease);
 }
 
 .card:hover .title {
-  color: var(--color-brand-primary);
+  color: var(--color-brand-primary, #e63946);
 }
 
-.meta {
+.metaRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -134,7 +273,6 @@
   gap: 4px;
   color: var(--color-text-muted);
   font-weight: 500;
-  text-transform: capitalize;
   font-size: 11px;
 }
 
@@ -145,19 +283,67 @@
   flex-shrink: 0;
 }
 
+.chapterCount {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
 .progress {
   font-weight: 600;
-  color: var(--color-brand-primary);
+  color: var(--color-brand-primary, #e63946);
   font-size: 11px;
+}
+
+/* MythToons Style Direct Chapter Buttons */
+.chapterList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.chapterBtn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--color-bg-secondary, #161616);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+  color: var(--color-text-primary);
+}
+
+.chapterBtn:hover {
+  background-color: var(--color-brand-primary-subtle, rgba(230, 57, 70, 0.12));
+  border-color: var(--color-brand-primary, #e63946);
+  color: var(--color-brand-primary, #e63946);
+  transform: translateX(2px);
+}
+
+.chapterBtnNum {
+  font-weight: 600;
+}
+
+.chapterBtnTime {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--color-text-muted);
 }
 
 /* Compact variant for shelves */
 .compact .coverWrapper {
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md, 10px);
 }
 
 .compact .title {
   font-size: 12px;
+  -webkit-line-clamp: 1;
 }
 
 .compact .info {
@@ -177,17 +363,18 @@
 .skeletonCover {
   width: 100%;
   aspect-ratio: 2/3;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg, 12px);
 }
 
 .skeletonTitle {
   width: 75%;
-  height: 13px;
-  border-radius: 3px;
+  height: 14px;
+  border-radius: 4px;
 }
 
 .skeletonText {
   width: 45%;
   height: 10px;
-  border-radius: 3px;
+  border-radius: 4px;
 }
+
