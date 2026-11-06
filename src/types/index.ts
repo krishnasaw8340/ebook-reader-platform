@@ -535,6 +535,7 @@ export interface CoinPackage {
   coins: number; // Int Coins
   price: number; // Decimal Price
   active: boolean; // Boolean Active
+  currency?: string; // ISO-4217, from API
 }
 
 // Schema: payments

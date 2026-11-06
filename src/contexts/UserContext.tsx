@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type {
   User,
   BookSeries,
@@ -16,6 +16,8 @@ import type {
 import { seriesService } from '../services/seriesService';
 import { bookService } from '../services/bookService';
 import { chapterService } from '../services/chapterService';
+import { walletService, type UnlockOutcome } from '../services/walletService';
+import { useAuthStore } from '../store/auth.store';
 
 interface UserContextType {
   currentUser: User | null;
@@ -34,8 +36,10 @@ interface UserContextType {
   
   // Database Operations
   isChapterUnlocked: (chapterId: string) => boolean;
-  unlockChapter: (chapterId: string) => boolean;
-  rechargeCoins: (packageId: string) => void;
+  /** Spends coins server-side; resolves with the outcome. */
+  unlockChapter: (chapterId: string) => Promise<UnlockOutcome>;
+  /** Re-fetch balance, transactions and packages from the server. */
+  refreshWallet: () => Promise<void>;
   toggleBookmark: (seriesId: string) => void;
   saveProgress: (
     bookId: string,
@@ -66,10 +70,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   // User-specific state (these will eventually come from APIs too)
-  const [chapterUnlocks, setChapterUnlocks] = useState<ChapterUnlock[]>(() => {
-    const saved = localStorage.getItem('ky_chapter_unlocks');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [chapterUnlocks, setChapterUnlocks] = useState<ChapterUnlock[]>([]);
 
   const [userLibrary, setUserLibrary] = useState<UserLibrary[]>(() => {
     const saved = localStorage.getItem('ky_user_library');
@@ -81,24 +82,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [wallets, setWallets] = useState<Wallet[]>(() => {
-    const saved = localStorage.getItem('ky_wallets');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const authUser = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  const [coinTransactions, setCoinTransactions] = useState<CoinTransaction[]>(() => {
-    const saved = localStorage.getItem('ky_coin_transactions');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Wallet data is server-authoritative (never persisted client-side).
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [coinTransactions, setCoinTransactions] = useState<CoinTransaction[]>([]);
+  const [coinPackages, setCoinPackages] = useState<CoinPackage[]>([]);
 
-  const [coinPackages] = useState<CoinPackage[]>([]);
-
-  const [paymentOrders, setPaymentOrders] = useState<PaymentOrder[]>(() => {
+  const [paymentOrders] = useState<PaymentOrder[]>(() => {
     const saved = localStorage.getItem('ky_payment_orders');
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [paymentTransactions, setPaymentTransactions] = useState<PaymentTransaction[]>(() => {
+  const [paymentTransactions] = useState<PaymentTransaction[]>(() => {
     const saved = localStorage.getItem('ky_payment_transactions');
     return saved ? JSON.parse(saved) : [];
   });
@@ -149,11 +146,40 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchCatalog();
   }, []);
 
-  // Sync user-specific state to local storage
-  useEffect(() => {
-    localStorage.setItem('ky_chapter_unlocks', JSON.stringify(chapterUnlocks));
-  }, [chapterUnlocks]);
+  const refreshWallet = useCallback(async () => {
+    if (!isAuthenticated || !authUser) {
+      setWallet(null);
+      setCoinTransactions([]);
+      setCoinPackages([]);
+      setChapterUnlocks([]);
+      return;
+    }
+    const [balanceResult, txResult, packagesResult, unlocksResult] = await Promise.allSettled([
+      walletService.getBalance(),
+      walletService.getTransactions(),
+      walletService.getPackages(),
+      walletService.getUnlocks(authUser.userId),
+    ]);
+    if (balanceResult.status === 'fulfilled') {
+      setWallet({
+        id: authUser.userId,
+        user_id: authUser.userId,
+        balance: balanceResult.value,
+        created_at: '',
+      });
+    } else {
+      console.error('[UserContext] Failed to load wallet:', balanceResult.reason);
+    }
+    if (txResult.status === 'fulfilled') setCoinTransactions(txResult.value);
+    if (packagesResult.status === 'fulfilled') setCoinPackages(packagesResult.value);
+    if (unlocksResult.status === 'fulfilled') setChapterUnlocks(unlocksResult.value);
+  }, [isAuthenticated, authUser]);
 
+  useEffect(() => {
+    void refreshWallet();
+  }, [refreshWallet]);
+
+  // Sync user-specific state to local storage
   useEffect(() => {
     localStorage.setItem('ky_user_library', JSON.stringify(userLibrary));
   }, [userLibrary]);
@@ -163,14 +189,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [readingProgress]);
 
   useEffect(() => {
-    localStorage.setItem('ky_wallets', JSON.stringify(wallets));
-  }, [wallets]);
-
-  useEffect(() => {
-    localStorage.setItem('ky_coin_transactions', JSON.stringify(coinTransactions));
-  }, [coinTransactions]);
-
-  useEffect(() => {
     localStorage.setItem('ky_payment_orders', JSON.stringify(paymentOrders));
   }, [paymentOrders]);
 
@@ -178,127 +196,29 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('ky_payment_transactions', JSON.stringify(paymentTransactions));
   }, [paymentTransactions]);
 
-  // Find active user wallet helper
-  const wallet = wallets.find(w => w.user_id === currentUser?.id) || null;
-
-  // Unlocked check helper
+  // Unlocked check helper (server enforces; this only drives the UI)
   const isChapterUnlocked = (chapterId: string): boolean => {
     const ch = chapters.find(c => c.id === chapterId);
     if (!ch) return false;
-    
-    // 1. FREE Chapters
+
+    // 1. FREE chapters
     const pricing = ch.pricing_model || ch.pricingModel || ch.access_type || 'FREE';
-    const cost = ch.coin_cost ?? ch.coinCost ?? 0;
-    if (pricing === 'FREE' || cost === 0) return true;
+    if (pricing === 'FREE') return true;
 
-    // 2. Volume/Book is Unlocked in Library
-    const isBookUnlocked = userLibrary.some(lib => lib.user_id === currentUser?.id && lib.book_id === ch.book_id);
-    if (isBookUnlocked) return true;
+    // 2. Admins read everything
+    if (useAuthStore.getState().isAdmin()) return true;
 
-    // 3. User has an explicit ChapterUnlock entitlement
-    const hasUnlock = chapterUnlocks.some(
-      u => u.user_id === currentUser?.id && u.chapter_id === chapterId
-    );
-    if (hasUnlock) return true;
-
-    // 4. Fallback check for past debit transactions
-    const hasTx = coinTransactions.some(tx => 
-      tx.wallet_id === wallet?.id && 
-      tx.type === 'Debit' && 
-      tx.reason.includes(chapterId)
-    );
-    return hasTx;
+    // 3. User spent coins on this chapter (persisted server-side)
+    return chapterUnlocks.some(u => u.chapter_id === chapterId);
   };
 
-  // Chapter Unlock
-  const unlockChapter = (chapterId: string): boolean => {
-    if (!currentUser || !wallet) return false;
-    const ch = chapters.find(c => c.id === chapterId);
-    if (!ch) return false;
-
-    if (isChapterUnlocked(chapterId)) return true;
-
-    const cost = ch.coin_cost ?? ch.coinCost ?? 0;
-
-    if (wallet.balance >= cost) {
-      // Deduct coins from wallet balance
-      setWallets(prev => prev.map(w => w.id === wallet.id ? { ...w, balance: w.balance - cost } : w));
-
-      // Create new ChapterUnlock entitlement
-      const newUnlock: ChapterUnlock = {
-        id: `unlock-${Date.now()}`,
-        user_id: currentUser.id,
-        chapter_id: chapterId,
-        coins_paid: cost,
-        source: 'COIN_PURCHASE',
-        unlocked_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-      };
-      setChapterUnlocks(prev => [newUnlock, ...prev]);
-
-      // Log coin debit transaction
-      const newTx: CoinTransaction = {
-        id: `tx-${Date.now()}`,
-        wallet_id: wallet.id,
-        type: 'Debit',
-        coins: -cost,
-        reason: `Unlocked chapter: ${ch.title} (${chapterId})`,
-        created_at: new Date().toISOString()
-      };
-      setCoinTransactions(prev => [newTx, ...prev]);
-      return true;
-    }
-    return false;
-  };
-
-  // Recharge Coins package
-  const rechargeCoins = (packageId: string) => {
-    if (!currentUser || !wallet) return;
-    const pkg = coinPackages.find(p => p.id === packageId);
-    if (!pkg) return;
-
-    // 1. Create PENDING Payment Order
-    const orderId = `order-${Date.now()}`;
-    const newOrder: PaymentOrder = {
-      id: orderId,
-      user_id: currentUser.id,
-      package_id: pkg.id,
-      amount: pkg.price,
-      status: 'PENDING',
-      created_at: new Date().toISOString()
-    };
-    setPaymentOrders(prev => [newOrder, ...prev]);
-
-    // 2. Simulate payment gateway response (SUCCESS after 200ms)
-    setTimeout(() => {
-      // Update Payment Order Status to PAID
-      setPaymentOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'PAID' } : o));
-
-      // Create Payment Transaction entry
-      const newTxn: PaymentTransaction = {
-        id: `txn-${Date.now()}`,
-        order_id: orderId,
-        gateway: "Sandbox_Stripe",
-        gateway_txn_id: `gref-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-        status: 'SUCCESS',
-        paid_at: new Date().toISOString()
-      };
-      setPaymentTransactions(prev => [newTxn, ...prev]);
-
-      // Credit Coins into Wallet balance
-      setWallets(prev => prev.map(w => w.id === wallet.id ? { ...w, balance: w.balance + pkg.coins } : w));
-
-      // Append Coin Credit Transaction
-      const coinTx: CoinTransaction = {
-        id: `tx-${Date.now()}`,
-        wallet_id: wallet.id,
-        type: 'Credit',
-        coins: pkg.coins,
-        reason: `Recharged Wallet (${pkg.coins} Coins via ${pkg.name})`,
-        created_at: new Date().toISOString()
-      };
-      setCoinTransactions(prev => [coinTx, ...prev]);
-    }, 200);
+  // Chapter unlock: the server debits coins atomically and records the ledger
+  const unlockChapter = async (chapterId: string): Promise<UnlockOutcome> => {
+    if (!isAuthenticated || !authUser) return 'error';
+    if (isChapterUnlocked(chapterId)) return 'unlocked';
+    const outcome = await walletService.unlockChapter(chapterId);
+    if (outcome === 'unlocked') await refreshWallet();
+    return outcome;
   };
 
   // Series bookmark toggle
@@ -441,7 +361,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading,
       isChapterUnlocked,
       unlockChapter,
-      rechargeCoins,
+      refreshWallet,
       toggleBookmark,
       saveProgress,
       publishBook,

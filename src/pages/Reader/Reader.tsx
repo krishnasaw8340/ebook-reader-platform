@@ -154,13 +154,13 @@ export const Reader: React.FC = () => {
     );
   }
 
-  const handleUnlock = () => {
-    const success = unlockChapter(chapter.id);
-    if (success) {
+  const handleUnlock = async () => {
+    const outcome = await unlockChapter(chapter.id);
+    if (outcome === 'unlocked') {
       setCoinFloat(true);
       setTimeout(() => setCoinFloat(false), 1200);
       saveProgress(book.id, chapter.id, 0, 1, 0);
-    } else {
+    } else if (outcome === 'insufficient') {
       setRechargeOpen(true);
     }
   };
