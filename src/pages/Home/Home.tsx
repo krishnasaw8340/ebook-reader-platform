@@ -8,7 +8,6 @@ import {
   ChevronRight, 
   ChevronLeft,
   Compass, 
-  Star, 
   Play, 
   Bookmark, 
   Sparkles, 
@@ -26,7 +25,7 @@ const STATUS_FILTERS = ['All', 'Ongoing', 'Completed'] as const;
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { bookSeries, books, chapters, readingProgress, userLibrary, toggleBookmark } = useUser();
+  const { bookSeries, books, chapters, readingProgress, userLibrary, toggleBookmark, loading } = useUser();
   const [activeFormat, setActiveFormat] = useState<string>('All');
   const [activeGenre, setActiveGenre] = useState<string>('All Genres');
   const [activeStatus, setActiveStatus] = useState<string>('All');
@@ -172,6 +171,19 @@ export const Home: React.FC = () => {
             )}
           </section>
         </div>
+      ) : loading ? (
+        <div className="main-container">
+          <div className={styles.emptyState}>
+            <p>Loading original catalog…</p>
+          </div>
+        </div>
+      ) : bookSeries.length === 0 ? (
+        <div className="main-container">
+          <div className={styles.emptyState}>
+            <Compass size={32} />
+            <p>NA — no original series available.</p>
+          </div>
+        </div>
       ) : (
         <>
           {/* Hero Spotlight Carousel */}
@@ -197,16 +209,13 @@ export const Home: React.FC = () => {
                         e.currentTarget.src = getFallbackCoverUrl(currentHero.title, 'Spotlight');
                       }}
                     />
-                    <span className={styles.heroRatingTag}>
-                      <Star size={12} fill="#fbbf24" stroke="#fbbf24" /> 4.9
-                    </span>
                   </div>
 
                   <div className={styles.heroInfo}>
                     <div className={styles.heroBadges}>
                       <span className={styles.badgeHot}><Flame size={12} /> SPOTLIGHT</span>
-                      <span className={styles.badgeGenre}>MANHWA</span>
-                      <span className={styles.badgeStatus}>{currentHero.status}</span>
+                      <span className={styles.badgeGenre}>NA</span>
+                      <span className={styles.badgeStatus}>{currentHero.status || 'NA'}</span>
                     </div>
 
                     <h1 className={styles.heroTitle} onClick={() => navigate(`/book/${currentHero.id}`)}>
@@ -214,20 +223,16 @@ export const Home: React.FC = () => {
                     </h1>
 
                     <p className={styles.heroSynopsis}>
-                      {currentHero.description || 'Dive into this epic trending series with high quality vertical chapters and instant reading.'}
+                      {currentHero.description || 'NA'}
                     </p>
 
                     <div className={styles.heroMetaStats}>
-                      <span><Layers size={13} /> {currentHeroChapters.length || 8} Chapters</span>
-                      <span>•</span>
-                      <span><Sparkles size={13} /> High Definition</span>
-                      <span>•</span>
-                      <span><Clock size={13} /> Updated Today</span>
+                      <span><Layers size={13} /> {currentHeroChapters.length || 'NA'} Chapters</span>
                     </div>
 
                     <div className={styles.heroActions}>
                       <button className={styles.heroBtnRead} onClick={handleHeroRead}>
-                        <Play size={15} fill="currentColor" /> Read Chapter 1
+                        <Play size={15} fill="currentColor" /> Read Now
                       </button>
 
                       <button 
@@ -313,39 +318,35 @@ export const Home: React.FC = () => {
               </section>
             )}
 
-            {/* MythToons Signature Top Weekly Rankings */}
+            {/* Catalog spotlight */}
             <section className={styles.section}>
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitleBlock}>
-                  <h2><Flame size={18} className={styles.rankingFlameIcon} /> Weekly Top Rankings</h2>
-                  <span className={styles.sectionSubtitle}>Most read manhwa & novels this week</span>
+                  <h2><Flame size={18} className={styles.rankingFlameIcon} /> Available Series</h2>
                 </div>
-                <button className={styles.viewAll} onClick={() => navigate('/browse?sort=popular')}>
-                  Top 100 <ChevronRight size={14} />
+                <button className={styles.viewAll} onClick={() => navigate('/browse')}>
+                  Browse <ChevronRight size={14} />
                 </button>
               </div>
 
               <div className={styles.rankingGrid}>
-                {topRankedSeries.map((series, idx) => (
+                {topRankedSeries.map((series) => (
                   <BookCard 
                     key={series.id} 
                     series={series} 
-                    rankingNumber={idx + 1}
-                    badge={idx === 0 ? 'HOT' : undefined}
                   />
                 ))}
               </div>
             </section>
 
-            {/* MythToons Signature 1-Click Latest Chapter Updates Feed */}
+            {/* More catalog entries */}
             <section className={styles.section}>
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitleBlock}>
-                  <h2><Clock size={18} className={styles.clockIcon} /> Latest Chapter Releases</h2>
-                  <span className={styles.sectionSubtitle}>Fresh translations uploaded recently</span>
+                  <h2><Clock size={18} className={styles.clockIcon} /> More Series</h2>
                 </div>
                 <button className={styles.viewAll} onClick={() => navigate('/browse?sort=latest')}>
-                  View All Updates <ChevronRight size={14} />
+                  Browse <ChevronRight size={14} />
                 </button>
               </div>
 
@@ -363,7 +364,7 @@ export const Home: React.FC = () => {
             {/* Trending Now Shelf */}
             <section className={styles.section}>
               <div className={styles.sectionHeader}>
-                <h2><Sparkles size={18} className={styles.sparkleIcon} /> Trending Comics & Novels</h2>
+                <h2><Sparkles size={18} className={styles.sparkleIcon} /> Explore Catalog</h2>
                 <button className={styles.viewAll} onClick={() => navigate('/browse')}>
                   Explore <ChevronRight size={14} />
                 </button>
@@ -414,4 +415,3 @@ export const Home: React.FC = () => {
     </div>
   );
 };
-

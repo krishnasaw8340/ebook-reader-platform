@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type {
   User,
   BookSeries,
@@ -16,7 +16,6 @@ import type {
 import { seriesService } from '../services/seriesService';
 import { bookService } from '../services/bookService';
 import { chapterService } from '../services/chapterService';
-import { SEED_SERIES, SEED_BOOKS, SEED_CHAPTERS } from '../utils/seedData';
 
 interface UserContextType {
   currentUser: User | null;
@@ -109,11 +108,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fetchCatalog = async () => {
       setLoading(true);
       try {
-        const [seriesData, booksData, chaptersData] = await Promise.all([
-          seriesService.getAll().catch(() => []),
-          bookService.getAll().catch(() => []),
-          chapterService.getAll().catch(() => []),
+        const [seriesResult, booksResult, chaptersResult] = await Promise.allSettled([
+          seriesService.getAll(),
+          bookService.getAll(),
+          chapterService.getAll(),
         ]);
+        const seriesData = seriesResult.status === 'fulfilled' ? seriesResult.value : [];
+        const booksData = booksResult.status === 'fulfilled' ? booksResult.value : [];
+        const chaptersData = chaptersResult.status === 'fulfilled' ? chaptersResult.value : [];
+
+        if (seriesResult.status === 'rejected') console.error('[UserContext] Failed to load series:', seriesResult.reason);
+        if (booksResult.status === 'rejected') console.error('[UserContext] Failed to load books:', booksResult.reason);
+        if (chaptersResult.status === 'rejected') console.error('[UserContext] Failed to load chapters:', chaptersResult.reason);
+
         const enrichedSeries = seriesData.map((s) => {
           if (!s.cover_image) {
             const childBook = booksData.find(
@@ -125,18 +132,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           return s;
         });
-        const finalSeries = enrichedSeries.length > 0 ? enrichedSeries : SEED_SERIES;
-        const finalBooks = booksData.length > 0 ? booksData : SEED_BOOKS;
-        const finalChapters = chaptersData.length > 0 ? chaptersData : SEED_CHAPTERS;
 
-        setBookSeries(finalSeries);
-        setBooks(finalBooks);
-        setChapters(finalChapters);
+        setBookSeries(enrichedSeries);
+        setBooks(booksData);
+        setChapters(chaptersData);
       } catch (err) {
-        console.warn('[UserContext] Failed to fetch catalog data, using fallback catalog:', err);
-        setBookSeries(SEED_SERIES);
-        setBooks(SEED_BOOKS);
-        setChapters(SEED_CHAPTERS);
+        console.error('[UserContext] Failed to fetch catalog data:', err);
+        setBookSeries([]);
+        setBooks([]);
+        setChapters([]);
       } finally {
         setLoading(false);
       }

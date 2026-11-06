@@ -33,7 +33,7 @@ import {
 import { chapterService } from '../../services/chapterService';
 import { storeChapterPdf } from '../../utils/pdfStorage';
 import type { BookSeries, PricingModel } from '../../types';
-import { catalogService, type CatalogLanguage, type CatalogCategory, type CatalogGenre, type CatalogTag } from '../../services/catalogService';
+import { catalogService, type CatalogLanguage, type CatalogCategory, type CatalogGenre } from '../../services/catalogService';
 import {
     SuccessBanner,
     ErrorBanner
@@ -49,47 +49,11 @@ const STEPS = [
     { number: 3, title: 'Review & Publish' }
 ];
 
-const DEFAULT_LANGUAGES_INIT: CatalogLanguage[] = [
-    { id: 'aa47e99c-8a1a-4d5e-970c-db916528b199', name: 'English', code: 'en' },
-    { id: '830f6493-88c4-4fd0-b922-c96d459f844e', name: 'Japanese', code: 'ja' },
-    { id: 'c7c3a0d9-f32d-4968-bdec-092f05c09d23', name: 'French', code: 'fr' },
-    { id: 'cd418489-4799-4606-a0b6-6d8e958c7959', name: 'German', code: 'de' },
-];
-
-const DEFAULT_CATEGORIES_INIT: CatalogCategory[] = [
-    { id: '00142c6a-cf97-4d2f-ab9f-7ad6499f6e26', name: 'Manga', slug: 'manga' },
-    { id: 'bc94a884-e419-4022-aec6-c3579a20f8d5', name: 'Manhwa', slug: 'manhwa' },
-    { id: '45af38b8-eb85-442f-92e8-440d3abba462', name: 'Manhua', slug: 'manhua' },
-    { id: '8899aeb1-e17e-479f-89aa-51d348af3cf7', name: 'Novel', slug: 'novel' },
-    { id: '0d480761-e69f-48a4-9e84-d0e9b1e053c4', name: 'Light Novel', slug: 'light-novel' },
-];
-
-const DEFAULT_GENRES_INIT: CatalogGenre[] = [
-    { id: '5d3ab5fb-19eb-40c2-9922-a1d5846578ed', name: 'Action', slug: 'action' },
-    { id: 'abd96397-6387-4c2d-a451-f0fb7744aa51', name: 'Adventure', slug: 'adventure' },
-    { id: '5cf3a7e8-21a5-4da8-9b19-ae34df65e991', name: 'Comedy', slug: 'comedy' },
-    { id: '67cbe159-2168-417c-964a-2b3d064c8e7c', name: 'Drama', slug: 'drama' },
-    { id: '70f3900f-42eb-43da-94f7-7ae3405c829c', name: 'Fantasy', slug: 'fantasy' },
-    { id: '2b9d22d9-412d-42ac-a824-a9bf9d47e348', name: 'Romance', slug: 'romance' },
-    { id: 'b86ae00d-f34d-44ca-bd3e-85677f61dd3c', name: 'Horror', slug: 'horror' },
-    { id: '70c88542-b603-448e-84f6-ba1665e9484a', name: 'Mystery', slug: 'mystery' },
-    { id: 'db2fb621-a540-4cc0-9701-64441881c1bc', name: 'Sci-Fi', slug: 'sci-fi' },
-];
-
-const DEFAULT_TAGS_INIT: CatalogTag[] = [
-    { id: 'b1ab7696-dda1-49e2-a035-264a2972ced9', name: 'School', slug: 'school' },
-    { id: '962adf53-a653-4b19-97f4-dedbb9019d6f', name: 'Magic', slug: 'magic' },
-    { id: '2d624a75-b2e4-404d-97fd-d25d268ca921', name: 'Revenge', slug: 'revenge' },
-    { id: '0144c50e-0c27-462a-9235-d22dc0bee967', name: 'Time Travel', slug: 'time-travel' },
-    { id: '3895728e-86bc-48a8-a3c4-03a9ce87f0f4', name: 'Pirates', slug: 'pirates' },
-    { id: '22709ac7-527a-4991-a743-73f5c07dc33a', name: 'Supernatural', slug: 'supernatural' },
-];
-
 export interface ChapterPdfItem {
     id: string;
     fileName: string;
     fileSize: number;
-    pageCount: number;
+    pageCount?: number;
     file?: File;
 }
 
@@ -160,10 +124,9 @@ export const BookWizard: React.FC = () => {
     const [description, setDescription] = useState('');
     const [author, setAuthor] = useState('');
     const [artist, setArtist] = useState('');
-    const [languageId, setLanguageId] = useState('aa47e99c-8a1a-4d5e-970c-db916528b199');
-    const [categoryId, setCategoryId] = useState('00142c6a-cf97-4d2f-ab9f-7ad6499f6e26');
-    const [selectedGenres, setSelectedGenres] = useState<string[]>(['5d3ab5fb-19eb-40c2-9922-a1d5846578ed']);
-    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [languageId, setLanguageId] = useState('');
+    const [categoryId, setCategoryId] = useState('');
+    const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
     
     // Cover artwork
     const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
@@ -176,48 +139,14 @@ export const BookWizard: React.FC = () => {
     const [isPremium, setIsPremium] = useState<boolean>(true);
 
     // Catalog Lists
-    const [languages, setLanguages] = useState<CatalogLanguage[]>(DEFAULT_LANGUAGES_INIT);
-    const [categories, setCategories] = useState<CatalogCategory[]>(DEFAULT_CATEGORIES_INIT);
-    const [genres, setGenres] = useState<CatalogGenre[]>(DEFAULT_GENRES_INIT);
-    const [tags, setTags] = useState<CatalogTag[]>(DEFAULT_TAGS_INIT);
+    const [languages, setLanguages] = useState<CatalogLanguage[]>([]);
+    const [categories, setCategories] = useState<CatalogCategory[]>([]);
+    const [genres, setGenres] = useState<CatalogGenre[]>([]);
 
     // =========================================================================
     // STEP 2 STATE: CHAPTERS & MULTI-PDF UPLOADS
     // =========================================================================
-    const [chapters, setChapters] = useState<WizardChapter[]>([
-        {
-            tempId: 'temp-c1',
-            chapterNo: 1,
-            title: 'Chapter 1: The Beginning',
-            accessType: 'FREE',
-            coinCost: 0,
-            published: true,
-            pdfFiles: [
-                {
-                    id: 'pdf-c1-1',
-                    fileName: 'chapter-001.pdf',
-                    pageCount: 32,
-                    fileSize: 18500000
-                }
-            ]
-        },
-        {
-            tempId: 'temp-c2',
-            chapterNo: 2,
-            title: 'Chapter 2: The Awakening',
-            accessType: 'FREE',
-            coinCost: 0,
-            published: true,
-            pdfFiles: [
-                {
-                    id: 'pdf-c2-1',
-                    fileName: 'chapter-002.pdf',
-                    pageCount: 28,
-                    fileSize: 16000000
-                }
-            ]
-        }
-    ]);
+    const [chapters, setChapters] = useState<WizardChapter[]>([]);
     const [isDragOver, setIsDragOver] = useState(false);
     const bulkPdfInputRef = useRef<HTMLInputElement>(null);
     
@@ -242,28 +171,30 @@ export const BookWizard: React.FC = () => {
     useEffect(() => {
         const loadInitial = async () => {
             try {
-                const [sList, meta] = await Promise.all([
+                const [seriesResult, metadataResult] = await Promise.allSettled([
                     adminSeriesService.getAll(),
-                    catalogService.getMetadata().catch(() => null)
+                    catalogService.getMetadata()
                 ]);
-                setSeriesList(sList);
-                if (sList.length > 0 && !selectedSeriesId) {
-                    setSelectedSeriesId(sList[0].id);
+                if (seriesResult.status === 'fulfilled') {
+                    setSeriesList(seriesResult.value);
+                    if (seriesResult.value.length > 0 && !selectedSeriesId) {
+                        setSelectedSeriesId(seriesResult.value[0].id);
+                    }
+                } else {
+                    console.error('[BookWizard] Failed to load series:', seriesResult.reason);
                 }
-                if (meta) {
-                    if (meta.languages?.length) {
-                        setLanguages(meta.languages);
-                        setLanguageId(meta.languages[0].id);
-                    }
-                    if (meta.categories?.length) {
-                        setCategories(meta.categories);
-                        setCategoryId(meta.categories[0].id);
-                    }
-                    if (meta.genres?.length) setGenres(meta.genres);
-                    if (meta.tags?.length) setTags(meta.tags);
+                if (metadataResult.status === 'fulfilled') {
+                    const metadata = metadataResult.value;
+                    setLanguages(metadata.languages);
+                    setLanguageId(metadata.languages[0]?.id || '');
+                    setCategories(metadata.categories);
+                    setCategoryId(metadata.categories[0]?.id || '');
+                    setGenres(metadata.genres);
+                } else {
+                    console.error('[BookWizard] Failed to load catalog metadata:', metadataResult.reason);
                 }
             } catch (err: any) {
-                console.warn('[BookWizard] Initial load failed:', err);
+                console.error('[BookWizard] Initial load failed:', err);
             }
         };
         loadInitial();
@@ -288,7 +219,6 @@ export const BookWizard: React.FC = () => {
             const created = await adminSeriesService.create({
                 name: inlineSeriesTitle,
                 description: inlineSeriesDesc || undefined,
-                cover_image: coverPreview || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&width=800',
                 status: 'ONGOING'
             });
             setSeriesList([created, ...seriesList]);
@@ -330,7 +260,6 @@ export const BookWizard: React.FC = () => {
                     {
                         id: `pdf-${Date.now()}-${idx}`,
                         fileName: file.name,
-                        pageCount: 30,
                         fileSize: file.size,
                         file: file
                     }
@@ -338,13 +267,7 @@ export const BookWizard: React.FC = () => {
             };
         });
 
-        // If user already had only the default sample chapters, replace them; otherwise append
-        const isDefaultState = chapters.length === 2 && chapters[0].tempId === 'temp-c1' && !chapters[0].pdfFiles[0]?.file;
-        if (isDefaultState) {
-            setChapters(newChapterItems.map((c, i) => ({ ...c, chapterNo: i + 1 })));
-        } else {
-            setChapters([...chapters, ...newChapterItems]);
-        }
+        setChapters([...chapters, ...newChapterItems]);
 
         setSuccessMessage(`Successfully added ${newChapterItems.length} chapter PDF(s).`);
     };
@@ -378,7 +301,6 @@ export const BookWizard: React.FC = () => {
                     id: `pdf-${Date.now()}-${i}`,
                     fileName: f.name,
                     fileSize: f.size,
-                    pageCount: 30,
                     file: f
                 }));
                 ch.pdfFiles = [...ch.pdfFiles, ...newPdfs];
@@ -491,6 +413,10 @@ export const BookWizard: React.FC = () => {
                 setErrorMessage('Please enter a manga title to continue.');
                 return;
             }
+            if (!categoryId) {
+                setErrorMessage('No original categories are available. Configure catalog metadata before continuing.');
+                return;
+            }
             if (creationMode === 'FRANCHISE' && !selectedSeriesId) {
                 setErrorMessage('Please choose a franchise series or switch to Standalone mode.');
                 return;
@@ -527,7 +453,6 @@ export const BookWizard: React.FC = () => {
                 const createdSeries = await adminSeriesService.create({
                     name: bookTitle,
                     description: description || undefined,
-                    cover_image: coverPreview || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&width=800',
                     status: 'ONGOING'
                 });
                 finalSeriesId = createdSeries.id;
@@ -574,7 +499,7 @@ export const BookWizard: React.FC = () => {
                 setSubmitStatusText(`Processing Chapter ${ch.chapterNo} of ${chapters.length}: ${ch.title}...`);
                 
                 const primaryPdf = ch.pdfFiles[0];
-                const totalPageCount = ch.pdfFiles.reduce((sum, p) => sum + (p.pageCount || 30), 0) || 30;
+                const totalPageCount = ch.pdfFiles.reduce((sum, p) => sum + (p.pageCount || 0), 0);
                 const totalFileSize = ch.pdfFiles.reduce((sum, p) => sum + (p.fileSize || 0), 0);
 
                 const createdChapter = await adminChapterService.create({
@@ -587,13 +512,13 @@ export const BookWizard: React.FC = () => {
                     access_type: ch.accessType,
                     coinCost: ch.accessType === 'FREE' ? 0 : ch.coinCost,
                     coin_cost: ch.accessType === 'FREE' ? 0 : ch.coinCost,
-                    pdfFileName: primaryPdf?.fileName || `chapter-${ch.chapterNo}.pdf`,
-                    pdf_file_name: primaryPdf?.fileName || `chapter-${ch.chapterNo}.pdf`,
-                    pdfPageCount: totalPageCount,
-                    pdf_page_count: totalPageCount,
+                    pdfFileName: primaryPdf?.fileName,
+                    pdf_file_name: primaryPdf?.fileName,
+                    pdfPageCount: totalPageCount || undefined,
+                    pdf_page_count: totalPageCount || undefined,
                     pdfFileSize: totalFileSize,
                     pdf_file_size: totalFileSize,
-                    contentStatus: 'READY',
+                    contentStatus: primaryPdf?.file ? 'READY' : 'PENDING',
                     published: ch.published
                 });
 
@@ -615,7 +540,7 @@ export const BookWizard: React.FC = () => {
                                     fileName: pdfItem.file.name,
                                     fileSize: pdfItem.file.size,
                                     key: key || pdfItem.file.name,
-                                    pageCount: pdfItem.pageCount || 30
+                                    pageCount: pdfItem.pageCount
                                 });
                             }
                         } catch (pdfErr) {
@@ -832,6 +757,7 @@ export const BookWizard: React.FC = () => {
                                 value={categoryId}
                                 onChange={(e) => setCategoryId(e.target.value)}
                             >
+                                {!categories.length && <option value="">NA</option>}
                                 {categories.map(cat => (
                                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                                 ))}
@@ -845,6 +771,7 @@ export const BookWizard: React.FC = () => {
                                 value={languageId}
                                 onChange={(e) => setLanguageId(e.target.value)}
                             >
+                                {!languages.length && <option value="">NA</option>}
                                 {languages.map(l => (
                                     <option key={l.id} value={l.id}>{l.name} ({l.code})</option>
                                 ))}
@@ -1206,7 +1133,7 @@ export const BookWizard: React.FC = () => {
 
                                                     <div className={styles.pdfFileMetaGroup}>
                                                         <span className={styles.pdfMetaText}>
-                                                            {(pdfItem.fileSize / (1024 * 1024)).toFixed(1)} MB · ~{pdfItem.pageCount || 30} pgs
+                                                            {(pdfItem.fileSize / (1024 * 1024)).toFixed(1)} MB · {pdfItem.pageCount ?? 'NA'} pgs
                                                         </span>
                                                         <button
                                                             type="button"
@@ -1297,11 +1224,11 @@ export const BookWizard: React.FC = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Category:</span>
-                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{categories.find(c => c.id === categoryId)?.name || 'Manga'}</span>
+                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{categories.find(c => c.id === categoryId)?.name || 'NA'}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Language:</span>
-                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{languages.find(l => l.id === languageId)?.name || 'English'}</span>
+                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{languages.find(l => l.id === languageId)?.name || 'NA'}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Monetization:</span>

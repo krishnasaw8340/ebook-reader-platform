@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bookmark, Star, Clock, Flame } from 'lucide-react';
+import { Bookmark, Clock, Flame } from 'lucide-react';
 import type { BookSeries } from '../../types';
 import { useUser } from '../../contexts/UserContext';
 import { getSeriesCover, getFallbackCoverUrl } from '../../utils/coverUtils';
@@ -23,7 +23,7 @@ export const BookCard: React.FC<BookCardProps> = ({
   rankingNumber,
   showChapters = false,
   badge,
-  format = 'MANHWA'
+  format = 'NA'
 }) => {
   const navigate = useNavigate();
   const { books, chapters, userLibrary, toggleBookmark } = useUser();
@@ -59,9 +59,6 @@ export const BookCard: React.FC<BookCardProps> = ({
     : 'var(--color-text-muted)';
 
   const coverSrc = getSeriesCover(series, books);
-
-  // Deterministic rating based on ID
-  const rating = (4.7 + ((series.title.length % 4) * 0.08)).toFixed(1);
 
   return (
     <div 
@@ -122,11 +119,8 @@ export const BookCard: React.FC<BookCardProps> = ({
               Ch. {latestChapter.chapter_no ?? latestChapter.chapterNumber}
             </span>
           ) : (
-            <span className={styles.latestChapterPill}>{series.status}</span>
+            <span className={styles.latestChapterPill}>{series.status || 'NA'}</span>
           )}
-          <span className={styles.ratingBadge}>
-            <Star size={11} fill="#fbbf24" stroke="#fbbf24" /> {rating}
-          </span>
         </div>
 
         {/* Progress bar */}
@@ -144,14 +138,14 @@ export const BookCard: React.FC<BookCardProps> = ({
         <div className={styles.metaRow}>
           <span className={styles.status}>
             <span className={styles.statusDot} style={{ backgroundColor: statusColor }} />
-            {series.status}
+            {series.status || 'NA'}
           </span>
 
           {progressPercent !== undefined ? (
             <span className={styles.progress}>{progressPercent}% read</span>
           ) : (
             <span className={styles.chapterCount}>
-              {seriesChapters.length > 0 ? `${seriesChapters.length} Chs` : 'New'}
+              {seriesChapters.length > 0 ? `${seriesChapters.length} Chs` : 'NA'}
             </span>
           )}
         </div>
@@ -159,7 +153,7 @@ export const BookCard: React.FC<BookCardProps> = ({
         {/* MythToons Style Direct Clickable Chapters */}
         {showChapters && recentChapters.length > 0 && (
           <div className={styles.chapterList}>
-            {recentChapters.map((ch, idx) => (
+            {recentChapters.map((ch) => (
               <button
                 key={ch.id}
                 className={styles.chapterBtn}
@@ -171,7 +165,7 @@ export const BookCard: React.FC<BookCardProps> = ({
                 </span>
                 <span className={styles.chapterBtnTime}>
                   <Clock size={10} />
-                  {idx === 0 ? 'Today' : '2d ago'}
+                  {ch.created_at ? new Date(ch.created_at).toLocaleDateString() : 'NA'}
                 </span>
               </button>
             ))}
@@ -181,4 +175,3 @@ export const BookCard: React.FC<BookCardProps> = ({
     </div>
   );
 };
-

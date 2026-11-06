@@ -16,16 +16,12 @@ import {
   CheckCircle2,
   Layers,
   X,
-  Play,
-  BookOpen,
-  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../contexts/UserContext';
 import { RechargeModal } from '../../components/common/RechargeModal';
-import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import { getChapterPdfUrl, storeChapterPdf } from '../../utils/pdfStorage';
-import { getFallbackCoverUrl } from '../../utils/coverUtils';
+import { chapterService } from '../../services/chapterService';
 import styles from './Reader.module.css';
 
 export const Reader: React.FC = () => {
@@ -67,35 +63,57 @@ export const Reader: React.FC = () => {
   const prevChapter = chapterIndex > 0 ? bookChapters[chapterIndex - 1] : null;
 
   const isLocked = chapter ? !isChapterUnlocked(chapter.id) : true;
-  const totalPdfPages = chapter ? (chapter.pdfPageCount ?? chapter.pdf_page_count ?? 24) : 24;
-  const pdfFileName = chapter ? (chapter.pdfFileName ?? chapter.pdf_file_name ?? 'chapter.pdf') : 'chapter.pdf';
+  const chapterPdfPageCount = chapter ? (chapter.pdfPageCount ?? chapter.pdf_page_count ?? 0) : 0;
+  const [totalPdfPages, setTotalPdfPages] = useState(chapterPdfPageCount);
+  const pdfFileName = chapter ? (chapter.pdfFileName ?? chapter.pdf_file_name ?? '') : '';
 
   const isSeriesBookmarked = series 
     ? books.filter(b => b.series_id === series.id || (b as any).seriesId === series.id).some(b => userLibrary.some(lib => lib.book_id === b.id))
     : false;
 
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoadError, setPdfLoadError] = useState(false);
   const [attachingPdf, setAttachingPdf] = useState(false);
   const readerPdfInputRef = useRef<HTMLInputElement>(null);
 
-  // Load PDF from IndexedDB if available
+  // Prefer a locally attached PDF, then request the original PDF from storage.
   useEffect(() => {
-    let currentUrl: string | null = null;
+    let cancelled = false;
     const loadPdf = async () => {
+      setPdfUrl(null);
+      setPdfLoadError(false);
+      setTotalPdfPages(chapterPdfPageCount);
       if (!chapter) return;
-      const url = await getChapterPdfUrl(chapter.id);
-      if (url) {
-        currentUrl = url;
-        setPdfBlobUrl(url);
-      } else {
-        setPdfBlobUrl(null);
+
+      try {
+        const storedUrl = await getChapterPdfUrl(chapter.id);
+        if (cancelled) return;
+        if (storedUrl) {
+          setPdfUrl(storedUrl);
+          return;
+        }
+
+        if (chapter.pdfStorageKey || chapter.pdf_storage_key) {
+          const access = await chapterService.getPdfAccess(chapter.id);
+          if (cancelled) return;
+          setPdfUrl(access.pdfUrl);
+          setTotalPdfPages(access.pageCount ?? chapterPdfPageCount);
+        }
+      } catch (error) {
+        console.error('[Reader] Failed to load original chapter PDF:', error);
+        if (!cancelled) setPdfLoadError(true);
       }
     };
     loadPdf();
     return () => {
-      if (currentUrl) URL.revokeObjectURL(currentUrl);
+      cancelled = true;
     };
-  }, [chapter?.id]);
+  }, [chapter, chapterPdfPageCount]);
+
+  useEffect(() => {
+    if (!pdfUrl?.startsWith('blob:')) return;
+    return () => URL.revokeObjectURL(pdfUrl);
+  }, [pdfUrl]);
 
   const handleReaderPdfSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -104,7 +122,9 @@ export const Reader: React.FC = () => {
     try {
       await storeChapterPdf(chapter.id, file, file.name);
       const url = URL.createObjectURL(file);
-      setPdfBlobUrl(url);
+      setPdfUrl(url);
+      setPdfLoadError(false);
+      setTotalPdfPages(chapterPdfPageCount);
     } catch (err) {
       console.warn('Failed to save chapter PDF:', err);
     } finally {
@@ -191,9 +211,6 @@ export const Reader: React.FC = () => {
     else setZoomLevel('fit-width');
   };
 
-  // Generate continuous page slices for Chapter PDF
-  const pdfPagesList = Array.from({ length: totalPdfPages }, (_, i) => i + 1);
-
   return (
     <div className={`${styles.readerWrapper} ${styles[brightness]}`}>
       {/* HUD Header Drawer */}
@@ -247,8 +264,8 @@ export const Reader: React.FC = () => {
                 onClick={() => readerPdfInputRef.current?.click()}
                 title="Click to attach or replace chapter PDF file"
               >
-                {pdfBlobUrl ? <CheckCircle2 size={13} style={{ color: '#10b981' }} /> : <UploadCloud size={13} />}
-                <span>{pdfBlobUrl ? `${pdfFileName} (Attached)` : 'Attach PDF'}</span>
+                {pdfUrl ? <CheckCircle2 size={13} style={{ color: '#10b981' }} /> : <UploadCloud size={13} />}
+                <span>{attachingPdf ? 'Attaching PDF...' : pdfUrl ? `${pdfFileName || 'PDF'} (Attached)` : 'Attach PDF'}</span>
               </div>
 
               {/* Bookmark Toggle */}
@@ -319,85 +336,25 @@ export const Reader: React.FC = () => {
         ) : (
           // Render Chapter Content
           <div className={styles.pagesContainer}>
-            {pdfBlobUrl ? (
+            {pdfUrl ? (
               // Embedded native PDF viewer for the real uploaded PDF
               <div 
                 className={styles.pdfIframeWrapper}
                 onClick={(e) => e.stopPropagation()}
               >
                 <iframe
-                  src={`${pdfBlobUrl}#toolbar=0&navpanes=0`}
+                  src={`${pdfUrl}#toolbar=0&navpanes=0`}
                   title={chapter.title}
                   className={styles.pdfIframe}
                 />
               </div>
-            ) : readingMode === 'vertical' ? (
-              // Vertical Continuous Webtoon Scroll Mode
-              <div className={styles.verticalStripWrapper}>
-                {pdfPagesList.map((pgNumber) => (
-                  <div key={pgNumber} className={styles.pageItem}>
-                    <img 
-                      src={getFallbackCoverUrl(`${series.title} - Ch.${chapter.chapter_no ?? chapter.chapterNumber} Pg.${pgNumber}`, 'Webtoon')}
-                      alt={`Page ${pgNumber}`} 
-                      className={styles.loaded}
-                      loading="lazy"
-                    />
-                    <div className={styles.pageNumberIndicator}>
-                      {chapter.title} • Page {pgNumber} / {totalPdfPages}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Chapter Finished Next Up Card */}
-                <div className={styles.chapterEndCard} onClick={(e) => e.stopPropagation()}>
-                  <div className={styles.endIcon}><Sparkles size={28} /></div>
-                  <h3>Chapter {chapter.chapter_no ?? chapter.chapterNumber} Finished!</h3>
-                  {nextChapter ? (
-                    <>
-                      <p>Up Next: <strong>Ch. {nextChapter.chapter_no ?? nextChapter.chapterNumber} - {nextChapter.title}</strong></p>
-                      <button className={styles.btnNextChapterBig} onClick={handleNextChapter}>
-                        <Play size={15} fill="currentColor" /> Continue to Next Chapter
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p>You're all caught up with the latest released chapter!</p>
-                      <button className={styles.btnNextChapterBig} onClick={() => navigate(`/book/${series.id}`)}>
-                        Return to Series Overview
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
             ) : (
-              // Horizontal Single Page Swipe Viewport
-              <div className={styles.singlePageWrapper} onClick={(e) => e.stopPropagation()}>
-                <button 
-                  className={`${styles.navChevronBtn} ${pageNum <= 1 ? styles.disabledChevron : ''}`}
-                  onClick={() => handlePageChange(pageNum - 1)}
-                  disabled={pageNum <= 1}
-                  aria-label="Previous Page"
-                >
-                  <ChevronLeft size={24} />
-                </button>
-                
-                <div className={styles.horizontalPageItem}>
-                  <img 
-                    src={getFallbackCoverUrl(`${series.title} - Ch.${chapter.chapter_no ?? chapter.chapterNumber} Pg.${pageNum}`, 'Webtoon')}
-                    alt={`Page ${pageNum}`} 
-                  />
-                  <div className={styles.pageNumberIndicator}>
-                    Page {pageNum} of {totalPdfPages}
-                  </div>
-                </div>
-
-                <button 
-                  className={`${styles.navChevronBtn} ${pageNum >= totalPdfPages ? styles.disabledChevron : ''}`}
-                  onClick={() => handlePageChange(pageNum + 1)}
-                  disabled={pageNum >= totalPdfPages}
-                  aria-label="Next Page"
-                >
-                  <ChevronRight size={24} />
+              <div className={styles.contentUnavailable} onClick={(e) => e.stopPropagation()}>
+                <FileText size={32} />
+                <h3>{pdfLoadError ? 'PDF unavailable' : 'NA'}</h3>
+                <p>{pdfLoadError ? 'Could not load the original chapter PDF. Reload the chapter or attach the original file.' : 'Original chapter PDF is not available.'}</p>
+                <button className={styles.btnNextChapterBig} onClick={() => readerPdfInputRef.current?.click()}>
+                  <UploadCloud size={15} /> Attach Original PDF
                 </button>
               </div>
             )}
@@ -577,4 +534,3 @@ export const Reader: React.FC = () => {
     </div>
   );
 };
-

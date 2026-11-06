@@ -6,20 +6,17 @@ import {
   Play, 
   BookOpen, 
   Layers, 
-  Star, 
-  Eye, 
   Clock, 
   ArrowUpDown, 
   Search, 
   Share2, 
-  Check, 
-  Sparkles 
+  Check 
 } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { BookCard } from '../../components/common/BookCard';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import { RechargeModal } from '../../components/common/RechargeModal';
-import { getSeriesCover, getBookCover, getFallbackCoverUrl } from '../../utils/coverUtils';
+import { getSeriesCover, getFallbackCoverUrl } from '../../utils/coverUtils';
 import styles from './BookDetails.module.css';
 
 export const BookDetails: React.FC = () => {
@@ -155,9 +152,6 @@ export const BookDetails: React.FC = () => {
                 e.currentTarget.src = getFallbackCoverUrl(series.title, 'Manhwa');
               }}
             />
-            <span className={styles.ratingBadge}>
-              <Star size={13} fill="#fbbf24" stroke="#fbbf24" /> 4.9
-            </span>
           </div>
 
           {/* Metadata Block */}
@@ -167,8 +161,7 @@ export const BookDetails: React.FC = () => {
                 <span className={styles.statusDot} style={{ backgroundColor: statusColor }} />
                 {series.status}
               </span>
-              <span className={styles.formatBadge}>MANHWA</span>
-              <span className={styles.badgeHD}><Sparkles size={11} /> ULTRA HD</span>
+              <span className={styles.formatBadge}>NA</span>
             </div>
 
             <h1 className={styles.title}>{series.title}</h1>
@@ -176,41 +169,23 @@ export const BookDetails: React.FC = () => {
             {/* Quick Stats Strip */}
             <div className={styles.statsStrip}>
               <div className={styles.statItem}>
-                <Star size={14} className={styles.statIconGold} fill="#fbbf24" />
-                <span className={styles.statBold}>4.9</span>
-                <span className={styles.statMuted}>Rating</span>
-              </div>
-              <div className={styles.statDivider} />
-              <div className={styles.statItem}>
                 <Layers size={14} className={styles.statIcon} />
-                <span className={styles.statBold}>{allBookChapters.length || 8}</span>
+                <span className={styles.statBold}>{allBookChapters.length}</span>
                 <span className={styles.statMuted}>Chapters</span>
-              </div>
-              <div className={styles.statDivider} />
-              <div className={styles.statItem}>
-                <Eye size={14} className={styles.statIcon} />
-                <span className={styles.statBold}>128.4K</span>
-                <span className={styles.statMuted}>Views</span>
-              </div>
-              <div className={styles.statDivider} />
-              <div className={styles.statItem}>
-                <Bookmark size={14} className={styles.statIcon} />
-                <span className={styles.statBold}>19.2K</span>
-                <span className={styles.statMuted}>Bookmarks</span>
               </div>
             </div>
 
             {/* Synopsis */}
             <div className={styles.synopsisBlock}>
               <h3>Synopsis</h3>
-              <p>{series.description || 'Dive into this action-packed manhwa filled with thrilling storylines, high-definition vertical panels, and unforgettable character arcs.'}</p>
+              <p>{series.description || 'NA'}</p>
             </div>
 
             {/* Primary Action Buttons */}
             <div className={styles.actionButtonsRow}>
-              <button className={styles.btnReadPrimary} onClick={handleReadNow} disabled={!currentBook}>
+              <button className={styles.btnReadPrimary} onClick={handleReadNow} disabled={!currentBook || allBookChapters.length === 0}>
                 <Play size={16} fill="currentColor" />
-                {hasReadingProgress ? 'Continue Reading' : 'Start Reading (Ch 1)'}
+                {hasReadingProgress ? 'Continue Reading' : 'Read Now'}
               </button>
 
               <button 
@@ -311,7 +286,9 @@ export const BookDetails: React.FC = () => {
                     <div className={styles.chapterRowRight}>
                       <span className={styles.chapterReleaseTime}>
                         <Clock size={11} />
-                        {new Date(chapter.created_at || (chapter as any).createdAt || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {chapter.created_at || (chapter as any).createdAt
+                          ? new Date(chapter.created_at || (chapter as any).createdAt || '').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                          : 'NA'}
                       </span>
 
                       {chapter.coin_cost > 0 ? (
@@ -364,4 +341,3 @@ export const BookDetails: React.FC = () => {
     </div>
   );
 };
-

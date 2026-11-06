@@ -27,7 +27,7 @@ export const mapChapterFromApi = (item: any): Chapter => {
     const pricingModel = (item.pricingModel || item.pricing_model || item.access_type || 'FREE') === 'PAID' ? 'PAID' : 'FREE';
     const coinCost = Number(item.coinCost ?? item.coin_cost ?? 0);
     const published = item.published !== undefined ? Boolean(item.published) : true;
-    const createdAt = item.createdAt || item.created_at || new Date().toISOString();
+    const createdAt = item.createdAt || item.created_at || '';
     const updatedAt = item.updatedAt || item.updated_at;
 
     const pdfStorageKey = item.pdfStorageKey || item.pdf_storage_key || null;
@@ -80,6 +80,17 @@ const getFallbackChapters = (_bookId?: string, _search?: string): Chapter[] => {
 const saveFallbackChapters = (_chapters: Chapter[]) => {
     // No-op: only real database data is maintained
 };
+
+export interface ChapterPdfAccessResponse {
+    chapterId: string;
+    bookId: string;
+    chapterNumber: number;
+    pdfUrl: string;
+    expiresIn: number;
+    pageCount?: number;
+    fileName?: string;
+    fileSize?: number;
+}
 
 export const chapterService = {
     /**
@@ -259,6 +270,13 @@ export const chapterService = {
         const res = await api.post<ChapterPdfUploadUrlResponse>(
             `/chapters/${encodeURIComponent(chapterId)}/content/upload-url`,
             payload
+        );
+        return res.data;
+    },
+
+    getPdfAccess: async (chapterId: string): Promise<ChapterPdfAccessResponse> => {
+        const res = await api.get<ChapterPdfAccessResponse>(
+            `/chapters/${encodeURIComponent(chapterId)}/access`
         );
         return res.data;
     },
