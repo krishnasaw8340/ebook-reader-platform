@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs';
-import { FileText, ShieldAlert, Award, Clock } from 'lucide-react';
+import { FileText, Clock } from 'lucide-react';
 import styles from './SupportPages.module.css';
 
 export const TermsOfService: React.FC = () => {
@@ -12,7 +12,7 @@ export const TermsOfService: React.FC = () => {
     { id: 'acceptance', label: '1. Acceptance of Terms' },
     { id: 'accounts', label: '2. User Accounts & OTP' },
     { id: 'intellectual-property', label: '3. Intellectual Property & IP' },
-    { id: 'coin-purchases', label: '4. Sandboxed Coins & Unlocks' },
+    { id: 'coin-purchases', label: '4. Coin Purchases & Unlocks' },
     { id: 'acceptable-use', label: '5. Acceptable Use Policy' },
     { id: 'termination', label: '6. Suspension & Termination' },
     { id: 'disclaimers', label: '7. Warranty Disclaimers' },
@@ -109,18 +109,19 @@ export const TermsOfService: React.FC = () => {
             <section id="coin-purchases" className={styles.section}>
               <h2 className={styles.sectionTitle}>
                 <span className={styles.sectionNumber}>4</span>
-                Sandboxed Coins, Pricing & Digital Unlocks
+                Coin Purchases, Pricing & Digital Unlocks
               </h2>
               <p className={styles.paragraph}>
                 KuroYomi utilizes virtual tokens known as <strong>KuroYomi Coins</strong> to facilitate chapter unlocks and volume acquisitions.
               </p>
               <ul className={styles.list}>
-                <li><strong>Sandbox Simulation:</strong> In demo and testing environments, coin transactions operate under sandbox mode with simulated billing flows.</li>
+                <li><strong>Payment Processing:</strong> Coin purchases use PayPal checkout. Test environments may use PayPal Sandbox; live payments may charge the displayed price.</li>
+                <li><strong>Payment Confirmation:</strong> Coins are credited after the backend verifies successful payment with PayPal.</li>
                 <li><strong>Permanency of Unlocks:</strong> Once a chapter or book is unlocked with coins, it remains permanently accessible under your account's "My Library" catalog, provided the account remains in good standing.</li>
                 <li><strong>Non-Refundable:</strong> Virtual coins spent on chapter views or immediate reading rights are final and non-refundable once content streaming has begun.</li>
               </ul>
               <div className={`${styles.calloutBox} ${styles.calloutSuccess}`}>
-                For exhaustive information regarding coin packages, gift incentives, and simulated ledger balances, refer to our dedicated <a href="/coin-policy" style={{ color: 'var(--color-brand-primary)', fontWeight: 'bold' }}>Sandboxed Coin Policies</a>.
+                For current coin package prices and payment steps, see the <a href="/coin-policy" style={{ color: 'var(--color-brand-primary)', fontWeight: 'bold' }}>Coin Policy</a>.
               </div>
             </section>
 

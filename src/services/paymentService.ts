@@ -9,6 +9,8 @@ export interface PaymentOrderView {
   priceAmount: string;
   currency: string;
   checkoutUrl: string | null;
+  orderCode: string | null;
+  discordUrl: string | null;
   expiresAt: string;
   completedAt: string | null;
 }

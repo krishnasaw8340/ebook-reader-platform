@@ -1,5 +1,15 @@
-import React, { useEffect, useRef } from 'react';
-import { X, Coins, CheckCircle, ExternalLink, Clock, Loader2, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  X,
+  Coins,
+  CheckCircle,
+  ExternalLink,
+  Clock,
+  Loader2,
+  AlertTriangle,
+  Copy,
+  Check,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../contexts/UserContext';
 import { useCheckout } from '../../hooks/useCheckout';
@@ -33,19 +43,31 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
   const { phase, order, error, secondsLeft, start, reset } = useCheckout({
     onCompleted: refreshWallet,
   });
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
 
   // Auto-start when opened with a preselected package.
   const startedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (isOpen && initialPackageId && startedFor.current !== initialPackageId) {
+    if (
+      isOpen &&
+      phase === 'idle' &&
+      initialPackageId &&
+      startedFor.current !== initialPackageId
+    ) {
       startedFor.current = initialPackageId;
       void start(initialPackageId);
     }
     if (!isOpen) startedFor.current = null;
-  }, [isOpen, initialPackageId, start]);
+  }, [isOpen, initialPackageId, phase, start]);
+
+  useEffect(() => {
+    setCodeCopied(false);
+    setCopyError(null);
+  }, [order?.id]);
 
   const handleClose = () => {
-    reset();
+    if (phase !== 'creating' && phase !== 'awaiting') reset();
     onClose();
   };
 
@@ -57,13 +79,21 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  const openCheckout = () => {
-    if (order?.checkoutUrl) window.open(order.checkoutUrl, '_blank', 'noopener,noreferrer');
-  };
-
   const retry = () => {
     reset();
     startedFor.current = null;
+  };
+
+  const copyOrderCode = async () => {
+    if (!order?.orderCode) return;
+    try {
+      await navigator.clipboard.writeText(order.orderCode);
+      setCodeCopied(true);
+      setCopyError(null);
+    } catch {
+      setCodeCopied(false);
+      setCopyError('Clipboard access is unavailable. Select and copy the code above.');
+    }
   };
 
   const renderBody = () => {
@@ -80,29 +110,57 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
       return (
         <div className={styles.checkoutPanel}>
           <div className={styles.orderSummary}>
-            <span className={styles.coinCount}>
-              <Coins size={16} className={styles.coinIcon} /> {order.coinsAmount} Coins
-            </span>
+            <div className={styles.orderHeading}>
+              <span className={styles.orderCreated}>Order Created</span>
+              <span className={styles.coinCount}>
+                <Coins size={16} className={styles.coinIcon} /> {order.coinsAmount} Coins
+              </span>
+            </div>
             <strong>{formatPrice(order.priceAmount, order.currency)}</strong>
           </div>
 
-          <button
-            className={styles.primaryAction}
-            onClick={openCheckout}
-            disabled={!order.checkoutUrl}
-          >
-            <ExternalLink size={16} /> Open secure checkout
-          </button>
+          <div className={styles.orderCodeCard}>
+            <span className={styles.orderCreated}>Your One-Time Code</span>
+            <div className={styles.orderCodeRow}>
+              <strong className={styles.orderCode}>{order.orderCode ?? 'N/A'}</strong>
+              <button
+                type="button"
+                className={styles.copyCodeButton}
+                onClick={() => void copyOrderCode()}
+                disabled={!order.orderCode}
+              >
+                {codeCopied ? <Check size={15} /> : <Copy size={15} />}
+                {codeCopied ? 'Copied!' : 'Copy code'}
+              </button>
+            </div>
+            {copyError && <p className={styles.copyError}>{copyError}</p>}
+          </div>
+
+          {order.discordUrl ? (
+            <a
+              className={styles.primaryAction}
+              href={order.discordUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink size={16} /> Open Discord to Pay
+            </a>
+          ) : (
+            <button type="button" className={styles.primaryAction} disabled>
+              Discord payment is not configured
+            </button>
+          )}
 
           <div className={styles.waitingRow}>
             <Loader2 size={14} className={styles.spin} />
-            <span>Waiting for payment confirmation…</span>
+            <span>Waiting for payment... Updates automatically.</span>
           </div>
           <div className={styles.timerRow}>
             <Clock size={13} /> Checkout expires in <strong>{formatClock(secondsLeft)}</strong>
           </div>
           <p className={styles.modalFooter}>
-            Keep this window open. Your coins are added automatically once payment is confirmed.
+            Enter your code in the Discord payment channel, then use its private PayPal link.
+            Keep this window open; your balance updates automatically after payment is confirmed.
           </p>
         </div>
       );
@@ -167,13 +225,11 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
             <p className={styles.subtext}>No coin packages available right now.</p>
           )}
           {coinPackages.map((pack, index) => (
-            <div
+            <button
               key={pack.id}
+              type="button"
               className={`${styles.packageRow} ${index === coinPackages.length - 1 && coinPackages.length > 2 ? styles.popularRow : ''}`}
               onClick={() => void start(pack.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && void start(pack.id)}
             >
               <div className={styles.packageInfo}>
                 <div className={styles.packHeader}>
@@ -183,8 +239,8 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
                 </div>
                 <span className={styles.packLabel}>{pack.name}</span>
               </div>
-              <button className={styles.priceBtn}>{formatPrice(pack.price, pack.currency)}</button>
-            </div>
+              <span className={styles.priceBtn}>{formatPrice(pack.price, pack.currency)}</span>
+            </button>
           ))}
         </div>
       </>

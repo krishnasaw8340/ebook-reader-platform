@@ -9,8 +9,7 @@ import {
   ChevronUp, 
   CheckCircle2, 
   Clock, 
-  Sparkles,
-  AlertCircle
+  Sparkles
 } from 'lucide-react';
 import styles from './SupportPages.module.css';
 
@@ -29,8 +28,8 @@ const FAQS: FAQ[] = [
     answer: "While reading any chapter in the KuroYomi Reader, click or tap the screen to bring up the reading navigation overlay. In the settings drawer, choose between 'Vertical Webtoon', 'Single Page', and 'Double Page Spread'."
   },
   {
-    question: "How do Sandboxed Coins work?",
-    answer: "In this demo version, all coin packages and billing orders are processed via a simulated sandbox payment engine. No real credit card charges occur, but your wallet ledger is accurately updated."
+    question: "How do coin purchases work?",
+    answer: "Create an order in your wallet, enter its one-time code in the KuroYomi Discord payment channel, then complete PayPal checkout. Coins are added after payment is verified. PayPal Sandbox is for testing; live payments may charge real money."
   },
   {
     question: "How can I publish my own manga or webtoon series on KuroYomi?",

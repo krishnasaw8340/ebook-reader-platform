@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs';
-import { Coins, Sparkles, Shield, RefreshCw, ShoppingCart, HelpCircle, ArrowRight } from 'lucide-react';
+import { Coins, Sparkles, Shield, ArrowRight } from 'lucide-react';
 import styles from './SupportPages.module.css';
 
 export const CoinPolicy: React.FC = () => {
@@ -13,8 +13,8 @@ export const CoinPolicy: React.FC = () => {
 
   const tocItems = [
     { id: 'overview', label: '1. What are KuroYomi Coins?' },
-    { id: 'sandbox-nature', label: '2. Sandbox Simulation Mode' },
-    { id: 'packages-bonus', label: '3. Packages & Bonus Rates' },
+    { id: 'payment-flow', label: '2. Payments & Testing' },
+    { id: 'packages-bonus', label: '3. Coin Packages' },
     { id: 'unlock-mechanics', label: '4. Chapter & Volume Unlocks' },
     { id: 'refunds-transfers', label: '5. Non-Refundable & Transfer Terms' },
     { id: 'creator-royalties', label: '6. Creator Revenue Model' },
@@ -25,7 +25,7 @@ export const CoinPolicy: React.FC = () => {
     <div className={styles.pageWrapper}>
       <div className={styles.glow} />
       <div className={styles.container}>
-        <Breadcrumbs items={[{ label: 'Home', path: '/' }, { label: 'Sandboxed Coin Policies' }]} />
+        <Breadcrumbs items={[{ label: 'Home', path: '/' }, { label: 'Coin Policy' }]} />
 
         <header className={styles.header}>
           <div className={styles.badgeRow}>
@@ -33,13 +33,13 @@ export const CoinPolicy: React.FC = () => {
               <Coins size={12} /> Virtual Currency Policy
             </span>
             <span className={styles.metaText}>
-              <Sparkles size={12} style={{ display: 'inline', marginRight: 4, color: 'var(--color-status-warning)' }} />
-              Sandbox Environment Active
+              <Shield size={12} style={{ display: 'inline', marginRight: 4, color: 'var(--color-status-success)' }} />
+              Server-Verified Payments
             </span>
           </div>
-          <h1 className={styles.title}>Sandboxed Coin Policies</h1>
+          <h1 className={styles.title}>KuroYomi Coin Policy</h1>
           <p className={styles.subtitle}>
-            Everything you need to know about KuroYomi Coins, virtual wallet balances, chapter unlocks, and our sandboxed transaction engine.
+            Learn how coin purchases, wallet balances, and chapter unlocks work.
           </p>
         </header>
 
@@ -69,9 +69,9 @@ export const CoinPolicy: React.FC = () => {
             <div className={styles.featureIconWrapper}>
               <Sparkles size={22} />
             </div>
-            <div className={styles.featureTitle}>Sandboxed Payment Engine</div>
+            <div className={styles.featureTitle}>Verified Payments</div>
             <p className={styles.featureDesc}>
-              Test transactions risk-free using simulated card processors and instant testnet ledger credits.
+              Coins are credited after the payment provider confirms a successful purchase.
             </p>
           </div>
         </div>
@@ -110,21 +110,21 @@ export const CoinPolicy: React.FC = () => {
               </p>
             </section>
 
-            <section id="sandbox-nature" className={styles.section}>
+            <section id="payment-flow" className={styles.section}>
               <h2 className={styles.sectionTitle}>
                 <span className={styles.sectionNumber}>2</span>
-                Sandbox Simulation Mode & Safe Testing
+                Payments & Testing
               </h2>
               <p className={styles.paragraph}>
-                In this preview deployment, KuroYomi operates under a <strong>Sandboxed Financial Protocol</strong>:
+                To purchase coins, create an order on the wallet page, enter its one-time code in the KuroYomi Discord payment channel, and complete checkout through PayPal. The website checks the order status automatically.
               </p>
               <ul className={styles.list}>
-                <li>Coin top-ups and checkout checkouts simulate actual production payment webhooks.</li>
-                <li>No actual fiat currency (USD, EUR, JPY) is captured during transactions.</li>
-                <li>Your wallet ledger accurately reflects double-entry accounting records, simulated orders, and unlock receipts so you can evaluate the experience exactly as in production.</li>
+                <li>Coins are added only after the backend verifies PayPal payment confirmation.</li>
+                <li>Sandbox PayPal accounts are used for testing; live PayPal transactions may charge real money.</li>
+                <li>Your updated coin balance appears automatically after a successful purchase.</li>
               </ul>
               <div className={`${styles.calloutBox} ${styles.calloutInfo}`}>
-                <strong>Developer & Evaluator Note:</strong> Test orders placed through the platform will instantly update your wallet balance upon simulated checkout completion.
+                <strong>Important:</strong> Check the displayed price and PayPal account environment before approving a payment.
               </div>
             </section>
 
@@ -134,12 +134,13 @@ export const CoinPolicy: React.FC = () => {
                 Packages, Tiers & Bonus Incentives
               </h2>
               <p className={styles.paragraph}>
-                Coins are bundled into tiered packages. Larger tiers award bonus promotional coins:
+                Coin packages currently available:
               </p>
               <ul className={styles.list}>
-                <li><strong>Starter Pouch (100 Coins):</strong> Perfect for catching up on 20-30 individual chapters.</li>
-                <li><strong>Reader's Chest (300 Coins + 25 Bonus):</strong> Ideal for binge-reading a full ongoing volume.</li>
-                <li><strong>Collector's Vault (1,000 Coins + 150 Bonus):</strong> Best value for heavy manga and manhwa readers.</li>
+                <li><strong>500 Coins:</strong> $4.99</li>
+                <li><strong>1,200 Coins:</strong> $9.99</li>
+                <li><strong>3,500 Coins:</strong> $24.99</li>
+                <li><strong>8,000 Coins:</strong> $49.99</li>
               </ul>
             </section>
 

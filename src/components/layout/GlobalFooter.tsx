@@ -58,7 +58,7 @@ export const GlobalFooter: React.FC = () => {
             <ul>
               <li onClick={() => handleNavigate('/terms')}>Terms of Service</li>
               <li onClick={() => handleNavigate('/privacy')}>Privacy Policy</li>
-              <li onClick={() => handleNavigate('/coin-policy')}>Sandboxed Coin Policies</li>
+              <li onClick={() => handleNavigate('/coin-policy')}>Coin Policy</li>
               <li onClick={() => handleNavigate('/support')}>Contact Support</li>
             </ul>
           </div>
@@ -66,7 +66,7 @@ export const GlobalFooter: React.FC = () => {
 
         <div className={styles.footerCopyright}>
           <div>© 2026 KuroYomi Platform Inc. Built with React 19 + TypeScript + Framer Motion.</div>
-          <div>Sandboxed Manga Reader & Creator Ecosystem</div>
+          <div>Manga Reader & Creator Ecosystem</div>
         </div>
       </div>
     </footer>
