@@ -1,15 +1,35 @@
 import React, { useState } from 'react';
-import { Coins, ShieldCheck } from 'lucide-react';
+import { Coins, Plus, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
+import { useAuthStore } from '../../store/auth.store';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import { RechargeModal } from '../../components/common/RechargeModal';
 import { formatPrice } from '../../utils/formatPrice';
 import styles from './Wallet.module.css';
 
 export const Wallet: React.FC = () => {
+  const navigate = useNavigate();
   const { wallet, coinTransactions, coinPackages } = useUser();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [checkoutPackageId, setCheckoutPackageId] = useState<string | null>(null);
+  const [rechargeOpen, setRechargeOpen] = useState(false);
+
+  const openRecharge = (packageId?: string) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    setCheckoutPackageId(packageId ?? null);
+    setRechargeOpen(true);
+  };
+
+  const closeRecharge = () => {
+    setRechargeOpen(false);
+    setCheckoutPackageId(null);
+  };
 
   return (
     <div className={styles.wallet}>
@@ -32,6 +52,14 @@ export const Wallet: React.FC = () => {
               <span> Coins</span>
             </div>
           </div>
+          <button
+            type="button"
+            className={styles.addCoinsBtn}
+            onClick={() => openRecharge()}
+          >
+            <Plus size={17} />
+            Add Coins
+          </button>
         </div>
 
         {/* Package selection */}
@@ -45,23 +73,21 @@ export const Wallet: React.FC = () => {
             ) : (
               <div className={styles.packagesGrid}>
                 {coinPackages.map((pack) => (
-                  <div
+                  <button
                     key={pack.id}
                     className={styles.packageCard}
-                    onClick={() => setCheckoutPackageId(pack.id)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && setCheckoutPackageId(pack.id)}
+                    type="button"
+                    onClick={() => openRecharge(pack.id)}
                   >
                     <span className={styles.packLabel}>{pack.name}</span>
                     <div className={styles.coinVal}>
                       <Coins size={20} />
                       <span>{pack.coins}</span>
                     </div>
-                    <button className={styles.priceBtn}>
+                    <span className={styles.priceBtn}>
                       {formatPrice(pack.price, pack.currency)}
-                    </button>
-                  </div>
+                    </span>
+                  </button>
                 ))}
               </div>
             )}
@@ -121,9 +147,9 @@ export const Wallet: React.FC = () => {
       </div>
 
       <RechargeModal
-        isOpen={checkoutPackageId !== null}
+        isOpen={rechargeOpen}
         initialPackageId={checkoutPackageId}
-        onClose={() => setCheckoutPackageId(null)}
+        onClose={closeRecharge}
       />
     </div>
   );
