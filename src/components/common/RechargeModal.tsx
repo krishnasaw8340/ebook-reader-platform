@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../contexts/UserContext';
 import { useCheckout } from '../../hooks/useCheckout';
+import type { PaymentOrderView } from '../../services/paymentService';
 import { formatPrice } from '../../utils/formatPrice';
 import styles from './Modal.module.css';
 
@@ -22,6 +23,7 @@ interface RechargeModalProps {
   message?: string;
   /** When set, checkout starts immediately for this package. */
   initialPackageId?: string | null;
+  discordWindowRef?: React.MutableRefObject<Window | null>;
 }
 
 const CELEBRATION_PARTICLES = Array.from({ length: 14 }, (_, i) => ({
@@ -38,10 +40,29 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
   onClose,
   message,
   initialPackageId,
+  discordWindowRef,
 }) => {
+  const localDiscordWindowRef = useRef<Window | null>(null);
+  const paymentWindowRef = discordWindowRef ?? localDiscordWindowRef;
+  const onOrderCreated = (order: PaymentOrderView) => {
+    const discordWindow = paymentWindowRef.current;
+    paymentWindowRef.current = null;
+    if (!discordWindow || discordWindow.closed) return;
+    if (!order.discordUrl) {
+      discordWindow.close();
+      return;
+    }
+    discordWindow.location.href = order.discordUrl;
+  };
+  const onOrderFailed = () => {
+    paymentWindowRef.current?.close();
+    paymentWindowRef.current = null;
+  };
   const { coinPackages, refreshWallet } = useUser();
   const { phase, order, error, secondsLeft, start, reset } = useCheckout({
     onCompleted: refreshWallet,
+    onOrderCreated,
+    onOrderFailed,
   });
   const [codeCopied, setCodeCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
@@ -64,7 +85,32 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
   useEffect(() => {
     setCodeCopied(false);
     setCopyError(null);
-  }, [order?.id]);
+    if (!order?.orderCode) return;
+    if (!navigator.clipboard?.writeText) {
+      setCopyError(
+        'Clipboard access is unavailable. Select and copy the code above.',
+      );
+      return;
+    }
+
+    let active = true;
+    void navigator.clipboard
+      .writeText(order.orderCode)
+      .then(() => {
+        if (active) setCodeCopied(true);
+      })
+      .catch(() => {
+        if (active) {
+          setCopyError(
+            'Clipboard access is unavailable. Select and copy the code above.',
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [order?.id, order?.orderCode]);
 
   const handleClose = () => {
     if (phase !== 'creating' && phase !== 'awaiting') reset();
@@ -110,13 +156,10 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
       return (
         <div className={styles.checkoutPanel}>
           <div className={styles.orderSummary}>
-            <div className={styles.orderHeading}>
-              <span className={styles.orderCreated}>Order Created</span>
-              <span className={styles.coinCount}>
-                <Coins size={16} className={styles.coinIcon} /> {order.coinsAmount} Coins
-              </span>
-            </div>
-            <strong>{formatPrice(order.priceAmount, order.currency)}</strong>
+            <span className={styles.orderCreated}>
+              Order Created: {order.coinsAmount} Coins (
+              {formatPrice(order.priceAmount, order.currency)})
+            </span>
           </div>
 
           <div className={styles.orderCodeCard}>
@@ -153,11 +196,18 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
 
           <div className={styles.waitingRow}>
             <Loader2 size={14} className={styles.spin} />
-            <span>Waiting for payment... Updates automatically.</span>
+            <span>
+              {order.status === 'COMPLETED'
+                ? 'Payment received. Updating your wallet balance…'
+                : 'Waiting for payment... Updates automatically.'}
+            </span>
           </div>
-          <div className={styles.timerRow}>
-            <Clock size={13} /> Checkout expires in <strong>{formatClock(secondsLeft)}</strong>
-          </div>
+          {order.status !== 'COMPLETED' && (
+            <div className={styles.timerRow}>
+              <Clock size={13} /> Checkout expires in{' '}
+              <strong>{formatClock(secondsLeft)}</strong>
+            </div>
+          )}
           <p className={styles.modalFooter}>
             Enter your code in the Discord payment channel, then use its private PayPal link.
             Keep this window open; your balance updates automatically after payment is confirmed.
@@ -187,9 +237,9 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
             ))}
             <CheckCircle size={56} className={styles.successIcon} />
           </div>
-          <h4>Payment confirmed!</h4>
+          <h4>Payment Successful!</h4>
           <p>
-            Added <strong>{order.coinsAmount} Coins</strong> to your wallet.
+            <strong>{order.coinsAmount} Coins</strong> added to your balance.
           </p>
         </motion.div>
       );
@@ -229,7 +279,10 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
               key={pack.id}
               type="button"
               className={`${styles.packageRow} ${index === coinPackages.length - 1 && coinPackages.length > 2 ? styles.popularRow : ''}`}
-              onClick={() => void start(pack.id)}
+              onClick={() => {
+                paymentWindowRef.current = window.open('about:blank', '_blank');
+                void start(pack.id);
+              }}
             >
               <div className={styles.packageInfo}>
                 <div className={styles.packHeader}>

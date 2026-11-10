@@ -25,6 +25,9 @@ function errorMessage(err: unknown): string {
 interface Options {
   /** Called once when the server confirms the order as COMPLETED. */
   onCompleted: () => Promise<void> | void;
+  /** Called after creating an order so the browser can navigate the Discord tab. */
+  onOrderCreated: (order: PaymentOrderView) => void;
+  onOrderFailed: () => void;
 }
 
 /**
@@ -32,16 +35,28 @@ interface Options {
  * The server (webhook) is the only thing that can complete an order, so the
  * client never credits coins itself.
  */
-export function useCheckout({ onCompleted }: Options) {
+export function useCheckout({
+  onCompleted,
+  onOrderCreated,
+  onOrderFailed,
+}: Options) {
   const [phase, setPhase] = useState<CheckoutPhase>('idle');
   const [order, setOrder] = useState<PaymentOrderView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const onCompletedRef = useRef(onCompleted);
+  const onOrderCreatedRef = useRef(onOrderCreated);
+  const onOrderFailedRef = useRef(onOrderFailed);
   useEffect(() => {
     onCompletedRef.current = onCompleted;
   }, [onCompleted]);
+  useEffect(() => {
+    onOrderCreatedRef.current = onOrderCreated;
+  }, [onOrderCreated]);
+  useEffect(() => {
+    onOrderFailedRef.current = onOrderFailed;
+  }, [onOrderFailed]);
 
   const orderId = order?.id ?? null;
   const expiresAt = order?.expiresAt ?? null;
@@ -54,7 +69,9 @@ export function useCheckout({ onCompleted }: Options) {
       const created = await paymentService.createOrder(packageId);
       setOrder(created);
       setPhase('awaiting');
+      onOrderCreatedRef.current(created);
     } catch (err) {
+      onOrderFailedRef.current();
       setError(errorMessage(err));
       setPhase('error');
     }

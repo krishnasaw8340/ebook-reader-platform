@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, Plus, ShieldCheck } from 'lucide-react';
+import { Coins, MessageCircle, Plus, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
@@ -13,22 +13,59 @@ export const Wallet: React.FC = () => {
   const navigate = useNavigate();
   const { wallet, coinTransactions, coinPackages } = useUser();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const [checkoutPackageId, setCheckoutPackageId] = useState<string | null>(null);
   const [rechargeOpen, setRechargeOpen] = useState(false);
+  const [discordError, setDiscordError] = useState<string | null>(null);
 
-  const openRecharge = (packageId?: string) => {
+  const openRecharge = () => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
 
-    setCheckoutPackageId(packageId ?? null);
     setRechargeOpen(true);
+  };
+
+  const openDiscordInvite = () => {
+    const inviteUrl = import.meta.env.VITE_DISCORD_INVITE_URL?.trim();
+    if (!inviteUrl) {
+      setDiscordError(
+        'Discord invite is not configured. Add your server invite URL to the frontend environment.',
+      );
+      return;
+    }
+
+    let destination: URL;
+    try {
+      destination = new URL(inviteUrl);
+    } catch {
+      setDiscordError('The configured Discord invite URL is invalid.');
+      return;
+    }
+
+    if (
+      destination.protocol !== 'https:' ||
+      !['discord.gg', 'www.discord.gg', 'discord.com', 'www.discord.com'].includes(
+        destination.hostname,
+      ) ||
+      (destination.hostname.endsWith('discord.com') &&
+        !destination.pathname.startsWith('/invite/'))
+    ) {
+      setDiscordError('Use a valid Discord server invite URL.');
+      return;
+    }
+
+    const discordWindow = window.open(destination.toString(), '_blank');
+    if (!discordWindow) {
+      setDiscordError('Your browser blocked the Discord tab. Allow popups and try again.');
+      return;
+    }
+
+    discordWindow.opener = null;
+    setDiscordError(null);
   };
 
   const closeRecharge = () => {
     setRechargeOpen(false);
-    setCheckoutPackageId(null);
   };
 
   return (
@@ -67,27 +104,45 @@ export const Wallet: React.FC = () => {
           <div className={styles.packagesWrapper}>
             <h3>Purchase Reading Coins</h3>
             <p className={styles.subtext}>Refill your wallet to unlock premium chapters.</p>
+            {discordError && (
+              <p className={styles.discordLinkError} role="alert">
+                {discordError}
+              </p>
+            )}
 
             {coinPackages.length === 0 ? (
               <p className={styles.subtext}>No coin packages available right now.</p>
             ) : (
               <div className={styles.packagesGrid}>
                 {coinPackages.map((pack) => (
-                  <button
+                  <div
                     key={pack.id}
                     className={styles.packageCard}
-                    type="button"
-                    onClick={() => openRecharge(pack.id)}
                   >
                     <span className={styles.packLabel}>{pack.name}</span>
                     <div className={styles.coinVal}>
                       <Coins size={20} />
                       <span>{pack.coins}</span>
                     </div>
-                    <span className={styles.priceBtn}>
+                    <span className={styles.packagePrice}>
                       {formatPrice(pack.price, pack.currency)}
                     </span>
-                  </button>
+                    <button
+                      type="button"
+                      className={styles.buyButton}
+                      onClick={openDiscordInvite}
+                    >
+                      Buy
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.supportButton}
+                      onClick={openDiscordInvite}
+                    >
+                      <MessageCircle size={14} />
+                      Support
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -148,7 +203,6 @@ export const Wallet: React.FC = () => {
 
       <RechargeModal
         isOpen={rechargeOpen}
-        initialPackageId={checkoutPackageId}
         onClose={closeRecharge}
       />
     </div>

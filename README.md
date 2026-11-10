@@ -238,9 +238,14 @@ Create a `.env` file in the project root:
 # Backend API gateway
 VITE_API_BASE_URL=http://localhost:3000/api
 
+# Discord server invite opened by wallet coin package buttons
+VITE_DISCORD_INVITE_URL=https://discord.gg/jEncSsqWYZ
+
 # Max cover upload size in MB (Client pre-check)
 VITE_MAX_BOOK_COVER_SIZE_MB=10
 ```
+
+Set `VITE_DISCORD_INVITE_URL` to an invite link created from the target server's **Invite People** option. The **Buy** and **Support** buttons on each wallet package open Discord's invite flow, including for visitors who are not signed in. These buttons do not create an order or start a payment.
 
 ### 3. Start Development Server
 ```bash
