@@ -43,7 +43,8 @@
 }
 
 .addCoinsBtn:focus-visible,
-.packageCard:focus-visible {
+.buyButton:focus-visible,
+.supportButton:focus-visible {
   outline: 3px solid var(--color-interaction-focus-ring);
   outline-offset: 2px;
 }
@@ -123,6 +124,12 @@
   margin-bottom: 16px;
 }
 
+.discordLinkError {
+  margin: 0 0 12px;
+  color: var(--color-status-error);
+  font-size: 13px;
+}
+
 .packagesGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -143,8 +150,6 @@
   padding: 20px 16px;
   text-align: center;
   color: inherit;
-  font: inherit;
-  cursor: pointer;
   transition: var(--transition-fast);
   position: relative;
   display: flex;
@@ -193,22 +198,49 @@
   color: var(--coin);
 }
 
-.priceBtn {
+.packagePrice {
   display: block;
-  background-color: var(--color-brand-primary);
-  color: #ffffff;
-  border: none;
-  padding: 6px 20px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition-fast);
-  width: 100%;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 700;
 }
 
-.priceBtn:hover {
+.buyButton,
+.supportButton {
+  display: inline-flex;
+  min-height: 38px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 6px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.buyButton {
+  background-color: var(--color-brand-primary);
+  color: #ffffff;
+}
+
+.buyButton:hover {
   background-color: var(--color-brand-primary-hover);
+}
+
+.supportButton {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-secondary);
+}
+
+.supportButton:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-brand-primary);
 }
 
 /* Logs */

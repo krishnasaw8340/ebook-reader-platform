@@ -173,10 +173,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (txResult.status === 'fulfilled') setCoinTransactions(txResult.value);
     if (packagesResult.status === 'fulfilled') setCoinPackages(packagesResult.value);
     if (unlocksResult.status === 'fulfilled') setChapterUnlocks(unlocksResult.value);
+    if (balanceResult.status === 'rejected') throw balanceResult.reason;
   }, [isAuthenticated, authUser]);
 
   useEffect(() => {
-    void refreshWallet();
+    void refreshWallet().catch((error: unknown) => {
+      console.error('[UserContext] Failed to refresh wallet:', error);
+    });
   }, [refreshWallet]);
 
   // Sync user-specific state to local storage
@@ -217,7 +220,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!isAuthenticated || !authUser) return 'error';
     if (isChapterUnlocked(chapterId)) return 'unlocked';
     const outcome = await walletService.unlockChapter(chapterId);
-    if (outcome === 'unlocked') await refreshWallet();
+    if (outcome === 'unlocked') {
+      try {
+        await refreshWallet();
+      } catch (error) {
+        console.error('[UserContext] Failed to refresh wallet after unlock:', error);
+      }
+    }
     return outcome;
   };
 
