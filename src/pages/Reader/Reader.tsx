@@ -10,17 +10,12 @@ import {
   ChevronRight,
   Maximize2,
   Lock,
-  Layout,
-  FileText,
-  UploadCloud,
-  CheckCircle2,
   Layers,
   X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../contexts/UserContext';
 import { RechargeModal } from '../../components/common/RechargeModal';
-import { getChapterPdfUrl, storeChapterPdf } from '../../utils/pdfStorage';
 import { chapterService } from '../../services/chapterService';
 import styles from './Reader.module.css';
 
@@ -41,7 +36,6 @@ export const Reader: React.FC = () => {
   } = useUser();
 
   const [pageNum, setPageNum] = useState(1);
-  const [readingMode, setReadingMode] = useState<'vertical' | 'horizontal'>('vertical');
   const [brightness, setBrightness] = useState<'normal' | 'oled' | 'dim' | 'sepia'>('normal');
   const [zoomLevel, setZoomLevel] = useState<'fit-width' | 'fit-screen' | 'large'>('fit-width');
   const [showHUD, setShowHUD] = useState(true);
@@ -50,6 +44,7 @@ export const Reader: React.FC = () => {
   const [coinFloat, setCoinFloat] = useState(false);
 
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const pageElements = useRef<Map<number, HTMLImageElement>>(new Map());
 
   const book = books.find(b => b.id === bookId);
   const series = book ? bookSeries.find(s => s.id === book.series_id || s.id === (book as any).seriesId) : null;
@@ -63,87 +58,97 @@ export const Reader: React.FC = () => {
   const prevChapter = chapterIndex > 0 ? bookChapters[chapterIndex - 1] : null;
 
   const isLocked = chapter ? !isChapterUnlocked(chapter.id) : true;
-  const chapterPdfPageCount = chapter ? (chapter.pdfPageCount ?? chapter.pdf_page_count ?? 0) : 0;
-  const [totalPdfPages, setTotalPdfPages] = useState(chapterPdfPageCount);
-  const pdfFileName = chapter ? (chapter.pdfFileName ?? chapter.pdf_file_name ?? '') : '';
+  const chapterPageCount = chapter ? (chapter.pageCount ?? chapter.pages?.length ?? 0) : 0;
 
   const isSeriesBookmarked = series 
     ? books.filter(b => b.series_id === series.id || (b as any).seriesId === series.id).some(b => userLibrary.some(lib => lib.book_id === b.id))
     : false;
 
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [pdfLoadError, setPdfLoadError] = useState(false);
-  const [attachingPdf, setAttachingPdf] = useState(false);
-  const readerPdfInputRef = useRef<HTMLInputElement>(null);
+  const [chapterPages, setChapterPages] = useState<Array<{ pageNumber: number; imageUrl: string; width?: number; height?: number }>>([]);
+  const [pagesLoadError, setPagesLoadError] = useState(false);
 
-  // Prefer a locally attached PDF, then request the original PDF from storage.
   useEffect(() => {
     let cancelled = false;
-    const loadPdf = async () => {
-      setPdfUrl(null);
-      setPdfLoadError(false);
-      setTotalPdfPages(chapterPdfPageCount);
-      if (!chapter) return;
+    let hasLoadedPages = false;
+    let refreshTimer: number | undefined;
+    setChapterPages([]);
+    setPagesLoadError(false);
+    if (!chapter || isLocked || chapterPageCount === 0) {
+      return () => { cancelled = true; };
+    }
 
+    const loadPages = async () => {
       try {
-        const storedUrl = await getChapterPdfUrl(chapter.id);
+        const access = await chapterService.getPageAccess(chapter.id);
         if (cancelled) return;
-        if (storedUrl) {
-          setPdfUrl(storedUrl);
-          return;
-        }
-
-        if (chapter.pdfStorageKey || chapter.pdf_storage_key) {
-          const access = await chapterService.getPdfAccess(chapter.id);
-          if (cancelled) return;
-          setPdfUrl(access.pdfUrl);
-          setTotalPdfPages(access.pageCount ?? chapterPdfPageCount);
+        const pages = access.pages ?? [];
+        setChapterPages(pages.sort((a, b) => a.pageNumber - b.pageNumber));
+        if (pages.length === 0) setPagesLoadError(true);
+        else {
+          setPagesLoadError(false);
+          hasLoadedPages = true;
+          const refreshInSeconds = Math.max((access.expiresIn ?? 600) - 60, 60);
+          refreshTimer = window.setTimeout(() => void loadPages(), refreshInSeconds * 1000);
         }
       } catch (error) {
-        console.error('[Reader] Failed to load original chapter PDF:', error);
-        if (!cancelled) setPdfLoadError(true);
+        console.error('[Reader] Failed to load chapter pages:', error);
+        if (!cancelled) {
+          setPagesLoadError(true);
+          if (hasLoadedPages) {
+            refreshTimer = window.setTimeout(() => void loadPages(), 30_000);
+          }
+        }
       }
     };
-    loadPdf();
+    void loadPages();
     return () => {
       cancelled = true;
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
     };
-  }, [chapter, chapterPdfPageCount]);
-
-  useEffect(() => {
-    if (!pdfUrl?.startsWith('blob:')) return;
-    return () => URL.revokeObjectURL(pdfUrl);
-  }, [pdfUrl]);
-
-  const handleReaderPdfSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !chapter) return;
-    setAttachingPdf(true);
-    try {
-      await storeChapterPdf(chapter.id, file, file.name);
-      const url = URL.createObjectURL(file);
-      setPdfUrl(url);
-      setPdfLoadError(false);
-      setTotalPdfPages(chapterPdfPageCount);
-    } catch (err) {
-      console.warn('Failed to save chapter PDF:', err);
-    } finally {
-      setAttachingPdf(false);
-      if (readerPdfInputRef.current) readerPdfInputRef.current.value = '';
-    }
-  };
+  }, [chapter?.id, chapterPageCount, isLocked]);
 
   // Load progress if exists
   useEffect(() => {
     if (book && chapter) {
       const prog = readingProgress.find(p => p.book_id === book.id && p.chapter_id === chapter.id);
       if (prog && prog.last_pdf_page) {
-        setPageNum(Math.min(prog.last_pdf_page, totalPdfPages));
+        setPageNum(Math.max(1, Math.min(prog.last_pdf_page, chapterPages.length || chapterPageCount)));
       } else {
         setPageNum(1);
       }
     }
-  }, [bookId, chapterId, totalPdfPages]);
+  }, [bookId, chapterId, chapterPages.length, chapterPageCount]);
+
+  useEffect(() => {
+    const viewport = workspaceRef.current;
+    if (!viewport || chapterPages.length === 0) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const viewportCenter = viewport.getBoundingClientRect().top + viewport.clientHeight * 0.45;
+      const visiblePages = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => {
+          const aDistance = Math.abs(a.boundingClientRect.top - viewportCenter);
+          const bDistance = Math.abs(b.boundingClientRect.top - viewportCenter);
+          return aDistance - bDistance;
+        });
+      const visiblePage = visiblePages[0]?.target as HTMLImageElement | undefined;
+      const nextPage = visiblePage ? Number(visiblePage.dataset.pageNumber) : 0;
+      if (nextPage > 0) setPageNum(nextPage);
+    }, { root: viewport, rootMargin: '-15% 0px -55% 0px', threshold: 0 });
+
+    chapterPages.forEach((page) => {
+      const image = pageElements.current.get(page.pageNumber);
+      if (image) observer.observe(image);
+    });
+    return () => observer.disconnect();
+  }, [chapterPages]);
+
+  useEffect(() => {
+    if (!book || !chapter || isLocked || chapterPages.length === 0) return;
+    const progressPercent = Math.round((pageNum / chapterPages.length) * 100);
+    saveProgress(book.id, chapter.id, progressPercent, pageNum, 0);
+  }, [pageNum, chapterPages.length, book?.id, chapter?.id, isLocked]);
 
   if (!book || !chapter || !series) {
     return (
@@ -166,14 +171,9 @@ export const Reader: React.FC = () => {
   };
 
   const handlePageChange = (nextPageNo: number) => {
-    if (nextPageNo < 1 || nextPageNo > totalPdfPages) return;
+    if (nextPageNo < 1 || nextPageNo > chapterPages.length) return;
     setPageNum(nextPageNo);
-    const progressPercent = Math.round((nextPageNo / totalPdfPages) * 100);
-    saveProgress(book.id, chapter.id, progressPercent, nextPageNo, 0);
-    
-    if (readingMode === 'horizontal') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    pageElements.current.get(nextPageNo)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleNextChapter = () => {
@@ -252,22 +252,6 @@ export const Reader: React.FC = () => {
                 <span>Chapters ({bookChapters.length})</span>
               </button>
 
-              <input
-                type="file"
-                ref={readerPdfInputRef}
-                accept="application/pdf"
-                style={{ display: 'none' }}
-                onChange={handleReaderPdfSelect}
-              />
-              <div 
-                className={styles.metaBadge} 
-                onClick={() => readerPdfInputRef.current?.click()}
-                title="Click to attach or replace chapter PDF file"
-              >
-                {pdfUrl ? <CheckCircle2 size={13} style={{ color: '#10b981' }} /> : <UploadCloud size={13} />}
-                <span>{attachingPdf ? 'Attaching PDF...' : pdfUrl ? `${pdfFileName || 'PDF'} (Attached)` : 'Attach PDF'}</span>
-              </div>
-
               {/* Bookmark Toggle */}
               <button 
                 className={`${styles.hudBtn} ${isSeriesBookmarked ? styles.activeBookmark : ''}`}
@@ -305,7 +289,7 @@ export const Reader: React.FC = () => {
 
       {/* Reader Main Viewport */}
       <main 
-        className={`${styles.viewport} ${styles[zoomLevel]} ${styles[readingMode]}`}
+        className={`${styles.viewport} ${styles[zoomLevel]} ${styles.vertical}`}
         ref={workspaceRef}
         onClick={() => setShowHUD(!showHUD)}
       >
@@ -336,26 +320,29 @@ export const Reader: React.FC = () => {
         ) : (
           // Render Chapter Content
           <div className={styles.pagesContainer}>
-            {pdfUrl ? (
-              // Embedded native PDF viewer for the real uploaded PDF
-              <div 
-                className={styles.pdfIframeWrapper}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <iframe
-                  src={`${pdfUrl}#toolbar=0&navpanes=0`}
-                  title={chapter.title}
-                  className={styles.pdfIframe}
-                />
+            {chapterPages.length > 0 ? (
+              <div className={styles.verticalStripWrapper} onClick={(e) => e.stopPropagation()}>
+                {chapterPages.map((page) => (
+                  <img
+                    key={page.pageNumber}
+                    ref={(element) => {
+                      if (element) pageElements.current.set(page.pageNumber, element);
+                      else pageElements.current.delete(page.pageNumber);
+                    }}
+                    data-page-number={page.pageNumber}
+                    src={page.imageUrl}
+                    alt={`Page ${page.pageNumber}`}
+                    loading="lazy"
+                    decoding="async"
+                    className={styles.chapterPageImage}
+                    style={page.width && page.height ? { aspectRatio: `${page.width} / ${page.height}` } : undefined}
+                  />
+                ))}
               </div>
             ) : (
               <div className={styles.contentUnavailable} onClick={(e) => e.stopPropagation()}>
-                <FileText size={32} />
-                <h3>{pdfLoadError ? 'PDF unavailable' : 'NA'}</h3>
-                <p>{pdfLoadError ? 'Could not load the original chapter PDF. Reload the chapter or attach the original file.' : 'Original chapter PDF is not available.'}</p>
-                <button className={styles.btnNextChapterBig} onClick={() => readerPdfInputRef.current?.click()}>
-                  <UploadCloud size={15} /> Attach Original PDF
-                </button>
+                <h3>{pagesLoadError ? 'Chapter pages unavailable' : 'No pages available (N/A)'}</h3>
+                {pagesLoadError && <p>Could not load the chapter pages. Please try again later.</p>}
               </div>
             )}
           </div>
@@ -364,7 +351,7 @@ export const Reader: React.FC = () => {
 
       {/* Floating HUD Footer Navigation Bar */}
       <AnimatePresence>
-        {showHUD && !isLocked && totalPdfPages > 0 && (
+        {showHUD && !isLocked && chapterPages.length > 0 && (
           <motion.footer 
             className={styles.hudFooter}
             initial={{ y: 70, opacity: 0 }}
@@ -379,13 +366,13 @@ export const Reader: React.FC = () => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const clickX = e.clientX - rect.left;
                 const percent = clickX / rect.width;
-                const targetPage = Math.round(percent * (totalPdfPages - 1)) + 1;
+                const targetPage = Math.round(percent * (chapterPages.length - 1)) + 1;
                 handlePageChange(targetPage);
               }}
             >
               <div 
                 className={styles.progressFill} 
-                style={{ width: `${((pageNum - 1) / Math.max(1, totalPdfPages - 1)) * 100}%` }}
+                style={{ width: `${((pageNum - 1) / Math.max(1, chapterPages.length - 1)) * 100}%` }}
               />
             </div>
 
@@ -421,23 +408,9 @@ export const Reader: React.FC = () => {
                   <ChevronLeft size={14} /> Prev Ch
                 </button>
 
-                {readingMode === 'horizontal' ? (
-                  <div className={styles.sliderControl}>
-                    <span>Pg {pageNum}</span>
-                    <input 
-                      type="range"
-                      min="1"
-                      max={totalPdfPages}
-                      value={pageNum}
-                      onChange={(e) => handlePageChange(parseInt(e.target.value))}
-                    />
-                    <span>{totalPdfPages}</span>
-                  </div>
-                ) : (
-                  <span className={styles.verticalPageCount} onClick={() => setShowChapterDrawer(true)}>
-                    Ch. {chapter.chapter_no ?? chapter.chapterNumber} • {totalPdfPages} Pages
-                  </span>
-                )}
+                <span className={styles.verticalPageCount} onClick={() => setShowChapterDrawer(true)}>
+                  Pg. {pageNum} / {chapterPages.length}
+                </span>
 
                 <button 
                   className={styles.chapterNavBtn}
@@ -450,15 +423,6 @@ export const Reader: React.FC = () => {
 
               {/* Right Reading Mode & Fullscreen */}
               <div className={styles.footerRight}>
-                <button 
-                  className={styles.hudBtn} 
-                  onClick={() => setReadingMode(readingMode === 'vertical' ? 'horizontal' : 'vertical')}
-                  title="Toggle Webtoon Vertical Strip / Single Page Flip"
-                >
-                  <Layout size={17} />
-                  <span className={styles.btnSubtext}>{readingMode}</span>
-                </button>
-
                 <button className={styles.hudBtn} onClick={toggleFullscreen} title="Fullscreen mode">
                   <Maximize2 size={17} />
                 </button>

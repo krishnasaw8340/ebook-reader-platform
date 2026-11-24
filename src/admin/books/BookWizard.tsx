@@ -23,7 +23,8 @@ import {
     HelpCircle,
     RefreshCw,
     Unlock,
-    Lock
+    Lock,
+    Image as ImageIcon
 } from 'lucide-react';
 import {
     adminSeriesService,
@@ -32,6 +33,7 @@ import {
 } from '../../services/admin/adminServices';
 import { chapterService } from '../../services/chapterService';
 import { storeChapterPdf } from '../../utils/pdfStorage';
+import { convertToWebp, isImageFile, isPdfFile } from '../../utils/imageUtils';
 import type { BookSeries, PricingModel } from '../../types';
 import { catalogService, type CatalogLanguage, type CatalogCategory, type CatalogGenre } from '../../services/catalogService';
 import {
@@ -45,7 +47,7 @@ import uiStyles from '../components/AdminUI.module.css';
 
 const STEPS = [
     { number: 1, title: 'Details & Mode' },
-    { number: 2, title: 'Chapter PDFs' },
+    { number: 2, title: 'Chapter Pages' },
     { number: 3, title: 'Review & Publish' }
 ];
 
@@ -55,6 +57,8 @@ export interface ChapterPdfItem {
     fileSize: number;
     pageCount?: number;
     file?: File;
+    previewUrl?: string;
+    isImage?: boolean;
 }
 
 export interface WizardChapter {
@@ -231,18 +235,95 @@ export const BookWizard: React.FC = () => {
     };
 
     // =========================================================================
-    // BULK CHAPTER PDF PROCESSING
+    // BULK CHAPTER FILE (IMAGES & PDFS) PROCESSING
     // =========================================================================
-    const processUploadedPdfFiles = (files: FileList | File[]) => {
-        const fileArray = Array.from(files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+    const processUploadedFiles = (files: FileList | File[]) => {
+        const fileArray = Array.from(files).filter(f => isImageFile(f) || isPdfFile(f));
         if (fileArray.length === 0) {
-            setErrorMessage('No valid PDF files selected. Please upload .pdf files.');
+            setErrorMessage('No valid image or PDF files selected. Please upload .jpg, .png, .webp, .avif, or .pdf files.');
             return;
         }
 
         // Sort files by natural alphanumeric filename
         fileArray.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
+        const imageFiles = fileArray.filter(isImageFile);
+        const pdfFiles = fileArray.filter(isPdfFile);
+
+        // Scenario A: User dropped image pages (e.g. 5-6 images for a chapter)
+        if (imageFiles.length > 0 && pdfFiles.length === 0) {
+            // Check if files have explicit multiple chapter markers (e.g. "Ch 1 - 01.jpg", "Ch 2 - 01.jpg")
+            const chapterGroups = new Map<number, File[]>();
+            let hasMultipleChapterMarkers = false;
+
+            for (const file of imageFiles) {
+                const cleanName = file.name.replace(/\.[^/.]+$/, '').trim();
+                const chMatch = cleanName.match(/(?:chapter|ch|ep|episode)[_.\s-]*(\d+)/i);
+                if (chMatch) {
+                    const num = parseInt(chMatch[1], 10);
+                    if (!isNaN(num)) {
+                        if (!chapterGroups.has(num)) chapterGroups.set(num, []);
+                        chapterGroups.get(num)!.push(file);
+                        hasMultipleChapterMarkers = true;
+                    }
+                }
+            }
+
+            if (hasMultipleChapterMarkers && chapterGroups.size > 1) {
+                // Group into multiple distinct chapters
+                const newChapters: WizardChapter[] = [];
+                const sortedChNums = Array.from(chapterGroups.keys()).sort((a, b) => a - b);
+                sortedChNums.forEach((chNum, idx) => {
+                    const chFiles = chapterGroups.get(chNum)!;
+                    const chapterNo = chapters.length + idx + 1;
+                    const isFree = pricingType === 'FREE' || (chapterNo <= defaultFreeChapters);
+                    newChapters.push({
+                        tempId: `temp-ch-${Date.now()}-${idx}`,
+                        chapterNo,
+                        title: `Chapter ${chapterNo}`,
+                        accessType: isFree ? 'FREE' : 'PAID',
+                        coinCost: isFree ? 0 : defaultChapterCoinCost,
+                        published: true,
+                        pdfFiles: chFiles.map((file, fIdx) => ({
+                            id: `img-${Date.now()}-${idx}-${fIdx}`,
+                            fileName: file.name,
+                            fileSize: file.size,
+                            file,
+                            previewUrl: URL.createObjectURL(file),
+                            isImage: true,
+                        }))
+                    });
+                });
+                setChapters([...chapters, ...newChapters]);
+                setSuccessMessage(`Organized ${imageFiles.length} pages across ${newChapters.length} chapters.`);
+                return;
+            }
+
+            // By default: All dropped images belong to a single chapter (e.g. 5-6 pages of this chapter)
+            const chapterNo = chapters.length + 1;
+            const isFree = pricingType === 'FREE' || (chapterNo <= defaultFreeChapters);
+            const newChapter: WizardChapter = {
+                tempId: `temp-ch-${Date.now()}`,
+                chapterNo,
+                title: `Chapter ${chapterNo}`,
+                accessType: isFree ? 'FREE' : 'PAID',
+                coinCost: isFree ? 0 : defaultChapterCoinCost,
+                published: true,
+                pdfFiles: imageFiles.map((file, fIdx) => ({
+                    id: `img-${Date.now()}-${fIdx}`,
+                    fileName: file.name,
+                    fileSize: file.size,
+                    file,
+                    previewUrl: URL.createObjectURL(file),
+                    isImage: true,
+                }))
+            };
+            setChapters([...chapters, newChapter]);
+            setSuccessMessage(`Added Chapter ${chapterNo} with ${imageFiles.length} page(s).`);
+            return;
+        }
+
+        // Scenario B: PDF files or mixed files (each PDF is treated as a chapter)
         const newChapterItems: WizardChapter[] = fileArray.map((file, idx) => {
             const currentTotal = chapters.length;
             const parsed = parseChapterFromFilename(file.name, currentTotal + idx + 1);
@@ -250,7 +331,7 @@ export const BookWizard: React.FC = () => {
             const isFree = pricingType === 'FREE' || (chapterNo <= defaultFreeChapters);
 
             return {
-                tempId: `temp-pdf-${Date.now()}-${idx}`,
+                tempId: `temp-file-${Date.now()}-${idx}`,
                 chapterNo: chapterNo,
                 title: parsed.title,
                 accessType: isFree ? 'FREE' : 'PAID',
@@ -258,28 +339,29 @@ export const BookWizard: React.FC = () => {
                 published: true,
                 pdfFiles: [
                     {
-                        id: `pdf-${Date.now()}-${idx}`,
+                        id: `file-${Date.now()}-${idx}`,
                         fileName: file.name,
                         fileSize: file.size,
-                        file: file
+                        file: file,
+                        previewUrl: isImageFile(file) ? URL.createObjectURL(file) : undefined,
+                        isImage: isImageFile(file)
                     }
                 ]
             };
         });
 
         setChapters([...chapters, ...newChapterItems]);
-
-        setSuccessMessage(`Successfully added ${newChapterItems.length} chapter PDF(s).`);
+        setSuccessMessage(`Successfully added ${newChapterItems.length} chapter(s).`);
     };
 
     const handleBulkFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            processUploadedPdfFiles(e.target.files);
+            processUploadedFiles(e.target.files);
             if (bulkPdfInputRef.current) bulkPdfInputRef.current.value = '';
         }
     };
 
-    // Add or Replace a PDF for a specific chapter
+    // Add or Replace pages/files for a specific chapter
     const handleTargetChapterPdfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0 && targetChapterIndex !== null && chapters[targetChapterIndex]) {
@@ -287,23 +369,27 @@ export const BookWizard: React.FC = () => {
             const ch = updated[targetChapterIndex];
 
             if (isReplaceMode && targetPdfIndex !== null && ch.pdfFiles[targetPdfIndex]) {
-                // Replace single PDF
                 const file = files[0];
                 ch.pdfFiles[targetPdfIndex] = {
                     ...ch.pdfFiles[targetPdfIndex],
                     fileName: file.name,
                     fileSize: file.size,
-                    file: file
+                    file: file,
+                    previewUrl: isImageFile(file) ? URL.createObjectURL(file) : undefined,
+                    isImage: isImageFile(file)
                 };
             } else {
-                // Add additional PDF(s) to this chapter
-                const newPdfs: ChapterPdfItem[] = Array.from(files).map((f, i) => ({
-                    id: `pdf-${Date.now()}-${i}`,
+                // Natural sort files
+                const sortedFiles = Array.from(files).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                const newItems: ChapterPdfItem[] = sortedFiles.map((f, i) => ({
+                    id: `file-${Date.now()}-${i}`,
                     fileName: f.name,
                     fileSize: f.size,
-                    file: f
+                    file: f,
+                    previewUrl: isImageFile(f) ? URL.createObjectURL(f) : undefined,
+                    isImage: isImageFile(f)
                 }));
-                ch.pdfFiles = [...ch.pdfFiles, ...newPdfs];
+                ch.pdfFiles = [...ch.pdfFiles, ...newItems];
             }
 
             setChapters(updated);
@@ -490,7 +576,7 @@ export const BookWizard: React.FC = () => {
                 }
             }
 
-            // Step 4: Register & Upload Chapter PDFs
+            // Step 4: Register & Upload Chapter Pages & Assets
             setSubmitProgressStep(4);
             setSubmitStatusText(`Uploading ${chapters.length} chapter assets...`);
             
@@ -498,8 +584,11 @@ export const BookWizard: React.FC = () => {
                 const ch = chapters[i];
                 setSubmitStatusText(`Processing Chapter ${ch.chapterNo} of ${chapters.length}: ${ch.title}...`);
                 
-                const primaryPdf = ch.pdfFiles[0];
-                const totalPageCount = ch.pdfFiles.reduce((sum, p) => sum + (p.pageCount || 0), 0);
+                const imageItems = ch.pdfFiles.filter(item => item.file && isImageFile(item.file));
+                const pdfItems = ch.pdfFiles.filter(item => item.file && isPdfFile(item.file));
+                const totalPageCount = imageItems.length > 0
+                    ? imageItems.length
+                    : ch.pdfFiles.reduce((sum, p) => sum + (p.pageCount || 0), 0);
                 const totalFileSize = ch.pdfFiles.reduce((sum, p) => sum + (p.fileSize || 0), 0);
 
                 const createdChapter = await adminChapterService.create({
@@ -512,22 +601,52 @@ export const BookWizard: React.FC = () => {
                     access_type: ch.accessType,
                     coinCost: ch.accessType === 'FREE' ? 0 : ch.coinCost,
                     coin_cost: ch.accessType === 'FREE' ? 0 : ch.coinCost,
-                    pdfFileName: primaryPdf?.fileName,
-                    pdf_file_name: primaryPdf?.fileName,
+                    pdfFileName: pdfItems[0]?.fileName,
+                    pdf_file_name: pdfItems[0]?.fileName,
                     pdfPageCount: totalPageCount || undefined,
                     pdf_page_count: totalPageCount || undefined,
                     pdfFileSize: totalFileSize,
                     pdf_file_size: totalFileSize,
-                    contentStatus: primaryPdf?.file ? 'READY' : 'PENDING',
+                    contentStatus: ch.pdfFiles.length > 0 ? 'READY' : 'PENDING',
                     published: ch.published
                 });
 
-                // Store PDF files locally in IndexedDB and upload to S3
-                for (const pdfItem of ch.pdfFiles) {
+                // If chapter has image pages: Convert to WebP & upload to S3 pages pipeline
+                if (imageItems.length > 0) {
+                    setSubmitStatusText(`Optimizing ${imageItems.length} pages (WebP) for Chapter ${ch.chapterNo}...`);
+                    const converted = await Promise.all(
+                        imageItems.map(item => convertToWebp(item.file!))
+                    );
+
+                    setSubmitStatusText(`Requesting cloud storage URLs for Chapter ${ch.chapterNo}...`);
+                    const uploadContract = await chapterService.getPageUploadUrls(
+                        createdChapter.id,
+                        converted.map(({ file }) => ({ fileName: file.name, fileSize: file.size }))
+                    );
+
+                    for (let pIdx = 0; pIdx < converted.length; pIdx++) {
+                        const contract = uploadContract.pages[pIdx];
+                        setSubmitStatusText(`Uploading page ${pIdx + 1} of ${converted.length} for Chapter ${ch.chapterNo}...`);
+                        await chapterService.uploadPageToS3(contract.uploadUrl, converted[pIdx].file);
+                    }
+
+                    // Save pages metadata
+                    await chapterService.savePages(
+                        createdChapter.id,
+                        uploadContract.pages.map((contract, pIdx) => ({
+                            pageNumber: contract.pageNumber,
+                            storageKey: contract.storageKey,
+                            width: converted[pIdx].width,
+                            height: converted[pIdx].height,
+                        }))
+                    );
+                }
+
+                // If chapter has PDF files: store locally & upload to S3 PDF pipeline
+                for (const pdfItem of pdfItems) {
                     if (pdfItem.file) {
                         await storeChapterPdf(createdChapter.id, pdfItem.file, pdfItem.fileName);
 
-                        // Try remote S3 upload
                         try {
                             const { uploadUrl, key } = await chapterService.getUploadUrl(createdChapter.id, {
                                 fileName: pdfItem.file.name,
@@ -903,16 +1022,16 @@ export const BookWizard: React.FC = () => {
             )}
 
             {/* ============================================================ */}
-            {/* STEP 2: CHAPTER PDFS & MULTI-PDF MANAGEMENT */}
+            {/* STEP 2: CHAPTER PAGES & CONTENT MANAGEMENT */}
             {/* ============================================================ */}
             {currentStep === 2 && (
                 <div className={styles.stepCard}>
                     <div className={styles.stepCardHeader}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                             <div>
-                                <h2 className={styles.stepCardTitle}>Step 2 — Upload Chapter PDFs</h2>
+                                <h2 className={styles.stepCardTitle}>Step 2 — Upload Chapter Pages & Content</h2>
                                 <p className={styles.stepCardSubtitle}>
-                                    Upload chapter PDFs. You can attach multiple PDF files to a single chapter (e.g. Part 1 & Part 2).
+                                    Upload chapter images (JPG, PNG, WEBP, AVIF) or PDFs. Multiple image pages are automatically compiled into seamless vertical chapters.
                                 </p>
                             </div>
                             <button
@@ -934,7 +1053,7 @@ export const BookWizard: React.FC = () => {
                             e.preventDefault();
                             setIsDragOver(false);
                             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                                processUploadedPdfFiles(e.dataTransfer.files);
+                                processUploadedFiles(e.dataTransfer.files);
                             }
                         }}
                         onClick={() => bulkPdfInputRef.current?.click()}
@@ -943,28 +1062,28 @@ export const BookWizard: React.FC = () => {
                             type="file"
                             ref={bulkPdfInputRef}
                             multiple
-                            accept="application/pdf"
+                            accept="image/png,image/jpeg,image/jpg,image/webp,image/avif,application/pdf"
                             style={{ display: 'none' }}
                             onChange={handleBulkFileChange}
                         />
                         <div className={styles.dropzoneIconCircle}>
                             <UploadCloud size={28} />
                         </div>
-                        <div className={styles.dropzoneTitle}>Drop your Chapter PDF files here</div>
+                        <div className={styles.dropzoneTitle}>Drop your Chapter Images or PDFs here</div>
                         <div className={styles.dropzoneSubtitle}>
-                            Select or drop multiple files (e.g. <code>01.pdf</code>, <code>02.pdf</code>, <code>Ch 03 - Awakening.pdf</code>). Automatically sorted into chapters.
+                            Select or drop multiple image files (e.g. <code>01.jpg</code>, <code>02.webp</code>, <code>03.png</code>) or PDF files. Automatically sorted into chapter pages.
                         </div>
                         <div className={styles.dropzoneBrowseBtn}>
-                            <Plus size={14} /> Browse PDF Files
+                            <Plus size={14} /> Browse Image & PDF Files
                         </div>
                     </div>
 
-                    {/* Hidden Chapter-Specific PDF input */}
+                    {/* Hidden Chapter-Specific File input */}
                     <input
                         type="file"
                         ref={targetChapterPdfInputRef}
                         multiple={!isReplaceMode}
-                        accept="application/pdf"
+                        accept="image/png,image/jpeg,image/jpg,image/webp,image/avif,application/pdf"
                         style={{ display: 'none' }}
                         onChange={handleTargetChapterPdfChange}
                     />
@@ -1008,7 +1127,7 @@ export const BookWizard: React.FC = () => {
 
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-secondary)' }}>
-                                Total: {chapters.length} chapters · {chapters.reduce((sum, c) => sum + c.pdfFiles.length, 0)} PDF files
+                                Total: {chapters.length} chapters · {chapters.reduce((sum, c) => sum + c.pdfFiles.length, 0)} pages/files
                             </span>
                             {chapters.length > 0 && (
                                 <button
@@ -1111,10 +1230,10 @@ export const BookWizard: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Multiple PDF Files Attached to this Chapter */}
+                                {/* Multiple Pages / Files Attached to this Chapter */}
                                 <div className={styles.chapterPdfSection}>
                                     <div className={styles.chapterPdfSectionHeader}>
-                                        <span>Attached PDF Files ({ch.pdfFiles.length})</span>
+                                        <span>Attached Pages & Content ({ch.pdfFiles.length})</span>
                                         {ch.pdfFiles.length > 0 && (
                                             <span>
                                                 Total Size: {(ch.pdfFiles.reduce((s, p) => s + p.fileSize, 0) / (1024 * 1024)).toFixed(1)} MB
@@ -1127,13 +1246,23 @@ export const BookWizard: React.FC = () => {
                                             {ch.pdfFiles.map((pdfItem, pdfIdx) => (
                                                 <div key={pdfItem.id} className={styles.pdfFileItem}>
                                                     <div className={styles.pdfFileNameGroup}>
-                                                        <FileText size={14} color="#38bdf8" />
+                                                        {pdfItem.previewUrl ? (
+                                                            <img 
+                                                                src={pdfItem.previewUrl} 
+                                                                alt="" 
+                                                                style={{ width: '22px', height: '30px', objectFit: 'cover', borderRadius: '3px', border: '1px solid rgba(255,255,255,0.1)' }} 
+                                                            />
+                                                        ) : pdfItem.isImage || (pdfItem.file && isImageFile(pdfItem.file)) ? (
+                                                            <ImageIcon size={14} color="#10b981" />
+                                                        ) : (
+                                                            <FileText size={14} color="#38bdf8" />
+                                                        )}
                                                         <span>{pdfItem.fileName}</span>
                                                     </div>
 
                                                     <div className={styles.pdfFileMetaGroup}>
                                                         <span className={styles.pdfMetaText}>
-                                                            {(pdfItem.fileSize / (1024 * 1024)).toFixed(1)} MB · {pdfItem.pageCount ?? 'NA'} pgs
+                                                            {(pdfItem.fileSize / (1024 * 1024)).toFixed(1)} MB
                                                         </span>
                                                         <button
                                                             type="button"
@@ -1152,7 +1281,7 @@ export const BookWizard: React.FC = () => {
                                                             type="button"
                                                             className={uiStyles.btnIcon}
                                                             style={{ padding: '2px 4px', color: '#ef4444' }}
-                                                            title="Remove this PDF"
+                                                            title="Remove this page/file"
                                                             onClick={() => handleRemovePdfFromChapter(idx, pdfIdx)}
                                                         >
                                                             <X size={13} />
@@ -1163,11 +1292,11 @@ export const BookWizard: React.FC = () => {
                                         </div>
                                     ) : (
                                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '4px 0' }}>
-                                            No PDF attached yet. Add a PDF file below.
+                                            No pages attached yet. Add image pages below.
                                         </div>
                                     )}
 
-                                    {/* Add another PDF to this Chapter */}
+                                    {/* Add more pages or files to this Chapter */}
                                     <button
                                         type="button"
                                         className={styles.btnAddPdfToChapter}
@@ -1178,7 +1307,7 @@ export const BookWizard: React.FC = () => {
                                             targetChapterPdfInputRef.current?.click();
                                         }}
                                     >
-                                        <Plus size={12} /> {ch.pdfFiles.length > 0 ? 'Add Another PDF to this Chapter' : 'Attach PDF File'}
+                                        <Plus size={12} /> {ch.pdfFiles.length > 0 ? 'Add More Pages / Images to this Chapter' : 'Attach Pages / Images'}
                                     </button>
                                 </div>
                             </div>
@@ -1241,7 +1370,7 @@ export const BookWizard: React.FC = () => {
                                     <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>{chapters.length}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>Attached PDFs:</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>Attached Pages & Files:</span>
                                     <span style={{ color: 'var(--color-text-primary)', fontWeight: 700 }}>
                                         {chapters.reduce((sum, c) => sum + c.pdfFiles.length, 0)} files
                                     </span>
@@ -1276,7 +1405,7 @@ export const BookWizard: React.FC = () => {
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: chapters.length > 0 ? '#10b981' : '#ef4444' }}>
                                     <CheckCircle2 size={16} />
-                                    <span>{chapters.length} chapters configured ({chapters.reduce((sum, c) => sum + c.pdfFiles.length, 0)} PDF assets)</span>
+                                    <span>{chapters.length} chapters configured ({chapters.reduce((sum, c) => sum + c.pdfFiles.length, 0)} pages/files)</span>
                                 </div>
                             </div>
                         </div>
@@ -1356,7 +1485,7 @@ export const BookWizard: React.FC = () => {
                             </div>
                             <div className={`${styles.progressItem} ${submitProgressStep >= 4 ? styles.progressItemDone : submitProgressStep === 3 ? styles.progressItemActive : ''}`}>
                                 <Check size={14} />
-                                <span>4. Registering Chapters & Uploading PDFs</span>
+                                <span>4. Registering Chapters & Uploading Content</span>
                             </div>
                             <div className={`${styles.progressItem} ${submitProgressStep >= 5 ? styles.progressItemDone : submitProgressStep === 4 ? styles.progressItemActive : ''}`}>
                                 <Check size={14} />

@@ -352,6 +352,14 @@ export interface UploadJob {
 export type ChapterPricingModel = 'FREE' | 'PAID';
 export type ChapterContentStatus = 'PENDING' | 'READY' | 'FAILED';
 
+export interface ChapterPage {
+  pageNumber: number;
+  imageUrl: string;
+  width?: number;
+  height?: number;
+  storageKey?: string;
+}
+
 export interface Chapter {
   id: string; // UUID PK
   book_id: string; // UUID FK
@@ -366,6 +374,9 @@ export interface Chapter {
   pricingModel?: ChapterPricingModel;
   coin_cost: number; // Int Cost
   coinCost?: number;
+
+  pages?: ChapterPage[];
+  pageCount?: number;
   
   // PDF Content Metadata
   pdf_storage_key?: string | null;

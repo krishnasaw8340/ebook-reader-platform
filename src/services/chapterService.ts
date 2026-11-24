@@ -12,6 +12,7 @@ import type {
     ChapterPdfUploadInitPayload,
     ChapterPdfUploadInitResponse,
     ChapterPdfUploadCompletePayload,
+    ChapterPage,
 } from '../types';
 
 const LS_CHAPTERS = 'ky_chapters';
@@ -35,7 +36,17 @@ export const mapChapterFromApi = (item: any): Chapter => {
     const pdfFileSize = item.pdfFileSize ?? item.pdf_file_size ?? null;
     const pdfPageCount = item.pdfPageCount ?? item.pdf_page_count ?? null;
     const pdfChecksum = item.pdfChecksum || item.pdf_checksum || null;
-    const contentStatus = item.contentStatus || item.content_status || (pdfStorageKey ? 'READY' : 'PENDING');
+    const pages = Array.isArray(item.pages)
+        ? item.pages.map((page: ChapterPage) => ({
+            pageNumber: Number(page.pageNumber),
+            imageUrl: page.imageUrl,
+            width: page.width,
+            height: page.height,
+            storageKey: page.storageKey,
+        }))
+        : [];
+    const pageCount = Number(item.pageCount ?? item.page_count ?? pages.length);
+    const contentStatus = item.contentStatus || item.content_status || (pages.length || pdfStorageKey ? 'READY' : 'PENDING');
 
     return {
         id: item.id,
@@ -51,6 +62,8 @@ export const mapChapterFromApi = (item: any): Chapter => {
         pricingModel: pricingModel,
         coin_cost: coinCost,
         coinCost: coinCost,
+        pages,
+        pageCount,
         pdf_storage_key: pdfStorageKey,
         pdfStorageKey: pdfStorageKey,
         pdf_file_name: pdfFileName,
@@ -85,9 +98,10 @@ export interface ChapterPdfAccessResponse {
     chapterId: string;
     bookId: string;
     chapterNumber: number;
-    pdfUrl: string;
+    pdfUrl?: string;
     expiresIn: number;
     pageCount?: number;
+    pages?: ChapterPage[];
     fileName?: string;
     fileSize?: number;
 }
@@ -279,6 +293,75 @@ export const chapterService = {
             `/chapters/${encodeURIComponent(chapterId)}/access`
         );
         return res.data;
+    },
+
+    getPageUploadUrls: async (
+        chapterId: string,
+        pages: Array<{ fileName: string; fileSize: number }>
+    ): Promise<{ chapterId: string; pages: Array<{ pageNumber: number; storageKey: string; uploadUrl: string; expiresIn: number }> }> => {
+        const res = await api.post(
+            `/chapters/${encodeURIComponent(chapterId)}/pages/upload-urls`,
+            {
+                pages: pages.map((page) => ({
+                    ...page,
+                    contentType: 'image/webp',
+                })),
+            }
+        );
+        return res.data;
+    },
+
+    savePages: async (
+        chapterId: string,
+        pages: Array<{ pageNumber: number; storageKey: string; width?: number; height?: number }>
+    ): Promise<Chapter> => {
+        const res = await api.put<any>(
+            `/chapters/${encodeURIComponent(chapterId)}/pages`,
+            { pages }
+        );
+        return mapChapterFromApi(res.data);
+    },
+
+    getPageAccess: async (chapterId: string): Promise<ChapterPdfAccessResponse> => {
+        const res = await api.get<ChapterPdfAccessResponse>(
+            `/chapters/${encodeURIComponent(chapterId)}/access`
+        );
+        return res.data;
+    },
+
+    uploadPageToS3: async (
+        uploadUrl: string,
+        file: File,
+        onProgress?: (progress: { loaded: number; total: number; percentage: number }) => void
+    ): Promise<void> => {
+        if (!uploadUrl) {
+            throw new Error('Chapter page upload URL is missing or empty.');
+        }
+
+        await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', uploadUrl, true);
+            xhr.setRequestHeader('Content-Type', 'image/webp');
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable && event.total > 0) {
+                    onProgress?.({
+                        loaded: event.loaded,
+                        total: event.total,
+                        percentage: Math.round((event.loaded * 100) / event.total),
+                    });
+                }
+            };
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    onProgress?.({ loaded: file.size, total: file.size, percentage: 100 });
+                    resolve();
+                } else {
+                    reject(new Error(`WebP page upload failed with status ${xhr.status}: ${xhr.statusText}`));
+                }
+            };
+            xhr.onerror = () => reject(new Error('Network error during chapter page upload.'));
+            xhr.send(file);
+        });
     },
 
     /**

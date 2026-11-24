@@ -261,7 +261,7 @@
 
 .vertical {
   overflow-y: auto;
-  padding: 80px 16px 100px 16px;
+  padding: 64px 0 80px;
 }
 
 .horizontal {
@@ -325,6 +325,18 @@
   flex-direction: column;
   gap: 0;
   width: 100%;
+}
+
+.chapterPageImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  object-fit: contain;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .pageItem {
@@ -491,22 +503,6 @@
   opacity: 0.2;
   cursor: not-allowed;
   pointer-events: none;
-}
-
-/* PDF Embedded Viewer */
-.pdfIframeWrapper {
-  width: 100%;
-  height: calc(100vh - 140px);
-  background: #1e1e24;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-}
-
-.pdfIframe {
-  width: 100%;
-  height: 100%;
-  border: none;
 }
 
 /* Locked Overlay */

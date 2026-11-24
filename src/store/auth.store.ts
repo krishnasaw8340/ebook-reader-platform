@@ -149,12 +149,12 @@ export const useAuthStore = create<AuthState>()(
                                 isLoading: false,
                             });
                         } catch (refreshErr: any) {
-                            // If refresh fails with 401 (unauthorized / cookie expired / revoked), clear session
+                            // If refresh fails with 401, only clear if we don't have an active accessToken
                             const isUnauthorized = refreshErr?.response?.status === 401;
-                            if (isUnauthorized) {
+                            if (isUnauthorized && !get().accessToken) {
                                 get().clearAuth();
                             } else {
-                                // If it's a network error or offline, retain local state
+                                // Retain restored local token/user so refresh doesn't log user out
                                 set({ isLoading: false });
                             }
                         }
@@ -269,10 +269,15 @@ export const useAuthStore = create<AuthState>()(
                 name: 'kuroyomi_auth_storage',
                 partialize: (state) => ({
                     user: state.user,
+                    accessToken: state.accessToken,
                     isAuthenticated: state.isAuthenticated,
                 }),
                 onRehydrateStorage: () => (state) => {
                     if (state) {
+                        // If we restored a token and user, keep authenticated
+                        if (state.accessToken && state.user) {
+                            state.isAuthenticated = true;
+                        }
                         state.isLoading = false;
                     }
                 },

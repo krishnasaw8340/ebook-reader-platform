@@ -4,7 +4,7 @@ import {
     Plus,
     Edit2,
     Trash2,
-    FileText,
+    Image,
     Upload,
     ExternalLink,
     Lock,
@@ -16,9 +16,9 @@ import {
     CheckCircle2,
     Clock,
     AlertCircle,
-    RefreshCw,
     FileUp,
-    Check
+    Check,
+    X
 } from 'lucide-react';
 import {
     adminChapterService,
@@ -36,6 +36,39 @@ import {
     EmptyState
 } from '../components/AdminUI';
 import styles from '../components/AdminUI.module.css';
+
+type PageUploadItem = {
+    file: File;
+    previewUrl: string;
+    progress: number;
+    status: 'ready' | 'uploading' | 'uploaded';
+};
+
+const convertToWebp = async (file: File): Promise<{ file: File; width: number; height: number }> => {
+    const bitmap = await createImageBitmap(file);
+    try {
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        if (extension === 'webp') return { file, width: bitmap.width, height: bitmap.height };
+
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error(`Could not convert "${file.name}" to WebP.`);
+        context.drawImage(bitmap, 0, 0);
+
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.88));
+        if (!blob) throw new Error(`Could not convert "${file.name}" to WebP.`);
+        const webpName = file.name.replace(/\.[^.]+$/, '.webp');
+        return {
+            file: new File([blob], webpName, { type: 'image/webp', lastModified: file.lastModified }),
+            width: bitmap.width,
+            height: bitmap.height,
+        };
+    } finally {
+        bitmap.close();
+    }
+};
 
 export const AdminChapters: React.FC = () => {
     const navigate = useNavigate();
@@ -62,19 +95,17 @@ export const AdminChapters: React.FC = () => {
     const [formCoinCost, setFormCoinCost] = useState(0);
     const [formPublished, setFormPublished] = useState(true);
 
-    // PDF Upload Modal & AWS S3 Flow
-    const MAX_PDF_SIZE_MB = 200;
-    const MAX_PDF_SIZE_BYTES = MAX_PDF_SIZE_MB * 1024 * 1024;
-
-    const [pdfModalOpen, setPdfModalOpen] = useState(false);
+    const MAX_IMAGE_SIZE_MB = 20;
+    const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+    const [pagesModalOpen, setPagesModalOpen] = useState(false);
     const [uploadTargetChapter, setUploadTargetChapter] = useState<Chapter | null>(null);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [uploadStep, setUploadStep] = useState<'idle' | 'requesting_url' | 'uploading_s3' | 'verifying' | 'success' | 'error'>('idle');
-    const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number; percentage: number }>({ loaded: 0, total: 0, percentage: 0 });
+    const [selectedPages, setSelectedPages] = useState<PageUploadItem[]>([]);
+    const [uploadStep, setUploadStep] = useState<'idle' | 'converting' | 'requesting_url' | 'uploading_s3' | 'saving' | 'success'>('idle');
     const [uploadError, setUploadError] = useState<string | null>(null);
-    const [uploadingPdf, setUploadingPdf] = useState(false);
+    const [uploadingPages, setUploadingPages] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+    const draggedPageIndex = React.useRef<number | null>(null);
 
     // Delete
     const [deleteTarget, setDeleteTarget] = useState<Chapter | null>(null);
@@ -193,52 +224,58 @@ export const AdminChapters: React.FC = () => {
         }
     };
 
-    const openPdfUploadModal = (ch: Chapter) => {
-        setUploadTargetChapter(ch);
-        setSelectedFile(null);
-        setUploadStep('idle');
-        setUploadProgress({ loaded: 0, total: 0, percentage: 0 });
-        setUploadError(null);
-        setIsDragOver(false);
-        setPdfModalOpen(true);
+    const clearSelectedPages = () => {
+        selectedPages.forEach((page) => URL.revokeObjectURL(page.previewUrl));
+        setSelectedPages([]);
     };
 
-    const validateAndSelectFile = (file: File) => {
-        setUploadError(null);
-        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-        if (!isPdf) {
-            setUploadError('Invalid file type. Please select a valid PDF file (.pdf).');
-            setSelectedFile(null);
-            return;
-        }
-
-        if (file.size <= 0) {
-            setUploadError('The selected file is empty. Please select a valid PDF.');
-            setSelectedFile(null);
-            return;
-        }
-
-        if (file.size > MAX_PDF_SIZE_BYTES) {
-            const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-            setUploadError(`File is too large (${sizeMb} MB). Maximum allowed size is ${MAX_PDF_SIZE_MB} MB.`);
-            setSelectedFile(null);
-            return;
-        }
-
-        setSelectedFile(file);
+    const openPagesUploadModal = (ch: Chapter) => {
+        clearSelectedPages();
+        setUploadTargetChapter(ch);
         setUploadStep('idle');
+        setUploadError(null);
+        setIsDragOver(false);
+        setPagesModalOpen(true);
+    };
+
+    const selectPageFiles = (fileList: FileList | File[]) => {
+        const incomingFiles = Array.from(fileList);
+        const supportedFiles = incomingFiles.every((file) => /\.(webp|jpe?g|png)$/i.test(file.name));
+        if (!supportedFiles) {
+            setUploadError('Only .webp, .jpg, .jpeg, and .png chapter images are supported.');
+            return;
+        }
+        if (incomingFiles.some((file) => file.size <= 0 || file.size > MAX_IMAGE_SIZE_BYTES)) {
+            setUploadError(`Each image must be non-empty and no larger than ${MAX_IMAGE_SIZE_MB} MB.`);
+            return;
+        }
+        if (selectedPages.length + incomingFiles.length > 500) {
+            setUploadError('A chapter can contain up to 500 pages.');
+            return;
+        }
+
+        setUploadError(null);
+        setUploadStep('idle');
+        setSelectedPages((current) => [
+            ...current,
+            ...incomingFiles.map((file) => ({
+                    file,
+                    previewUrl: URL.createObjectURL(file),
+                    progress: 0,
+                    status: 'ready' as const,
+                })),
+        ].sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, { numeric: true, sensitivity: 'base' })));
     };
 
     const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            validateAndSelectFile(e.target.files[0]);
-        }
+        if (e.target.files) selectPageFiles(e.target.files);
+        e.target.value = '';
     };
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!uploadingPdf) setIsDragOver(true);
+        if (!uploadingPages) setIsDragOver(true);
     };
 
     const handleDragLeave = (e: React.DragEvent) => {
@@ -251,66 +288,97 @@ export const AdminChapters: React.FC = () => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragOver(false);
-        if (uploadingPdf) return;
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            validateAndSelectFile(e.dataTransfer.files[0]);
-        }
+        if (uploadingPages) return;
+        if (e.dataTransfer.files.length) selectPageFiles(e.dataTransfer.files);
     };
 
-    const handlePdfUpload = async () => {
-        if (!uploadTargetChapter || !selectedFile) return;
-        setUploadingPdf(true);
+    const movePage = (fromIndex: number, toIndex: number) => {
+        if (fromIndex === toIndex || uploadingPages) return;
+        setSelectedPages((current) => {
+            const reordered = [...current];
+            const [moved] = reordered.splice(fromIndex, 1);
+            reordered.splice(toIndex, 0, moved);
+            return reordered;
+        });
+    };
+
+    const handlePageUpload = async () => {
+        if (!uploadTargetChapter || selectedPages.length === 0) return;
+        setUploadingPages(true);
         setUploadError(null);
 
         try {
-            // Step 1: Request S3 presigned PUT URL from NestJS backend
+            setUploadStep('converting');
+            const converted = await Promise.all(selectedPages.map(({ file }) => convertToWebp(file)));
+            if (converted.some(({ file }) => file.size > MAX_IMAGE_SIZE_BYTES)) {
+                throw new Error(`Converted WebP pages must each be no larger than ${MAX_IMAGE_SIZE_MB} MB.`);
+            }
+
             setUploadStep('requesting_url');
-            const uploadContract = await chapterService.getUploadUrl(uploadTargetChapter.id, {
-                fileName: selectedFile.name,
-                contentType: 'application/pdf',
-                fileSize: selectedFile.size,
-            });
+            const uploadContract = await chapterService.getPageUploadUrls(
+                uploadTargetChapter.id,
+                converted.map(({ file }) => ({ fileName: file.name, fileSize: file.size }))
+            );
+            if (uploadContract.pages.length !== converted.length) {
+                throw new Error('The server returned an incomplete page upload batch.');
+            }
 
-            // Step 2: Upload PDF directly to AWS S3 via presigned PUT URL
-            // (PDF bytes never touch NestJS!)
             setUploadStep('uploading_s3');
-            setUploadProgress({ loaded: 0, total: selectedFile.size, percentage: 0 });
+            let nextIndex = 0;
+            const uploadWorker = async () => {
+                while (nextIndex < converted.length) {
+                    const index = nextIndex++;
+                    const contract = uploadContract.pages[index];
+                    setSelectedPages((current) => current.map((page, pageIndex) =>
+                        pageIndex === index ? { ...page, status: 'uploading' } : page
+                    ));
+                    await chapterService.uploadPageToS3(contract.uploadUrl, converted[index].file, (progress) => {
+                        setSelectedPages((current) => current.map((page, pageIndex) =>
+                            pageIndex === index ? { ...page, progress: progress.percentage } : page
+                        ));
+                    });
+                    setSelectedPages((current) => current.map((page, pageIndex) =>
+                        pageIndex === index ? { ...page, status: 'uploaded', progress: 100 } : page
+                    ));
+                }
+            };
+            const uploadResults = await Promise.allSettled(
+                Array.from({ length: Math.min(4, converted.length) }, () => uploadWorker())
+            );
+            const failedUpload = uploadResults.find((result) => result.status === 'rejected');
+            if (failedUpload?.status === 'rejected') throw failedUpload.reason;
 
-            await chapterService.uploadPdfToS3(uploadContract.uploadUrl, selectedFile, (prog) => {
-                setUploadProgress(prog);
-            });
+            setUploadStep('saving');
+            await chapterService.savePages(
+                uploadTargetChapter.id,
+                uploadContract.pages.map((contract, index) => ({
+                    pageNumber: contract.pageNumber,
+                    storageKey: contract.storageKey,
+                    width: converted[index].width,
+                    height: converted[index].height,
+                }))
+            );
 
-            // Step 3: Complete upload and verify S3 object integrity with NestJS backend
-            setUploadStep('verifying');
-            await chapterService.uploadComplete(uploadTargetChapter.id, {
-                uploadId: uploadContract.uploadId,
-                versionId: uploadContract.versionId,
-                objectKey: uploadContract.objectKey,
-                storageKey: uploadContract.objectKey,
-                fileName: selectedFile.name,
-                fileSize: selectedFile.size,
-            });
-
-            // Step 4: Success
             setUploadStep('success');
-            setSuccessMessage(`Chapter PDF "${selectedFile.name}" uploaded and verified successfully in AWS S3.`);
+            setSuccessMessage(`${converted.length} chapter pages uploaded and verified successfully.`);
             setTimeout(() => {
-                setPdfModalOpen(false);
+                setPagesModalOpen(false);
+                clearSelectedPages();
                 loadData();
             }, 1000);
-        } catch (err: any) {
-            console.error('[handlePdfUpload] Upload error:', err);
-            setUploadStep('error');
-            let message = 'Upload failed. Please check your network and try again.';
-            if (err.response?.data?.message) {
-                const m = err.response.data.message;
+        } catch (err: unknown) {
+            console.error('[handlePageUpload] Upload error:', err);
+            let message = 'Page upload failed. Please check your network and try again.';
+            const error = err as { response?: { data?: { message?: string | string[] } }; message?: string };
+            if (error.response?.data?.message) {
+                const m = error.response.data.message;
                 message = Array.isArray(m) ? m.join(', ') : m;
-            } else if (err.message) {
-                message = err.message;
+            } else if (error.message) {
+                message = error.message;
             }
             setUploadError(message);
         } finally {
-            setUploadingPdf(false);
+            setUploadingPages(false);
         }
     };
 
@@ -376,7 +444,7 @@ export const AdminChapters: React.FC = () => {
         <div>
             <PageHeader
                 title="Chapter & Content Management"
-                subtitle="Manage manga chapter PDFs, monetization pricing (FREE or PAID with coins), and publishing status."
+                subtitle="Manage chapter WebP pages, monetization pricing (FREE or PAID with coins), and publishing status."
                 breadcrumbs={[
                     { label: 'Admin', path: '/admin' },
                     { label: 'Chapters' }
@@ -444,7 +512,7 @@ export const AdminChapters: React.FC = () => {
                                     <th>#</th>
                                     <th>Chapter Title</th>
                                     <th>Parent Book</th>
-                                    <th>Content (PDF Asset)</th>
+                                    <th>Chapter Pages</th>
                                     <th>Pricing</th>
                                     <th>Coin Cost</th>
                                     <th>Content Status</th>
@@ -457,11 +525,8 @@ export const AdminChapters: React.FC = () => {
                                     const pricing = (ch.pricingModel || ch.pricing_model || 'FREE') as ChapterPricingModel;
                                     const isPaid = pricing === 'PAID';
                                     const isPublished = ch.published !== undefined ? ch.published : true;
-                                    const pdfName = ch.pdfFileName || ch.pdf_file_name;
-                                    const pdfPages = ch.pdfPageCount ?? ch.pdf_page_count;
-                                    const pdfSize = ch.pdfFileSize ?? ch.pdf_file_size;
-                                    const contentStatus = (ch.contentStatus || ch.content_status || (pdfName ? 'READY' : 'PENDING')) as ChapterContentStatus;
-                                    const sizeMb = pdfSize ? (pdfSize / (1024 * 1024)).toFixed(1) + ' MB' : null;
+                                    const pageCount = ch.pageCount ?? ch.pages?.length ?? 0;
+                                    const contentStatus = (ch.contentStatus || ch.content_status || (pageCount ? 'READY' : 'PENDING')) as ChapterContentStatus;
 
                                     return (
                                         <tr key={ch.id}>
@@ -483,18 +548,18 @@ export const AdminChapters: React.FC = () => {
                                                 </span>
                                             </td>
                                             <td>
-                                                {pdfName ? (
+                                                {pageCount > 0 ? (
                                                     <div>
                                                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#38bdf8' }}>
-                                                            <FileText size={14} /> {pdfName}
+                                                            <Image size={14} /> {pageCount} WebP pages
                                                         </div>
                                                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                            {pdfPages ? `${pdfPages} PDF pages` : 'PDF'} {sizeMb ? ` • ${sizeMb}` : ''}
+                                                            Ordered vertical chapter
                                                         </div>
                                                     </div>
                                                 ) : (
                                                     <span style={{ fontSize: '12px', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                                        <AlertCircle size={13} /> No PDF uploaded
+                                                        <AlertCircle size={13} /> No pages available (N/A)
                                                     </span>
                                                 )}
                                             </td>
@@ -568,10 +633,10 @@ export const AdminChapters: React.FC = () => {
                                                     <button
                                                         className={styles.btnSecondary}
                                                         style={{ padding: '4px 8px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                                        title={pdfName ? 'Replace Chapter PDF' : 'Upload Chapter PDF'}
-                                                        onClick={() => openPdfUploadModal(ch)}
+                                                        title={pageCount ? 'Replace Chapter Pages' : 'Upload Chapter Pages'}
+                                                        onClick={() => openPagesUploadModal(ch)}
                                                     >
-                                                        <Upload size={12} /> {pdfName ? 'Replace PDF' : 'Upload PDF'}
+                                                        <Upload size={12} /> {pageCount ? 'Manage Pages' : 'Upload Pages'}
                                                     </button>
                                                     <button
                                                         className={styles.btnIcon}
@@ -738,328 +803,142 @@ export const AdminChapters: React.FC = () => {
                 </form>
             </Modal>
 
-            {/* PDF Upload / Replace Modal with Direct AWS S3 Flow */}
             <Modal
-                isOpen={pdfModalOpen}
+                isOpen={pagesModalOpen}
                 onClose={() => {
-                    if (!uploadingPdf) {
-                        setPdfModalOpen(false);
+                    if (!uploadingPages) {
+                        setPagesModalOpen(false);
+                        clearSelectedPages();
                     }
                 }}
-                title={
-                    uploadTargetChapter
-                        ? `${uploadTargetChapter.pdfFileName || uploadTargetChapter.pdf_file_name ? 'Replace' : 'Upload'} PDF: ${uploadTargetChapter.title}`
-                        : 'Upload Chapter PDF'
-                }
+                title={uploadTargetChapter ? `Chapter Pages: ${uploadTargetChapter.title}` : 'Upload Chapter Pages'}
                 footer={
                     <>
                         <button
                             className={styles.btnSecondary}
-                            onClick={() => setPdfModalOpen(false)}
-                            disabled={uploadingPdf}
+                            onClick={() => {
+                                setPagesModalOpen(false);
+                                clearSelectedPages();
+                            }}
+                            disabled={uploadingPages}
                         >
                             {uploadStep === 'success' ? 'Done' : 'Cancel'}
                         </button>
-                        {uploadStep === 'error' ? (
-                            <button
-                                className={styles.btnPrimary}
-                                onClick={handlePdfUpload}
-                                disabled={uploadingPdf || !selectedFile}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                            >
-                                <RefreshCw size={14} className={uploadingPdf ? styles.spinner : ''} />
-                                Retry Upload
-                            </button>
-                        ) : (
-                            <button
-                                className={styles.btnPrimary}
-                                onClick={handlePdfUpload}
-                                disabled={uploadingPdf || !selectedFile || uploadStep === 'success'}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                            >
-                                <Upload size={14} />
-                                {uploadingPdf
-                                    ? uploadStep === 'requesting_url'
-                                        ? 'Generating S3 URL...'
+                        <button
+                            className={styles.btnPrimary}
+                            onClick={handlePageUpload}
+                            disabled={uploadingPages || selectedPages.length === 0 || uploadStep === 'success'}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            <Upload size={14} />
+                            {uploadingPages
+                                ? uploadStep === 'converting'
+                                    ? 'Converting to WebP...'
+                                    : uploadStep === 'requesting_url'
+                                        ? 'Preparing uploads...'
                                         : uploadStep === 'uploading_s3'
-                                        ? `Uploading (${uploadProgress.percentage}%)`
-                                        : 'Verifying with S3...'
-                                    : uploadStep === 'success'
+                                            ? 'Uploading pages...'
+                                            : 'Saving page order...'
+                                : uploadStep === 'success'
                                     ? 'Upload Complete'
-                                    : uploadTargetChapter?.pdfFileName || uploadTargetChapter?.pdf_file_name
-                                    ? 'Replace PDF Asset'
-                                    : 'Upload Chapter PDF'}
-                            </button>
-                        )}
+                                    : `Upload ${selectedPages.length} Page${selectedPages.length === 1 ? '' : 's'}`}
+                        </button>
                     </>
                 }
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {/* Existing PDF Info Banner */}
-                    {(uploadTargetChapter?.pdfFileName || uploadTargetChapter?.pdf_file_name) && (
-                        <div
-                            style={{
-                                background: 'rgba(59, 130, 246, 0.08)',
-                                border: '1px solid rgba(59, 130, 246, 0.25)',
-                                borderRadius: '8px',
-                                padding: '12px 14px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '6px',
-                            }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                    Current PDF Asset
-                                </span>
-                                <span
-                                    style={{
-                                        fontSize: '11px',
-                                        fontWeight: 700,
-                                        padding: '2px 8px',
-                                        borderRadius: '10px',
-                                        background: uploadTargetChapter.contentStatus === 'READY' || uploadTargetChapter.content_status === 'READY'
-                                            ? 'rgba(16, 185, 129, 0.2)'
-                                            : 'rgba(245, 158, 11, 0.2)',
-                                        color: uploadTargetChapter.contentStatus === 'READY' || uploadTargetChapter.content_status === 'READY'
-                                            ? '#34d399'
-                                            : '#fbbf24',
-                                    }}
-                                >
-                                    {uploadTargetChapter.contentStatus || uploadTargetChapter.content_status || 'PENDING'}
-                                </span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                                <FileText size={16} color="#60a5fa" />
-                                <span>{uploadTargetChapter.pdfFileName || uploadTargetChapter.pdf_file_name}</span>
-                                {(uploadTargetChapter.pdfFileSize || uploadTargetChapter.pdf_file_size) && (
-                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 400 }}>
-                                        • {(((uploadTargetChapter.pdfFileSize ?? uploadTargetChapter.pdf_file_size) ?? 0) / (1024 * 1024)).toFixed(1)} MB
-                                    </span>
-                                )}
-                            </div>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                Note: Replacing will generate a new immutable version key in S3 without overwriting the previous asset.
-                            </span>
-                        </div>
-                    )}
-
-                    {/* Drag and drop file picker area */}
                     <input
                         ref={fileInputRef}
                         type="file"
-                        accept="application/pdf,.pdf"
+                        accept=".webp,.jpg,.jpeg,.png,image/webp,image/jpeg,image/png"
+                        multiple
                         style={{ display: 'none' }}
                         onChange={handleFileInputChange}
-                        disabled={uploadingPdf}
+                        disabled={uploadingPages}
                     />
-
                     <div
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
-                        onClick={() => {
-                            if (!uploadingPdf && fileInputRef.current) {
-                                fileInputRef.current.click();
-                            }
-                        }}
+                        onClick={() => !uploadingPages && fileInputRef.current?.click()}
                         style={{
-                            border: isDragOver
-                                ? '2px dashed var(--primary)'
-                                : '2px dashed var(--color-border)',
+                            border: `2px dashed ${isDragOver ? 'var(--primary)' : 'var(--color-border)'}`,
                             borderRadius: '10px',
                             padding: '24px 16px',
                             textAlign: 'center',
-                            cursor: uploadingPdf ? 'not-allowed' : 'pointer',
-                            background: isDragOver
-                                ? 'rgba(230, 57, 70, 0.06)'
-                                : 'var(--color-bg-secondary)',
-                            transition: 'var(--transition-fast)',
+                            cursor: uploadingPages ? 'not-allowed' : 'pointer',
+                            background: isDragOver ? 'rgba(230, 57, 70, 0.06)' : 'var(--color-bg-secondary)',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            justifyContent: 'center',
                             gap: '10px',
                         }}
                     >
-                        <div
-                            style={{
-                                width: '48px',
-                                height: '48px',
-                                borderRadius: '50%',
-                                background: 'rgba(230, 57, 70, 0.12)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--primary)',
-                            }}
-                        >
-                            <FileUp size={24} />
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '4px' }}>
-                                {isDragOver ? 'Drop PDF file here' : 'Choose a Chapter PDF file'}
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                Drag and drop your manga/ebook PDF here, or click to browse
-                            </div>
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                            Format: PDF only (application/pdf) • Maximum file size: {MAX_PDF_SIZE_MB} MB
-                        </div>
+                        <FileUp size={28} color="var(--primary)" />
+                        <strong>{isDragOver ? 'Drop chapter images here' : 'Choose or drop chapter images'}</strong>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            WebP, JPEG, and PNG; files are sorted numerically by name and converted to WebP.
+                        </span>
                     </div>
 
-                    {/* Selected File Details */}
-                    {selectedFile && (
-                        <div
-                            style={{
-                                background: 'var(--color-surface)',
-                                border: '1px solid var(--color-border)',
-                                borderRadius: '8px',
-                                padding: '12px 16px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                            }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {selectedPages.length > 0 && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', maxHeight: '360px', overflowY: 'auto' }}>
+                            {selectedPages.map((page, index) => (
                                 <div
-                                    style={{
-                                        width: '36px',
-                                        height: '36px',
-                                        borderRadius: '6px',
-                                        background: 'rgba(230, 57, 70, 0.1)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: 'var(--primary)',
+                                    key={`${page.file.name}-${index}`}
+                                    draggable={!uploadingPages}
+                                    onDragStart={() => { draggedPageIndex.current = index; }}
+                                    onDragOver={(event) => event.preventDefault()}
+                                    onDrop={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        if (event.dataTransfer.files.length) {
+                                            selectPageFiles(event.dataTransfer.files);
+                                            return;
+                                        }
+                                        if (draggedPageIndex.current !== null) movePage(draggedPageIndex.current, index);
+                                        draggedPageIndex.current = null;
                                     }}
+                                    style={{ position: 'relative', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden', background: 'var(--color-surface)' }}
                                 >
-                                    <FileText size={18} />
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                                        {selectedFile.name}
+                                    <img src={page.previewUrl} alt={page.file.name} style={{ width: '100%', height: '150px', objectFit: 'cover', display: 'block' }} />
+                                    <div style={{ padding: '8px', fontSize: '11px' }}>
+                                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 700 }}>
+                                            {index + 1}. {page.file.name}
+                                        </div>
+                                        <div style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                            {page.status === 'uploaded' ? 'Uploaded' : page.status === 'uploading' ? `${page.progress}%` : `${(page.file.size / (1024 * 1024)).toFixed(1)} MB`}
+                                        </div>
+                                        {page.status !== 'ready' && (
+                                            <div style={{ height: '4px', marginTop: '6px', background: 'rgba(255,255,255,.1)', borderRadius: '4px' }}>
+                                                <div style={{ width: `${page.progress}%`, height: '100%', background: page.status === 'uploaded' ? '#10b981' : 'var(--primary)' }} />
+                                            </div>
+                                        )}
                                     </div>
-                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                        {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • application/pdf
-                                    </div>
+                                    {!uploadingPages && (
+                                        <button
+                                            type="button"
+                                            aria-label={`Remove ${page.file.name}`}
+                                            onClick={() => {
+                                                URL.revokeObjectURL(page.previewUrl);
+                                                setSelectedPages((current) => current.filter((_, pageIndex) => pageIndex !== index));
+                                            }}
+                                            style={{ position: 'absolute', top: '6px', right: '6px', border: 0, borderRadius: '50%', background: 'rgba(0,0,0,.7)', color: 'white', width: '24px', height: '24px', cursor: 'pointer' }}
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    )}
                                 </div>
-                            </div>
-                            {!uploadingPdf && uploadStep !== 'success' && (
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (fileInputRef.current) fileInputRef.current.click();
-                                    }}
-                                    style={{
-                                        background: 'transparent',
-                                        border: '1px solid var(--color-border)',
-                                        borderRadius: '6px',
-                                        color: 'var(--text-secondary)',
-                                        fontSize: '12px',
-                                        fontWeight: 600,
-                                        padding: '4px 10px',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    Change
-                                </button>
-                            )}
+                            ))}
                         </div>
                     )}
-
-                    {/* Live Upload Progress */}
-                    {(uploadingPdf || uploadStep === 'success') && (
-                        <div
-                            style={{
-                                background: 'var(--color-surface)',
-                                border: '1px solid var(--color-border)',
-                                borderRadius: '8px',
-                                padding: '14px 16px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '8px',
-                            }}
-                        >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                                    {uploadStep === 'requesting_url' && 'Step 1/3: Requesting presigned S3 upload URL...'}
-                                    {uploadStep === 'uploading_s3' && `Step 2/3: Uploading ${selectedFile?.name} directly to S3...`}
-                                    {uploadStep === 'verifying' && 'Step 3/3: Verifying S3 object integrity with backend...'}
-                                    {uploadStep === 'success' && 'Upload Complete! S3 object verified.'}
-                                </span>
-                                <span style={{ fontSize: '12px', fontWeight: 800, color: uploadStep === 'success' ? '#10b981' : 'var(--primary)' }}>
-                                    {uploadStep === 'success' ? '100%' : `${uploadProgress.percentage}%`}
-                                </span>
-                            </div>
-
-                            {/* Progress bar */}
-                            <div
-                                style={{
-                                    height: '8px',
-                                    borderRadius: '4px',
-                                    background: 'rgba(255, 255, 255, 0.08)',
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        width: uploadStep === 'success' ? '100%' : `${uploadProgress.percentage}%`,
-                                        height: '100%',
-                                        background: uploadStep === 'success'
-                                            ? '#10b981'
-                                            : 'linear-gradient(90deg, var(--primary), #ff758f)',
-                                        transition: 'width 0.2s ease-in-out',
-                                        borderRadius: '4px',
-                                    }}
-                                />
-                            </div>
-
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
-                                <span>
-                                    {uploadStep === 'uploading_s3'
-                                        ? `${(uploadProgress.loaded / (1024 * 1024)).toFixed(1)} MB / ${(uploadProgress.total / (1024 * 1024)).toFixed(1)} MB`
-                                        : uploadStep === 'success'
-                                        ? 'Verified in ap-south-1 S3 bucket'
-                                        : 'Amazon S3 private PUT stream'}
-                                </span>
-                                <span>
-                                    {uploadStep === 'uploading_s3' && 'Direct Browser → S3'}
-                                    {uploadStep === 'verifying' && 'HeadObject check'}
-                                    {uploadStep === 'success' && 'Metadata synced'}
-                                </span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Error Banner */}
                     {uploadError && (
-                        <div
-                            style={{
-                                background: 'rgba(239, 68, 68, 0.1)',
-                                border: '1px solid rgba(239, 68, 68, 0.3)',
-                                borderRadius: '8px',
-                                padding: '12px 14px',
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                gap: '10px',
-                                color: '#f87171',
-                                fontSize: '13px',
-                            }}
-                        >
-                            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontWeight: 700, marginBottom: '2px' }}>Upload Error</div>
-                                <div>{uploadError}</div>
-                            </div>
+                        <div className={styles.alertError} role="alert">
+                            <AlertCircle size={16} /> {uploadError}
                         </div>
                     )}
-
-                    {/* Direct S3 Architecture Notice */}
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                        🔒 <strong>Zero-Proxy S3 Security:</strong> The PDF binary is uploaded directly from your browser to Amazon S3 via a temporary signed PUT contract. File bytes never pass through the API server, ensuring zero buffer bottlenecks.
+                        Images upload directly to private S3 storage. Drag thumbnails to change reading order before upload.
                     </div>
                 </div>
             </Modal>
@@ -1070,7 +949,7 @@ export const AdminChapters: React.FC = () => {
                 onClose={() => setDeleteTarget(null)}
                 onConfirm={handleDelete}
                 title="Delete Chapter"
-                message={`Are you sure you want to delete "${deleteTarget?.title}"? The chapter and its associated PDF asset reference will be removed.`}
+                message={`Are you sure you want to delete "${deleteTarget?.title}"?`}
                 confirmText="Delete Chapter"
             />
         </div>
